@@ -7,4 +7,12 @@ export interface LoginResponse {
   token: string;
   refreshToken: string;
   email: string;
+  nickname: string | null;
+}
+
+export interface UserResponseDto {
+  id: number;
+  username: string;
+  email: string;
+  name?: string;
 }

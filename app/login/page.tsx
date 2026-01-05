@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import Cookies from "js-cookie";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,15 +31,25 @@ const LoginPage = () => {
     const username = formData.get("username");
     const password = formData.get("password");
 
+    setLoading(true);
+    setError(null);
+
     try {
       const data: LoginRequest = {
         username: username as string,
         password: password as string,
       };
       const response = await login(data);
-      console.log("Login successful:", response.data);
+
+      Cookies.set("token", response.token);
+      Cookies.set("refreshToken", response.refreshToken);
+
+      console.log("Login successful:", response);
     } catch (error) {
       console.error("Login failed:", error);
+      setError("Login failed. Please check your credentials.");
+    } finally {
+      setLoading(false);
     }
   };
 

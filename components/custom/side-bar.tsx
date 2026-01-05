@@ -18,8 +18,8 @@ import { House, Newspaper } from "lucide-react";
 const data = {
   navMain: [
     {
-      title: "Dashboard",
-      url: "/dashboard",
+      title: "활동",
+      url: "/dashboard/activity",
       icon: House,
     },
     {
