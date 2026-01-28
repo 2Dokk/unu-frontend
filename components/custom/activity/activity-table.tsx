@@ -8,11 +8,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { searchActivities } from "@/lib/api/activity";
 import {
   ACTIVITY_STATUS_MAP,
   ActivityResponse,
 } from "@/lib/interfaces/activity";
+import {
+  getMyParticipantByActivityId,
+  createMyParticipantByActivityId,
+} from "@/lib/api/activity-participant";
+import {
+  ActivityParticipantResponse,
+  ACTIVITY_PARTICIPANT_STATUS_MAP,
+} from "@/lib/interfaces/activity-participant";
 import { useEffect, useState } from "react";
 
 interface ActivityTableProps {
@@ -30,6 +40,10 @@ export function ActivityTable({
 }: ActivityTableProps) {
   const [activities, setActivities] = useState<ActivityResponse[]>([]);
   const [loading, setLoading] = useState(false);
+  const [participantMap, setParticipantMap] = useState<
+    Record<number, ActivityParticipantResponse | null>
+  >({});
+  const [applyingId, setApplyingId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchActivities = async () => {
@@ -42,6 +56,19 @@ export function ActivityTable({
           quarterId: quarter,
         });
         setActivities(data);
+
+        // Fetch participant status for each activity
+        const participantData: Record<
+          number,
+          ActivityParticipantResponse | null
+        > = {};
+        await Promise.all(
+          data.map(async (activity) => {
+            const participant = await getMyParticipantByActivityId(activity.id);
+            participantData[activity.id] = participant;
+          }),
+        );
+        setParticipantMap(participantData);
       } catch (error) {
         console.error("Failed to fetch activities:", error);
       } finally {
@@ -51,6 +78,63 @@ export function ActivityTable({
 
     fetchActivities();
   }, [quarter, activityType, status, searchTerm]);
+
+  const handleApply = async (activityId: number) => {
+    setApplyingId(activityId);
+    try {
+      const participant = await createMyParticipantByActivityId({ activityId });
+      setParticipantMap((prev) => ({
+        ...prev,
+        [activityId]: participant,
+      }));
+    } catch (error) {
+      console.error("Failed to apply for activity:", error);
+    } finally {
+      setApplyingId(null);
+    }
+  };
+
+  const renderActionButton = (activity: ActivityResponse) => {
+    const participant = participantMap[activity.id];
+    const isApplying = applyingId === activity.id;
+
+    // 모집중이 아니면 버튼 비활성화
+    if (activity.status !== "OPEN") {
+      return (
+        <Button variant="outline" disabled size="sm">
+          모집 종료
+        </Button>
+      );
+    }
+
+    // 신청하지 않았으면 신청 버튼
+    if (!participant) {
+      return (
+        <Button
+          onClick={() => handleApply(activity.id)}
+          disabled={isApplying}
+          size="sm"
+        >
+          {isApplying ? "신청 중..." : "참여 신청"}
+        </Button>
+      );
+    }
+
+    // 신청 상태에 따라 뱃지 표시
+    const statusConfig = {
+      APPLIED: { variant: "secondary" as const, label: "신청됨" },
+      APPROVED: { variant: "default" as const, label: "승인됨" },
+      REJECTED: { variant: "destructive" as const, label: "거절됨" },
+    };
+
+    const config = statusConfig[participant.status];
+
+    return (
+      <Badge variant={config.variant}>
+        {ACTIVITY_PARTICIPANT_STATUS_MAP[participant.status]}
+      </Badge>
+    );
+  };
 
   return (
     <Table>
@@ -62,12 +146,13 @@ export function ActivityTable({
           <TableHead className="text-center">활동 유형</TableHead>
           <TableHead className="text-center">담당자</TableHead>
           <TableHead className="text-center">분기</TableHead>
+          <TableHead className="text-center">액션</TableHead>
         </TableRow>
       </TableHeader>
       {loading && (
         <TableBody>
           <TableRow>
-            <TableCell colSpan={6}>
+            <TableCell colSpan={7}>
               <div className="flex items-center justify-center py-8">
                 <Spinner />
               </div>
@@ -78,7 +163,7 @@ export function ActivityTable({
       {activities.length === 0 && !loading && (
         <TableBody>
           <TableRow>
-            <TableCell colSpan={6} className="text-center">
+            <TableCell colSpan={7} className="text-center">
               활동이 없습니다.
             </TableCell>
           </TableRow>
@@ -95,6 +180,9 @@ export function ActivityTable({
             <TableCell>{activity.activityType.name}</TableCell>
             <TableCell>{activity.assignee.username}</TableCell>
             <TableCell>{activity.quarter.name}</TableCell>
+            <TableCell className="text-center">
+              {renderActionButton(activity)}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
