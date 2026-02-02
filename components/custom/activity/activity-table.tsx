@@ -18,12 +18,14 @@ import {
 import {
   getMyParticipantByActivityId,
   createMyParticipantByActivityId,
+  deleteActivityParticipant,
 } from "@/lib/api/activity-participant";
 import {
   ActivityParticipantResponse,
   ACTIVITY_PARTICIPANT_STATUS_MAP,
 } from "@/lib/interfaces/activity-participant";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface ActivityTableProps {
   quarter?: string;
@@ -38,12 +40,14 @@ export function ActivityTable({
   status,
   searchTerm,
 }: ActivityTableProps) {
+  const router = useRouter();
   const [activities, setActivities] = useState<ActivityResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [participantMap, setParticipantMap] = useState<
     Record<number, ActivityParticipantResponse | null>
   >({});
   const [applyingId, setApplyingId] = useState<number | null>(null);
+  const [cancelingId, setCancelingId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchActivities = async () => {
@@ -94,9 +98,37 @@ export function ActivityTable({
     }
   };
 
+  const handleCancel = async (activityId: number, participantId: number) => {
+    setCancelingId(activityId);
+    try {
+      await deleteActivityParticipant(participantId);
+      setParticipantMap((prev) => ({
+        ...prev,
+        [activityId]: null,
+      }));
+    } catch (error) {
+      console.error("Failed to cancel activity:", error);
+    } finally {
+      setCancelingId(null);
+    }
+  };
+
+  const handleRowClick = (activityId: number) => {
+    router.push(`/dashboard/activity/${activityId}`);
+  };
+
   const renderActionButton = (activity: ActivityResponse) => {
     const participant = participantMap[activity.id];
     const isApplying = applyingId === activity.id;
+    const isCanceling = cancelingId === activity.id;
+
+    if (activity.status === "CREATED") {
+      return (
+        <Button variant="outline" disabled size="sm">
+          모집 예정
+        </Button>
+      );
+    }
 
     // 모집중이 아니면 버튼 비활성화
     if (activity.status !== "OPEN") {
@@ -120,19 +152,15 @@ export function ActivityTable({
       );
     }
 
-    // 신청 상태에 따라 뱃지 표시
-    const statusConfig = {
-      APPLIED: { variant: "secondary" as const, label: "신청됨" },
-      APPROVED: { variant: "default" as const, label: "승인됨" },
-      REJECTED: { variant: "destructive" as const, label: "거절됨" },
-    };
-
-    const config = statusConfig[participant.status];
-
     return (
-      <Badge variant={config.variant}>
-        {ACTIVITY_PARTICIPANT_STATUS_MAP[participant.status]}
-      </Badge>
+      <Button
+        variant="outline"
+        onClick={() => handleCancel(activity.id, participant.id)}
+        disabled={isCanceling}
+        size="sm"
+      >
+        {isCanceling ? "취소 중..." : "신청 취소"}
+      </Button>
     );
   };
 
@@ -149,7 +177,7 @@ export function ActivityTable({
           <TableHead className="text-center">액션</TableHead>
         </TableRow>
       </TableHeader>
-      {loading && (
+      {(loading || quarter === "") && (
         <TableBody>
           <TableRow>
             <TableCell colSpan={7}>
@@ -160,7 +188,7 @@ export function ActivityTable({
           </TableRow>
         </TableBody>
       )}
-      {activities.length === 0 && !loading && (
+      {activities.length === 0 && !loading && quarter !== "" && (
         <TableBody>
           <TableRow>
             <TableCell colSpan={7} className="text-center">
@@ -171,7 +199,11 @@ export function ActivityTable({
       )}
       <TableBody>
         {activities.map((activity) => (
-          <TableRow key={activity.id}>
+          <TableRow
+            key={activity.id}
+            onClick={() => handleRowClick(activity.id)}
+            className="cursor-pointer hover:bg-muted/50"
+          >
             <TableCell className="font-medium">{activity.title}</TableCell>
             <TableCell>{activity.description}</TableCell>
             <TableCell>

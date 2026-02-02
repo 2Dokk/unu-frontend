@@ -4,6 +4,7 @@ export interface QuarterResponse {
   year: number;
   season: string;
   startDate: string;
+  endDate: string;
 }
 
 export interface QuarterRequest {

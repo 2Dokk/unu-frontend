@@ -11,6 +11,7 @@ import { SearchForm } from "@/components/custom/activity/activity-search-bar";
 import { ActivityTable } from "@/components/custom/activity/activity-table";
 import { useState } from "react";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
+import { ActivityCreationButton } from "@/components/custom/activity/activity-creation-button";
 
 const ActivityPage = () => {
   const [quarter, setQuarter] = useState<string>();
@@ -29,6 +30,7 @@ const ActivityPage = () => {
         <ActivityTypeSelector value={activityType} onChange={setActivityType} />
         <ActivityStatusSelector value={status} onChange={setStatus} />
         <SearchForm value={searchTerm} onChange={setSearchTerm} />
+        <ActivityCreationButton />
       </div>
       <div>
         <ActivityTable

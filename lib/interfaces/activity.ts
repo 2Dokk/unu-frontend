@@ -32,9 +32,9 @@ export interface ActivityResponse {
 export interface ActivityRequest {
   title: string;
   description: string;
-  status: string;
+  status?: string;
   activityTypeId: number;
-  assigneeId: number;
+  assigneeId?: number;
   quarterId: number;
   startDate: string;
   endDate: string;

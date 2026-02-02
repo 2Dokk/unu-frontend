@@ -11,7 +11,7 @@ export async function getActivityById(
   activityId: number,
 ): Promise<ActivityResponse> {
   const response = await axiosInstance.get<ActivityResponse>(
-    `/activity-types/${activityId}`,
+    `/activities/${activityId}`,
   );
   return response.data;
 }
@@ -20,7 +20,17 @@ export async function createActivity(
   data: ActivityRequest,
 ): Promise<ActivityResponse> {
   const response = await axiosInstance.post<ActivityResponse>(
-    "/Activitys",
+    "/activities",
+    data,
+  );
+  return response.data;
+}
+
+export async function createActivityForMe(
+  data: ActivityRequest,
+): Promise<ActivityResponse> {
+  const response = await axiosInstance.post<ActivityResponse>(
+    "/activities/me",
     data,
   );
   return response.data;
