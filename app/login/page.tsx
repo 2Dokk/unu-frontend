@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,6 +23,7 @@ import { LoginRequest } from "@/lib/interfaces/auth";
 import { useState } from "react";
 
 const LoginPage = () => {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -45,6 +47,9 @@ const LoginPage = () => {
       Cookies.set("refreshToken", response.refreshToken);
 
       console.log("Login successful:", response);
+
+      // Redirect to dashboard after successful login
+      router.push("/dashboard/activity");
     } catch (error) {
       console.error("Login failed:", error);
       setError("Login failed. Please check your credentials.");

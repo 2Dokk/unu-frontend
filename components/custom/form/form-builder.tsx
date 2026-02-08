@@ -28,6 +28,12 @@ export function FormBuilder({ initialSchema, onChange }: FormBuilderProps) {
   );
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
 
+  // Update schema when initialSchema changes (e.g., template selection)
+  useEffect(() => {
+    const parsed = parseSchema(initialSchema);
+    setSchema(parsed);
+  }, [initialSchema]);
+
   // Sync schema changes to parent
   useEffect(() => {
     const serialized = serializeSchema(schema);
