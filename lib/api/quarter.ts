@@ -2,7 +2,9 @@ import { QuarterRequest, QuarterResponse } from "../interfaces/quarter";
 import axiosInstance from "./axiosInstance";
 
 export async function getCurrentQuarter(): Promise<QuarterResponse> {
-  const response = await axiosInstance.get<QuarterResponse>("/current-quarter");
+  const response = await axiosInstance.get<QuarterResponse>(
+    "/public/current-quarter",
+  );
   return response.data;
 }
 
@@ -11,7 +13,7 @@ export async function updateCurrentQuarter(data: {
 }): Promise<QuarterResponse> {
   const response = await axiosInstance.put<QuarterResponse>(
     "/current-quarter",
-    data
+    data,
   );
   return response.data;
 }
@@ -22,16 +24,16 @@ export async function getAllQuarters(): Promise<QuarterResponse[]> {
 }
 
 export async function getQuarterById(
-  quarterId: number
+  quarterId: number,
 ): Promise<QuarterResponse> {
   const response = await axiosInstance.get<QuarterResponse>(
-    `/quarters/${quarterId}`
+    `/quarters/${quarterId}`,
   );
   return response.data;
 }
 
 export async function createQuarter(
-  data: QuarterRequest
+  data: QuarterRequest,
 ): Promise<QuarterResponse> {
   const response = await axiosInstance.post<QuarterResponse>("/quarters", data);
   return response.data;
@@ -39,11 +41,11 @@ export async function createQuarter(
 
 export async function updateQuarter(
   quarterId: number,
-  data: QuarterRequest
+  data: QuarterRequest,
 ): Promise<QuarterResponse> {
   const response = await axiosInstance.put<QuarterResponse>(
     `/quarters/${quarterId}`,
-    data
+    data,
   );
   return response.data;
 }
@@ -54,13 +56,13 @@ export async function deleteQuarter(quarterId: number): Promise<void> {
 
 export async function searchQuarters(
   year: number,
-  season: string
+  season: string,
 ): Promise<QuarterResponse[]> {
   const response = await axiosInstance.get<QuarterResponse[]>(
     "/quarters/search",
     {
       params: { year, season },
-    }
+    },
   );
   return response.data;
 }

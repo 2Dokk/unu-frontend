@@ -7,8 +7,8 @@
  * - Text-based logo: "ItNU | IT and You"
  * - Logo links to different pages based on user role:
  *   - Anonymous: /apply (public recruitment page)
- *   - Member: /dashboard/activity (member activities)
- *   - Admin: /dashboard/admin (admin dashboard)
+ *   - Member: /activities (member activities)
+ *   - Admin: /manage (admin dashboard)
  *
  * Right-side content changes based on user role:
  * - Anonymous: Shows "모집 공고" and "로그인" buttons
@@ -66,8 +66,8 @@ export function NavigationBar() {
   };
 
   const getLogoLink = () => {
-    if (userRole === "admin") return "/dashboard/admin";
-    if (userRole === "member") return "/dashboard/activity";
+    if (userRole === "admin") return "/manage";
+    if (userRole === "member") return "/activities";
     return "/apply";
   };
 
@@ -108,13 +108,11 @@ export function NavigationBar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => router.push("/dashboard/admin")}>
+              <DropdownMenuItem onClick={() => router.push("/manage")}>
                 <Shield className="mr-2 h-4 w-4" />
                 관리자 홈
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push("/dashboard/activity")}
-              >
+              <DropdownMenuItem onClick={() => router.push("/activities")}>
                 <User className="mr-2 h-4 w-4" />
                 학회원 화면으로 이동
               </DropdownMenuItem>
@@ -146,9 +144,7 @@ export function NavigationBar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem
-              onClick={() => router.push("/dashboard/activity")}
-            >
+            <DropdownMenuItem onClick={() => router.push("/activities")}>
               <Home className="mr-2 h-4 w-4" />내 페이지
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -163,7 +159,7 @@ export function NavigationBar() {
   };
 
   return (
-    <header className="flex w-full h-16 items-center justify-between border-b px-6">
+    <header className="sticky top-0 z-50 flex w-full h-16 items-center justify-between border-b px-6 bg-background">
       {/* Logo */}
       <Link
         href={getLogoLink()}

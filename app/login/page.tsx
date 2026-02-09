@@ -49,7 +49,7 @@ const LoginPage = () => {
       console.log("Login successful:", response);
 
       // Redirect to dashboard after successful login
-      router.push("/dashboard/activity");
+      router.push("/activities");
     } catch (error) {
       console.error("Login failed:", error);
       setError("Login failed. Please check your credentials.");

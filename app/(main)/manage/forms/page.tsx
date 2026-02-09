@@ -154,9 +154,7 @@ export default function AdminFormsPage() {
               <div className="flex items-center justify-between">
                 <CardTitle>템플릿 목록</CardTitle>
                 <Button
-                  onClick={() =>
-                    router.push("/dashboard/admin/forms/templates/new")
-                  }
+                  onClick={() => router.push("/manage/forms/templates/new")}
                 >
                   <Plus className="mr-2 h-4 w-4" />새 템플릿
                 </Button>
@@ -213,7 +211,7 @@ export default function AdminFormsPage() {
                               <DropdownMenuItem
                                 onClick={() =>
                                   router.push(
-                                    `/dashboard/admin/forms/templates/${template.id}`,
+                                    `/manage/forms/templates/${template.id}`,
                                   )
                                 }
                               >
@@ -223,7 +221,7 @@ export default function AdminFormsPage() {
                               <DropdownMenuItem
                                 onClick={() =>
                                   router.push(
-                                    `/dashboard/admin/forms/templates/${template.id}/edit`,
+                                    `/manage/forms/templates/${template.id}/edit`,
                                   )
                                 }
                               >
@@ -261,9 +259,7 @@ export default function AdminFormsPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>폼 목록</CardTitle>
-                <Button
-                  onClick={() => router.push("/dashboard/admin/forms/new")}
-                >
+                <Button onClick={() => router.push("/manage/forms/new")}>
                   <Plus className="mr-2 h-4 w-4" />새 폼
                 </Button>
               </div>
@@ -320,9 +316,7 @@ export default function AdminFormsPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 onClick={() =>
-                                  router.push(
-                                    `/dashboard/admin/forms/${form.id}`,
-                                  )
+                                  router.push(`/manage/forms/${form.id}`)
                                 }
                               >
                                 <Eye className="mr-2 h-4 w-4" />
@@ -330,9 +324,7 @@ export default function AdminFormsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
-                                  router.push(
-                                    `/dashboard/admin/forms/${form.id}/edit`,
-                                  )
+                                  router.push(`/manage/forms/${form.id}/edit`)
                                 }
                               >
                                 <Pencil className="mr-2 h-4 w-4" />

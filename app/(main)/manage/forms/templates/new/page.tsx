@@ -26,7 +26,7 @@ export default function NewFormTemplatePage() {
     try {
       setIsSubmitting(true);
       await createFormTemplate({ title, schema });
-      router.push("/dashboard/admin/forms");
+      router.push("/manage/forms");
     } catch (error) {
       console.error("Failed to create template:", error);
       setIsSubmitting(false);
@@ -72,7 +72,7 @@ export default function NewFormTemplatePage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push("/dashboard/admin/forms")}
+            onClick={() => router.push("/manage/forms")}
             disabled={isSubmitting}
           >
             취소

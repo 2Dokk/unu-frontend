@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -20,46 +20,34 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FormBuilder } from "@/components/custom/form/form-builder";
-import {
-  getFormTemplateById,
-  updateFormTemplate,
-  deleteFormTemplate,
-} from "@/lib/api/form-template";
-import { FormTemplateResponse } from "@/lib/interfaces/form";
+import { getFormById, updateForm, deleteForm } from "@/lib/api/form";
+import { FormResponse } from "@/lib/interfaces/form";
 
-export default function EditFormTemplatePage() {
+export default function EditFormPage() {
   const router = useRouter();
   const params = useParams();
   const id = Number(params.id);
 
-  const [template, setTemplate] = useState<FormTemplateResponse | null>(null);
+  const [form, setForm] = useState<FormResponse | null>(null);
   const [title, setTitle] = useState("");
   const [schema, setSchema] = useState("");
-  const [initialTitle, setInitialTitle] = useState("");
-  const [initialSchema, setInitialSchema] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-
-  const hasUnsavedChanges = title !== initialTitle || schema !== initialSchema;
 
   useEffect(() => {
-    loadTemplate();
+    loadForm();
   }, [id]);
 
-  async function loadTemplate() {
+  async function loadForm() {
     try {
       setIsLoading(true);
-      const data = await getFormTemplateById(id);
-      setTemplate(data);
+      const data = await getFormById(id);
+      setForm(data);
       setTitle(data.title);
       setSchema(data.schema);
-      setInitialTitle(data.title);
-      setInitialSchema(data.schema);
-      setLastSaved(new Date(data.modifiedAt));
     } catch (error) {
-      console.error("Failed to load template:", error);
+      console.error("Failed to load form:", error);
     } finally {
       setIsLoading(false);
     }
@@ -67,27 +55,28 @@ export default function EditFormTemplatePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !schema.trim()) return;
+    if (!form || !title.trim() || !schema.trim()) return;
 
     try {
       setIsSubmitting(true);
-      await updateFormTemplate(id, { title, schema });
-      setInitialTitle(title);
-      setInitialSchema(schema);
-      setLastSaved(new Date());
-      router.push("/dashboard/admin/forms");
+      await updateForm(id, {
+        templateId: form.template.id,
+        title,
+        schema,
+      });
+      router.push("/manage/forms");
     } catch (error) {
-      console.error("Failed to update template:", error);
+      console.error("Failed to update form:", error);
       setIsSubmitting(false);
     }
   }
 
   async function handleDelete() {
     try {
-      await deleteFormTemplate(id);
-      router.push("/dashboard/admin/forms");
+      await deleteForm(id);
+      router.push("/manage/forms");
     } catch (error) {
-      console.error("Failed to delete template:", error);
+      console.error("Failed to delete form:", error);
       setDeleteDialogOpen(false);
     }
   }
@@ -101,6 +90,7 @@ export default function EditFormTemplatePage() {
             <Skeleton className="h-6 w-32" />
           </CardHeader>
           <CardContent className="space-y-6">
+            <Skeleton className="h-20 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-65 w-full" />
           </CardContent>
@@ -109,15 +99,12 @@ export default function EditFormTemplatePage() {
     );
   }
 
-  if (!template) {
+  if (!form) {
     return (
       <div className="container mx-auto max-w-5xl py-8 px-4">
         <div className="text-center">
-          <p className="text-muted-foreground">템플릿을 찾을 수 없어요.</p>
-          <Button
-            className="mt-4"
-            onClick={() => router.push("/dashboard/admin/forms")}
-          >
+          <p className="text-muted-foreground">폼을 찾을 수 없어요.</p>
+          <Button className="mt-4" onClick={() => router.push("/manage/forms")}>
             목록으로 돌아가기
           </Button>
         </div>
@@ -128,43 +115,32 @@ export default function EditFormTemplatePage() {
   return (
     <div className="container mx-auto max-w-5xl py-8 px-4">
       <div className="mb-8">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">폼 템플릿 편집</h1>
-            <p className="text-muted-foreground mt-2">
-              다양한 학회 활동에서 사용할 폼 구조를 구성합니다.
-            </p>
-            <p className="text-sm text-muted-foreground/80 mt-1">
-              이 템플릿은 여러 활동에서 재사용될 수 있습니다.
-            </p>
-          </div>
-          <div className="text-sm text-right">
-            {hasUnsavedChanges ? (
-              <span className="text-amber-600 font-medium">
-                저장되지 않은 변경 사항 있음
-              </span>
-            ) : lastSaved ? (
-              <span className="text-muted-foreground">
-                {new Date().getTime() - lastSaved.getTime() < 60000
-                  ? "방금 저장됨"
-                  : `${Math.floor((new Date().getTime() - lastSaved.getTime()) / 60000)}분 전 저장됨`}
-              </span>
-            ) : null}
-          </div>
-        </div>
+        <h1 className="text-3xl font-bold">폼 수정</h1>
+        <p className="text-muted-foreground mt-2">폼 정보를 수정하세요</p>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
-            <CardTitle>템플릿 정보</CardTitle>
+            <CardTitle>폼 정보</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label>템플릿</Label>
+              <div className="flex items-center gap-2 p-3 rounded-md border bg-muted/50">
+                <span className="font-medium">{form.template.title}</span>
+                <Badge variant="secondary">ID: {form.template.id}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                템플릿은 수정할 수 없어요.
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="title">제목</Label>
               <Input
                 id="title"
-                placeholder="템플릿 제목을 입력하세요"
+                placeholder="폼 제목을 입력하세요"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -180,32 +156,25 @@ export default function EditFormTemplatePage() {
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-between mt-8 pt-6 border-t">
+        <div className="flex justify-between mt-6">
           <Button
             type="button"
-            variant="ghost"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            variant="destructive"
             onClick={() => setDeleteDialogOpen(true)}
             disabled={isSubmitting}
           >
-            <Trash2 className="mr-2 h-4 w-4" />
             삭제
           </Button>
           <div className="flex gap-3">
             <Button
               type="button"
-              variant="ghost"
-              onClick={() => router.push("/dashboard/admin/forms")}
+              variant="outline"
+              onClick={() => router.push("/manage/forms")}
               disabled={isSubmitting}
             >
               취소
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              size="lg"
-              className="min-w-[120px]"
-            >
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "저장 중..." : "저장"}
             </Button>
           </div>
@@ -218,7 +187,7 @@ export default function EditFormTemplatePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>정말 삭제하시겠어요?</AlertDialogTitle>
             <AlertDialogDescription>
-              템플릿 "{template.title}"을(를) 삭제하면 되돌릴 수 없어요.
+              폼 "{form.title}"을(를) 삭제하면 되돌릴 수 없어요.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

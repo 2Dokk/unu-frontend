@@ -67,7 +67,7 @@ export default function NewFormPage() {
         title,
         schema,
       });
-      router.push("/dashboard/admin/forms");
+      router.push("/manage/forms");
     } catch (error) {
       console.error("Failed to create form:", error);
       setIsSubmitting(false);
@@ -140,7 +140,7 @@ export default function NewFormPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push("/dashboard/admin/forms")}
+            onClick={() => router.push("/manage/forms")}
             disabled={isSubmitting}
           >
             취소

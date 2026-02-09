@@ -5,9 +5,9 @@ import { useRouter, useParams } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
@@ -19,32 +19,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  getFormTemplateById,
-  deleteFormTemplate,
-} from "@/lib/api/form-template";
-import { FormTemplateResponse } from "@/lib/interfaces/form";
+import { getFormById, deleteForm } from "@/lib/api/form";
+import { FormResponse } from "@/lib/interfaces/form";
 
-export default function ViewFormTemplatePage() {
+export default function ViewFormPage() {
   const router = useRouter();
   const params = useParams();
   const id = Number(params.id);
 
-  const [template, setTemplate] = useState<FormTemplateResponse | null>(null);
+  const [form, setForm] = useState<FormResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
-    loadTemplate();
+    loadForm();
   }, [id]);
 
-  async function loadTemplate() {
+  async function loadForm() {
     try {
       setIsLoading(true);
-      const data = await getFormTemplateById(id);
-      setTemplate(data);
+      const data = await getFormById(id);
+      setForm(data);
     } catch (error) {
-      console.error("Failed to load template:", error);
+      console.error("Failed to load form:", error);
     } finally {
       setIsLoading(false);
     }
@@ -52,10 +49,10 @@ export default function ViewFormTemplatePage() {
 
   async function handleDelete() {
     try {
-      await deleteFormTemplate(id);
-      router.push("/dashboard/admin/forms");
+      await deleteForm(id);
+      router.push("/manage/forms");
     } catch (error) {
-      console.error("Failed to delete template:", error);
+      console.error("Failed to delete form:", error);
       setDeleteDialogOpen(false);
     }
   }
@@ -87,15 +84,12 @@ export default function ViewFormTemplatePage() {
     );
   }
 
-  if (!template) {
+  if (!form) {
     return (
       <div className="container mx-auto max-w-4xl py-8 px-4">
         <div className="text-center">
-          <p className="text-muted-foreground">템플릿을 찾을 수 없어요.</p>
-          <Button
-            className="mt-4"
-            onClick={() => router.push("/dashboard/admin/forms")}
-          >
+          <p className="text-muted-foreground">폼을 찾을 수 없어요.</p>
+          <Button className="mt-4" onClick={() => router.push("/manage/forms")}>
             목록으로 돌아가기
           </Button>
         </div>
@@ -107,15 +101,13 @@ export default function ViewFormTemplatePage() {
     <div className="container mx-auto max-w-4xl py-8 px-4">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{template.title}</h1>
-          <p className="text-muted-foreground mt-2">템플릿 상세 정보</p>
+          <h1 className="text-3xl font-bold">{form.title}</h1>
+          <p className="text-muted-foreground mt-2">폼 상세 정보</p>
         </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() =>
-              router.push(`/dashboard/admin/forms/templates/${id}/edit`)
-            }
+            onClick={() => router.push(`/manage/forms/${id}/edit`)}
           >
             <Pencil className="mr-2 h-4 w-4" />
             수정
@@ -136,23 +128,31 @@ export default function ViewFormTemplatePage() {
           <CardHeader>
             <CardTitle>정보</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">템플릿</p>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{form.template.title}</span>
+                <Badge variant="secondary">ID: {form.template.id}</Badge>
+              </div>
+            </div>
+            <Separator />
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">생성일</p>
-                <p className="font-medium">{formatDate(template.createdAt)}</p>
+                <p className="font-medium">{formatDate(form.createdAt)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">수정일</p>
-                <p className="font-medium">{formatDate(template.modifiedAt)}</p>
+                <p className="font-medium">{formatDate(form.modifiedAt)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">생성자</p>
-                <p className="font-medium">{template.createdBy}</p>
+                <p className="font-medium">{form.createdBy}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">수정자</p>
-                <p className="font-medium">{template.modifiedBy}</p>
+                <p className="font-medium">{form.modifiedBy}</p>
               </div>
             </div>
           </CardContent>
@@ -165,17 +165,14 @@ export default function ViewFormTemplatePage() {
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-80 w-full rounded-md border bg-muted/50">
-              <pre className="p-4 text-sm font-mono">{template.schema}</pre>
+              <pre className="p-4 text-sm font-mono">{form.schema}</pre>
             </ScrollArea>
           </CardContent>
         </Card>
       </div>
 
       <div className="flex justify-start mt-6">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/dashboard/admin/forms")}
-        >
+        <Button variant="outline" onClick={() => router.push("/manage/forms")}>
           목록으로 돌아가기
         </Button>
       </div>
@@ -186,7 +183,7 @@ export default function ViewFormTemplatePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>정말 삭제하시겠어요?</AlertDialogTitle>
             <AlertDialogDescription>
-              템플릿 "{template.title}"을(를) 삭제하면 되돌릴 수 없어요.
+              폼 "{form.title}"을(를) 삭제하면 되돌릴 수 없어요.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

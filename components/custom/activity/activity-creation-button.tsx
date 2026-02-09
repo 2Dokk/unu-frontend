@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 
 export function ActivityCreationButton() {
   return (
-    <Link href="/dashboard/activity/new">
+    <Link href="/activities/new">
       <Button>
         <Plus className="h-4 w-4 mr-2" />
         활동 생성

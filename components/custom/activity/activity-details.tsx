@@ -348,7 +348,7 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
 
   const handleEdit = () => {
     // TODO: Navigate to edit page
-    router.push(`/dashboard/activity/${activityId}/edit`);
+    router.push(`/activities/${activityId}/edit`);
   };
 
   const handleStatusChange = () => {
@@ -393,7 +393,7 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
             <Button
               variant="outline"
               className="mt-4"
-              onClick={() => router.push("/dashboard/activity")}
+              onClick={() => router.push("/activities")}
             >
               활동 목록으로 돌아가기
             </Button>
@@ -429,7 +429,7 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
                 <ChevronRight className="h-4 w-4" />
               </BreadcrumbSeparator>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard/activity">활동</BreadcrumbLink>
+                <BreadcrumbLink href="/activities">활동</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator>
                 <ChevronRight className="h-4 w-4" />

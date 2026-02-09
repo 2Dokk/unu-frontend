@@ -130,7 +130,7 @@ export default function NewRecruitmentPage() {
         formId: parseInt(formId),
         active,
       });
-      router.push("/dashboard/admin/recruitment");
+      router.push("/manage/recruitment");
     } catch (error) {
       console.error("Failed to create recruitment:", error);
       alert("모집 생성에 실패했습니다.");
@@ -286,7 +286,7 @@ export default function NewRecruitmentPage() {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => router.push("/dashboard/admin/recruitment")}
+                onClick={() => router.push("/manage/recruitment")}
                 disabled={isSubmitting}
               >
                 취소

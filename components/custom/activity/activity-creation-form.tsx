@@ -87,7 +87,7 @@ export function ActivityCreationForm({
     try {
       await createActivityForMe(formData);
       onSuccess?.();
-      router.push("/dashboard/activity");
+      router.push("/activities");
     } catch (error) {
       console.error("Failed to create activity:", error);
     } finally {

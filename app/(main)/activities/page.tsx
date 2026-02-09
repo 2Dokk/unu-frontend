@@ -382,11 +382,11 @@ const ActivityPage = () => {
   };
 
   const handleActivityClick = (activityId: number) => {
-    router.push(`/dashboard/activity/${activityId}`);
+    router.push(`/activities/${activityId}`);
   };
 
   const handleCreateActivity = () => {
-    router.push("/dashboard/activity/new");
+    router.push("/activities/new");
   };
 
   const handlePrevQuarter = () => {

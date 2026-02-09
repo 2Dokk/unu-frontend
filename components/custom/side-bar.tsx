@@ -19,7 +19,7 @@ const data = {
   navMain: [
     {
       title: "활동",
-      url: "/dashboard/activity",
+      url: "/activities",
       icon: House,
     },
     {

@@ -114,7 +114,7 @@ export function ActivityTable({
   };
 
   const handleRowClick = (activityId: number) => {
-    router.push(`/dashboard/activity/${activityId}`);
+    router.push(`/activities/${activityId}`);
   };
 
   const renderActionButton = (activity: ActivityResponse) => {
