@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { getRecruitmentById } from "@/lib/api/recruitment";
+import { getActiveRecruitment, getRecruitmentById } from "@/lib/api/recruitment";
 import { getFormById } from "@/lib/api/form";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 import { FormResponse } from "@/lib/interfaces/form";
@@ -28,8 +28,6 @@ type RecruitmentStatus = "모집중" | "모집 예정" | "모집 마감";
 
 export default function ApplicationFormPage() {
   const router = useRouter();
-  const params = useParams();
-  const id = Number(params.id);
 
   const [recruitment, setRecruitment] = useState<RecruitmentResponse | null>(
     null,
@@ -57,15 +55,15 @@ export default function ApplicationFormPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    console.log("Loading data for recruitment ID:", id);
     loadData();
-  }, [id]);
+  }, []);
 
   async function loadData() {
     try {
       setIsLoading(true);
       setError(null);
-      const recruitmentData = await getRecruitmentById(id);
+      const recruitmentData = await getActiveRecruitment();
+
       setRecruitment(recruitmentData);
       console.log("Fetched recruitment data:", recruitmentData);
 
@@ -150,7 +148,7 @@ export default function ApplicationFormPage() {
 
     try {
       setIsSubmitting(true);
-      const result = await createApplication({
+      await createApplication({
         name,
         studentId,
         major,
@@ -164,8 +162,8 @@ export default function ApplicationFormPage() {
         password: password,
       });
 
-      // Navigate to success page with application ID
-      router.push(`/apply/${id}/complete?applicationId=${result.id}`);
+      // Navigate to success page
+      router.push("/apply/complete");
     } catch (error) {
       console.error("Failed to submit application:", error);
       alert("지원서 제출에 실패했습니다. 다시 시도해주세요.");
@@ -323,7 +321,7 @@ export default function ApplicationFormPage() {
                 <Button onClick={() => loadData()} variant="outline">
                   다시 시도
                 </Button>
-                <Button onClick={() => router.push(`/apply/${id}`)}>
+                <Button onClick={() => router.push("/apply")}>
                   돌아가기
                 </Button>
               </div>
@@ -342,7 +340,7 @@ export default function ApplicationFormPage() {
       {/* Back Button */}
       <Button
         variant="ghost"
-        onClick={() => router.push(`/apply/${id}`)}
+        onClick={() => router.push("/apply")}
         className="mb-6"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -638,7 +636,7 @@ export default function ApplicationFormPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push(`/apply/${id}`)}
+            onClick={() => router.push("/apply")}
             disabled={isSubmitting}
           >
             취소

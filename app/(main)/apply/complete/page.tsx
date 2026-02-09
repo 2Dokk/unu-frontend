@@ -1,16 +1,12 @@
 "use client";
 
-import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function ApplicationCompletePage() {
   const router = useRouter();
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const id = params.id;
-  const applicationId = searchParams.get("applicationId");
 
   return (
     <div className="container mx-auto max-w-2xl py-20 px-4">
@@ -40,14 +36,9 @@ export default function ApplicationCompletePage() {
           </div>
 
           <div className="flex flex-col sm:flex-row justify-center gap-3">
-            {applicationId && (
-              <Button
-                variant="outline"
-                onClick={() => router.push("/apply/my")}
-              >
-                <FileText className="mr-2 h-4 w-4" />내 지원서 조회
-              </Button>
-            )}
+            <Button variant="outline" onClick={() => router.push("/apply/my")}>
+              <FileText className="mr-2 h-4 w-4" />내 지원서 조회
+            </Button>
             <Button onClick={() => router.push("/apply")}>홈으로 이동</Button>
           </div>
         </CardContent>

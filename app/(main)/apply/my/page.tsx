@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { searchApplication, verifyApplication } from "@/lib/api/application";
+import { lookupApplication, verifyApplication } from "@/lib/api/application";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 
 export default function ApplicationLookupPage() {
@@ -44,7 +44,7 @@ export default function ApplicationLookupPage() {
       setIsLoading(true);
 
       // Step 1: Search for application
-      const application = await searchApplication({
+      const application = await lookupApplication({
         name: name.trim(),
         email: email.trim(),
       });
@@ -78,13 +78,20 @@ export default function ApplicationLookupPage() {
       setIsLoading(true);
 
       // Step 2: Verify password
-      await verifyApplication(foundApplication.id, password);
+      const verifiedApp = await verifyApplication(
+        foundApplication.id,
+        password,
+      );
 
-      // Store password temporarily in sessionStorage for the detail page
-      sessionStorage.setItem(`app_${foundApplication.id}_pwd`, password);
+      // Store application data and password in sessionStorage for the detail page
+      sessionStorage.setItem(
+        "current_application",
+        JSON.stringify(verifiedApp),
+      );
+      sessionStorage.setItem("current_application_pwd", password);
 
-      // Navigate to detail page
-      router.push(`/apply/my/${foundApplication.id}`);
+      // Navigate to detail page (no ID in URL)
+      router.push("/apply/my/detail");
     } catch (error: any) {
       console.error("Failed to verify application:", error);
       setError("비밀번호가 올바르지 않습니다.");
@@ -177,7 +184,10 @@ export default function ApplicationLookupPage() {
                 <div>
                   <p className="font-semibold">지원서를 찾았습니다</p>
                   <p className="text-sm text-muted-foreground">
-                    지원서 ID: {foundApplication.id}
+                    제출일:{" "}
+                    {new Date(foundApplication.createdAt).toLocaleDateString(
+                      "ko-KR",
+                    )}
                   </p>
                 </div>
               </div>

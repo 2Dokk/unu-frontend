@@ -1,15 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Edit, Save, Trash2, Lock } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Edit, Save, Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,9 +25,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  verifyApplication,
-  updatePublicApplication,
-  cancelPublicApplication,
+  updateApplication,
+  cancelApplicationWithPassword,
 } from "@/lib/api/application";
 import {
   ApplicationResponse,
@@ -60,16 +53,13 @@ const STATUS_BADGE_MAP: Record<
 
 export default function ApplicationDetailPage() {
   const router = useRouter();
-  const params = useParams();
-  const applicationId = Number(params.applicationId);
 
   const [password, setPassword] = useState("");
-  const [needsPassword, setNeedsPassword] = useState(true);
   const [application, setApplication] = useState<ApplicationResponse | null>(
     null,
   );
   const [schema, setSchema] = useState<FormSchema | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
@@ -79,64 +69,49 @@ export default function ApplicationDetailPage() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    // Check if password exists in sessionStorage
-    const storedPassword = sessionStorage.getItem(`app_${applicationId}_pwd`);
-    if (storedPassword) {
-      setPassword(storedPassword);
-      setNeedsPassword(false);
-      loadApplication(storedPassword);
-    }
-  }, [applicationId]);
+    loadFromSession();
+  }, []);
 
-  async function loadApplication(pwd: string) {
+  function loadFromSession() {
     try {
-      setIsLoading(true);
-      setError(null);
+      const storedApp = sessionStorage.getItem("current_application");
+      const storedPwd = sessionStorage.getItem("current_application_pwd");
 
-      const data = await verifyApplication(applicationId, pwd);
-      setApplication(data);
-      setNeedsPassword(false);
-      setPassword(pwd);
-      sessionStorage.setItem(`app_${applicationId}_pwd`, pwd);
-      console.log("Loaded application data:", data);
+      if (!storedApp || !storedPwd) {
+        // No data found, redirect to search page
+        router.push("/apply/my");
+        return;
+      }
+
+      const appData: ApplicationResponse = JSON.parse(storedApp);
+      setApplication(appData);
+      setPassword(storedPwd);
 
       // Parse form schema and answers
-      if (data.formSnapshot && data.answers) {
+      if (appData.formSnapshot && appData.answers) {
         try {
           const parsedSchema =
-            typeof data.formSnapshot === "string"
-              ? JSON.parse(data.formSnapshot)
-              : data.formSnapshot;
+            typeof appData.formSnapshot === "string"
+              ? JSON.parse(appData.formSnapshot)
+              : appData.formSnapshot;
           setSchema(parsedSchema);
 
           const parsedAnswers =
-            typeof data.answers === "string"
-              ? JSON.parse(data.answers)
-              : data.answers;
+            typeof appData.answers === "string"
+              ? JSON.parse(appData.answers)
+              : appData.answers;
           setAnswers(parsedAnswers);
         } catch (e) {
           console.error("Failed to parse schema or answers:", e);
         }
       }
 
-      // Clear password from sessionStorage after successful load
-      sessionStorage.removeItem(`app_${applicationId}_pwd`);
-    } catch (error: any) {
-      console.error("Failed to load application:", error);
-      setError("비밀번호가 올바르지 않거나 지원서를 찾을 수 없습니다.");
-    } finally {
       setIsLoading(false);
+    } catch (error) {
+      console.error("Failed to load from session:", error);
+      router.push("/apply/my");
     }
   }
-
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!password.trim()) {
-      setError("비밀번호를 입력해주세요.");
-      return;
-    }
-    await loadApplication(password);
-  };
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -181,13 +156,13 @@ export default function ApplicationDetailPage() {
         password: password,
         answers: answers,
       };
-      console.log("Updating application with data:", applicationData);
 
-      const updatedApp = await updatePublicApplication(
-        applicationId,
+      const updatedApp = await updateApplication(
+        application.id,
         applicationData,
       );
       setApplication(updatedApp);
+      sessionStorage.setItem("current_application", JSON.stringify(updatedApp));
       setIsEditing(false);
 
       // Show success message
@@ -201,7 +176,7 @@ export default function ApplicationDetailPage() {
   };
 
   const handleCancel = async () => {
-    if (!password) {
+    if (!password || !application) {
       setError("비밀번호가 필요합니다.");
       return;
     }
@@ -210,7 +185,11 @@ export default function ApplicationDetailPage() {
       setIsCanceling(true);
       setError(null);
 
-      await cancelPublicApplication(applicationId, password);
+      await cancelApplicationWithPassword(application.id, password);
+
+      // Clear session storage
+      sessionStorage.removeItem("current_application");
+      sessionStorage.removeItem("current_application_pwd");
 
       // Show success and navigate back
       alert("지원이 취소되었습니다.");
@@ -229,69 +208,14 @@ export default function ApplicationDetailPage() {
     }));
   };
 
+  const handleBack = () => {
+    // Clear session storage when going back
+    sessionStorage.removeItem("current_application");
+    sessionStorage.removeItem("current_application_pwd");
+    router.push("/apply/my");
+  };
+
   const canEdit = application?.status === "APPLIED";
-
-  // Password verification UI
-  if (needsPassword) {
-    return (
-      <div className="container mx-auto max-w-md py-16 px-4">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-primary/10 rounded-full">
-                <Lock className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-            <CardTitle className="text-center">비밀번호 확인</CardTitle>
-            <CardDescription className="text-center">
-              지원서를 확인하려면 비밀번호를 입력해주세요.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">비밀번호</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setError(null);
-                  }}
-                  placeholder="지원서 제출 시 설정한 비밀번호"
-                  disabled={isLoading}
-                  autoFocus
-                />
-              </div>
-
-              {error && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                  <p className="text-sm text-destructive">{error}</p>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push("/apply/my")}
-                  disabled={isLoading}
-                  className="flex-1"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  돌아가기
-                </Button>
-                <Button type="submit" disabled={isLoading} className="flex-1">
-                  {isLoading ? "확인 중..." : "확인"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   // Loading state
   if (isLoading) {
@@ -305,14 +229,14 @@ export default function ApplicationDetailPage() {
   }
 
   // Error or no application
-  if (error || !application) {
+  if (!application) {
     return (
       <div className="container mx-auto max-w-3xl py-12 px-4">
         <Card>
           <CardContent className="pt-12 pb-12">
             <div className="text-center space-y-4">
               <p className="text-lg text-muted-foreground">
-                {error || "지원서를 불러올 수 없습니다."}
+                지원서를 불러올 수 없습니다.
               </p>
               <Button onClick={() => router.push("/apply/my")}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -333,11 +257,7 @@ export default function ApplicationDetailPage() {
   return (
     <div className="container mx-auto max-w-3xl py-12 px-4">
       {/* Back Button */}
-      <Button
-        variant="ghost"
-        onClick={() => router.push("/apply/my")}
-        className="mb-6"
-      >
+      <Button variant="ghost" onClick={handleBack} className="mb-6">
         <ArrowLeft className="mr-2 h-4 w-4" />
         돌아가기
       </Button>
@@ -347,7 +267,6 @@ export default function ApplicationDetailPage() {
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex-1">
             <h1 className="text-3xl font-bold mb-2">지원서 상세</h1>
-            <p className="text-muted-foreground">지원서 ID: {application.id}</p>
           </div>
           <Badge variant={statusInfo.variant} className="text-sm">
             {statusInfo.label}

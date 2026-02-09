@@ -96,7 +96,7 @@ export default function ApplyPage() {
   function handleApply() {
     if (!recruitment) return;
     // Navigate to application form page
-    router.push(`/apply/${recruitment.id}/form`);
+    router.push(`/apply/form`);
   }
 
   if (isLoading) {

@@ -14,7 +14,7 @@ export async function getRecruitmentById(
   id: number,
 ): Promise<RecruitmentResponse> {
   const response = await axiosInstance.get<RecruitmentResponse>(
-    `/public/recruitments/${id}`,
+    `/recruitments/${id}`,
   );
   return response.data;
 }
