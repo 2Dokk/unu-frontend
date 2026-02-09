@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -59,51 +58,60 @@ const LoginPage = () => {
   };
 
   return (
-    <div className={cn("flex flex-col gap-6")}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Login to your account</CardTitle>
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-2 text-center">
+          <CardTitle className="text-2xl font-bold">
+            ItNU — IT and You
+          </CardTitle>
           <CardDescription>
-            Enter your email below to login to your account
+            학회 운영 및 활동 관리를 위한 내부 시스템입니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="username">Username</FieldLabel>
+                <FieldLabel htmlFor="username">아이디</FieldLabel>
                 <Input
                   id="username"
                   name="username"
                   type="text"
-                  placeholder="Enter your username"
+                  placeholder="아이디를 입력하세요"
+                  className="h-11"
                   required
                 />
               </Field>
               <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <a
-                    href="#"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </a>
+                <FieldLabel htmlFor="password">비밀번호</FieldLabel>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="비밀번호를 입력하세요"
+                  className="h-11"
+                  required
+                />
+              </Field>
+              {error && (
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
                 </div>
-                <Input id="password" name="password" type="password" required />
-              </Field>
+              )}
               <Field>
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Logging in..." : "Login"}
+                <Button
+                  type="submit"
+                  className="w-full h-11"
+                  disabled={loading}
+                >
+                  {loading ? "로그인 중..." : "로그인"}
                 </Button>
-                <Button variant="outline" type="button">
-                  Login with Google
-                </Button>
-                <FieldDescription className="text-center">
-                  Don&apos;t have an account? <a href="#">Sign up</a>
-                </FieldDescription>
-                {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
               </Field>
+              <FieldDescription className="text-center text-xs text-muted-foreground">
+                학회원 및 운영진만 로그인이 가능합니다.
+                <br />
+                계정 관련 문의는 운영진에게 연락해주세요.
+              </FieldDescription>
             </FieldGroup>
           </form>
         </CardContent>
