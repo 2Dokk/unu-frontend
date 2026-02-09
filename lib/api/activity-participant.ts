@@ -88,3 +88,12 @@ export async function createMyParticipantByActivityId(data: {
   );
   return response.data;
 }
+
+export async function getActivityParticipantsByUserId(data: {
+  userId: number;
+}): Promise<ActivityParticipantResponse[]> {
+  const response = await axiosInstance.get<ActivityParticipantResponse[]>(
+    `/activity-participants/users/${data.userId}`,
+  );
+  return response.data;
+}

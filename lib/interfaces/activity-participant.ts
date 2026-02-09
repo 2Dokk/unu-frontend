@@ -1,3 +1,6 @@
+import { ActivityResponse } from "./activity";
+import { UserResponseDto } from "./auth";
+
 export interface ActivityParticipantResponse {
   id: number;
   activityId: number;
@@ -6,6 +9,8 @@ export interface ActivityParticipantResponse {
   completed: boolean;
   createdAt: string;
   modifiedAt: string;
+  activity?: ActivityResponse;
+  user?: UserResponseDto;
 }
 
 export interface ActivityParticipantRequest {

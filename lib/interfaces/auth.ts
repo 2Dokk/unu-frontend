@@ -15,4 +15,8 @@ export interface UserResponseDto {
   username: string;
   email: string;
   name?: string;
+  studentId?: string;
+  role?: string;
+  isActive?: boolean;
+  joinedQuarter?: string;
 }
