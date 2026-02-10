@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Pencil, Trash2, X, Filter } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  Filter,
+  MoreVertical,
+  Eye,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +51,12 @@ import {
   ActivityTypeResponse,
 } from "@/lib/interfaces/activity";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // ========================
 // HELPER FUNCTIONS
@@ -390,77 +406,81 @@ export default function ActivitiesManagementPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b">
-                    <TableHead className="w-[30%]">활동명</TableHead>
-                    <TableHead className="text-center w-[12%]">유형</TableHead>
-                    <TableHead className="w-[12%]">분기</TableHead>
-                    <TableHead className="w-[20%]">활동 기간</TableHead>
-                    <TableHead className="text-center w-[12%]">상태</TableHead>
-                    <TableHead className="w-[10%]">담당자</TableHead>
-                    <TableHead className="text-center w-[10%]">관리</TableHead>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[30%]">활동명</TableHead>
+                  <TableHead className="text-center w-[12%]">유형</TableHead>
+                  <TableHead className="w-[12%]">분기</TableHead>
+                  <TableHead className="w-[20%]">활동 기간</TableHead>
+                  <TableHead className="text-center w-[12%]">상태</TableHead>
+                  <TableHead className="w-[10%]">담당자</TableHead>
+                  <TableHead className="text-center w-[10%]">작업</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {activities.map((activity) => (
+                  <TableRow
+                    key={activity.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => handleActivityClick(activity.id)}
+                  >
+                    <TableCell className="font-semibold">
+                      {activity.title}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline" className="text-xs">
+                        {activity.activityType.name}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {activity.quarter.name}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatDate(activity.startDate)} ~{" "}
+                      {formatDate(activity.endDate)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={getStatusBadgeVariant(activity.status)}>
+                        {getStatusLabel(activity.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {activity.assignee.name || activity.assignee.username}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              router.push(`/manage/activities/${activity.id}`)
+                            }
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            상세
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              router.push(
+                                `/manage/activities/${activity.id}/edit`,
+                              )
+                            }
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            수정
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activities.map((activity) => (
-                    <TableRow
-                      key={activity.id}
-                      className="cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => handleActivityClick(activity.id)}
-                    >
-                      <TableCell className="font-semibold">
-                        {activity.title}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline" className="text-xs">
-                          {activity.activityType.name}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {activity.quarter.name}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(activity.startDate)} ~{" "}
-                        {formatDate(activity.endDate)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={getStatusBadgeVariant(activity.status)}>
-                          {getStatusLabel(activity.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {activity.assignee.name || activity.assignee.username}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditClick(activity.id, e);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={(e) => handleDeleteClick(activity, e)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

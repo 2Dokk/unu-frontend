@@ -339,68 +339,66 @@ export default function MembersManagementPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>이름</TableHead>
-                    <TableHead>학번</TableHead>
-                    <TableHead>아이디</TableHead>
-                    <TableHead>역할</TableHead>
-                    <TableHead>상태</TableHead>
-                    <TableHead>가입 분기</TableHead>
-                    <TableHead>이메일</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMembers.map((member) => (
-                    <TableRow
-                      key={member.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleRowClick(member.id)}
-                    >
-                      <TableCell className="font-medium">
-                        {member.name || "—"}
-                      </TableCell>
-                      <TableCell>{member.studentId || "—"}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {member.username}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getRoleBadgeVariant(member.role)}>
-                          {getRoleLabel(member.role)}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>이름</TableHead>
+                  <TableHead>학번</TableHead>
+                  <TableHead>아이디</TableHead>
+                  <TableHead>역할</TableHead>
+                  <TableHead>상태</TableHead>
+                  <TableHead>가입 분기</TableHead>
+                  <TableHead>이메일</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredMembers.map((member) => (
+                  <TableRow
+                    key={member.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleRowClick(member.id)}
+                  >
+                    <TableCell className="font-medium">
+                      {member.name || "—"}
+                    </TableCell>
+                    <TableCell>{member.studentId || "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {member.username}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getRoleBadgeVariant(member.role)}>
+                        {getRoleLabel(member.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {member.isActive === undefined ? (
+                        <Badge variant="outline">미정</Badge>
+                      ) : member.isActive ? (
+                        <Badge variant="default" className="gap-1">
+                          <UserCheck className="h-3 w-3" />
+                          활성
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {member.isActive === undefined ? (
-                          <Badge variant="outline">미정</Badge>
-                        ) : member.isActive ? (
-                          <Badge variant="default" className="gap-1">
-                            <UserCheck className="h-3 w-3" />
-                            활성
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="gap-1">
-                            <UserX className="h-3 w-3" />
-                            비활성
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {member.joinedQuarter || "—"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {member.email}
-                      </TableCell>
-                      <TableCell>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                      ) : (
+                        <Badge variant="secondary" className="gap-1">
+                          <UserX className="h-3 w-3" />
+                          비활성
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {member.joinedQuarter || "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {member.email}
+                    </TableCell>
+                    <TableCell>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}
