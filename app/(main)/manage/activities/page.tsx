@@ -175,14 +175,12 @@ export default function ActivitiesManagementPage() {
   }
 
   function handleActivityClick(activityId: number) {
-    router.push(`/activities/${activityId}`);
+    router.push(`/manage/activities/${activityId}`);
   }
 
   function handleEditClick(activityId: number, e: React.MouseEvent) {
     e.stopPropagation();
-    // TODO: Create edit page at /activities/[id]/edit
-    // For now, navigate to detail page
-    router.push(`/activities/${activityId}`);
+    router.push(`/manage/activities/${activityId}/edit`);
   }
 
   function handleDeleteClick(activity: ActivityResponse, e: React.MouseEvent) {
@@ -441,7 +439,10 @@ export default function ActivitiesManagementPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={(e) => handleEditClick(activity.id, e)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditClick(activity.id, e);
+                            }}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
