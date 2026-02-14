@@ -61,9 +61,7 @@ const LoginPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2 text-center">
-          <CardTitle className="text-2xl font-bold">
-            ItNU — IT and You
-          </CardTitle>
+          <CardTitle className="text-2xl font-bold">U-NU</CardTitle>
           <CardDescription>
             학회 운영 및 활동 관리를 위한 내부 시스템입니다.
           </CardDescription>

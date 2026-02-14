@@ -103,7 +103,7 @@ export async function getApplicationsByRecruitmentId(
   recruitmentId: number,
 ): Promise<ApplicationResponse[]> {
   const response = await axiosInstance.get<ApplicationResponse[]>(
-    `/applications/${recruitmentId}/applications`,
+    `/applications/recruitments/${recruitmentId}`,
   );
   return response.data;
 }

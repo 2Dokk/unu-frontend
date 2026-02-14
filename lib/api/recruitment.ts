@@ -33,7 +33,7 @@ export async function updateRecruitment(
   id: number,
   data: RecruitmentRequest,
 ): Promise<RecruitmentResponse> {
-  const response = await axiosInstance.patch<RecruitmentResponse>(
+  const response = await axiosInstance.put<RecruitmentResponse>(
     `/recruitments/${id}`,
     data,
   );

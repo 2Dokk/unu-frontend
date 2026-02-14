@@ -163,7 +163,7 @@ export default function AdminRecruitmentsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>모집 목록</CardTitle>
-            <Button onClick={() => router.push("/manage/recruitment/new")}>
+            <Button onClick={() => router.push("/manage/recruitments/new")}>
               <Plus className="mr-2 h-4 w-4" />새 모집 생성
             </Button>
           </div>
@@ -299,7 +299,7 @@ export default function AdminRecruitmentsPage() {
                             <DropdownMenuItem
                               onClick={() =>
                                 router.push(
-                                  `/manage/recruitment/${recruitment.id}`,
+                                  `/manage/recruitments/${recruitment.id}`,
                                 )
                               }
                             >
@@ -309,7 +309,7 @@ export default function AdminRecruitmentsPage() {
                             <DropdownMenuItem
                               onClick={() =>
                                 router.push(
-                                  `/manage/recruitment/${recruitment.id}/edit`,
+                                  `/manage/recruitments/${recruitment.id}/edit`,
                                 )
                               }
                             >
