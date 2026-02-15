@@ -192,7 +192,7 @@ export default function RecruitmentForm({
       <div className="mb-8">
         <h1 className="text-3xl font-bold">{pageTitle}</h1>
         <p className="text-muted-foreground mt-2">
-          모집 기간과 사용할 폼을 선택하세요.
+          모집 기간과 사용할 지원서 양식을 선택하세요.
         </p>
       </div>
 
@@ -292,14 +292,15 @@ export default function RecruitmentForm({
                 {/* Form Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="form">
-                    사용 폼 선택 <span className="text-destructive">*</span>
+                    사용 지원서 양식 선택{" "}
+                    <span className="text-destructive">*</span>
                   </Label>
                   {formsLoading ? (
                     <Skeleton className="h-10 w-full" />
                   ) : (
                     <Select value={formId} onValueChange={handleFormSelect}>
                       <SelectTrigger id="form">
-                        <SelectValue placeholder="폼을 선택하세요" />
+                        <SelectValue placeholder="지원서 양식을 선택하세요" />
                       </SelectTrigger>
                       <SelectContent>
                         {forms.map((form) => (
@@ -311,7 +312,7 @@ export default function RecruitmentForm({
                     </Select>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    선택한 폼의 질문 목록이 오른쪽에 표시됩니다.
+                    선택한 지원서 양식의 질문 목록이 오른쪽에 표시됩니다.
                   </p>
                 </div>
 
@@ -355,13 +356,13 @@ export default function RecruitmentForm({
           <div className="lg:sticky lg:top-8 lg:self-start">
             <Card>
               <CardHeader>
-                <CardTitle>폼 미리보기</CardTitle>
+                <CardTitle>지원서 미리보기</CardTitle>
               </CardHeader>
               <CardContent>
                 {!formId ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <p className="text-sm">
-                      왼쪽에서 폼을 선택하면 질문 목록이 표시됩니다.
+                      왼쪽에서 지원서 양식을 선택하면 질문 목록이 표시됩니다.
                     </p>
                   </div>
                 ) : formLoading ? (
@@ -400,7 +401,7 @@ export default function RecruitmentForm({
                                 variant="secondary"
                                 className="shrink-0 text-xs"
                               >
-                                Q{index + 1}
+                                {index + 1}
                               </Badge>
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium text-sm break-words">
@@ -437,7 +438,9 @@ export default function RecruitmentForm({
                   </div>
                 ) : (
                   <div className="text-center py-8 text-destructive">
-                    <p className="text-sm">폼을 불러오는데 실패했습니다.</p>
+                    <p className="text-sm">
+                      지원서 양식을 불러오는데 실패했습니다.
+                    </p>
                   </div>
                 )}
               </CardContent>

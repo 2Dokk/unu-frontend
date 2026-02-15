@@ -30,7 +30,7 @@ export async function updateFormTemplate(
   id: number,
   data: FormTemplateRequest,
 ): Promise<FormTemplateResponse> {
-  const response = await axiosInstance.patch<FormTemplateResponse>(
+  const response = await axiosInstance.put<FormTemplateResponse>(
     `/form-templates/${id}`,
     data,
   );

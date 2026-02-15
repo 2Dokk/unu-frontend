@@ -181,12 +181,6 @@ export default function ApplyPage() {
                   </Badge>
                 </div>
               )}
-              {form && (
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 shrink-0" />
-                  <span>{form.title}</span>
-                </div>
-              )}
             </div>
 
             {!recruitment.active && (
@@ -242,15 +236,6 @@ export default function ApplyPage() {
                     {formatDateTime(recruitment.endAt)}
                   </span>
                 </div>
-                {form && (
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      지원서 양식
-                    </span>
-                    <span className="font-medium">{form.title}</span>
-                  </div>
-                )}
               </div>
             )}
 

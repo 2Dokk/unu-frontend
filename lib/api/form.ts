@@ -20,10 +20,7 @@ export async function updateForm(
   id: number,
   data: FormRequest,
 ): Promise<FormResponse> {
-  const response = await axiosInstance.patch<FormResponse>(
-    `/forms/${id}`,
-    data,
-  );
+  const response = await axiosInstance.put<FormResponse>(`/forms/${id}`, data);
   return response.data;
 }
 

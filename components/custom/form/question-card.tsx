@@ -104,7 +104,7 @@ export function QuestionCard({
             className="flex-1 flex items-center gap-2 text-left hover:bg-accent/50 rounded px-2 py-1.5 -mx-2 -my-1 transition-colors"
           >
             <Badge variant="secondary" className="shrink-0 text-xs py-0">
-              질문 {index + 1}
+              {index + 1}
             </Badge>
             <span className="font-semibold flex-1 truncate text-sm">
               {question.title || "(제목 없음)"}

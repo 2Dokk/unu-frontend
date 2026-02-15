@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -110,6 +111,7 @@ export default function MemberDetailPage() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"all" | "completed">("all");
 
   useEffect(() => {
     async function loadData() {
@@ -141,8 +143,18 @@ export default function MemberDetailPage() {
     }
   };
 
+  // Filter participants based on active tab
+  const filteredParticipants =
+    activeTab === "completed"
+      ? participants.filter((p) => p.completed === true)
+      : participants;
+
+  const completedCount = participants.filter(
+    (p) => p.completed === true,
+  ).length;
+
   // Group participants by quarter
-  const participantsByQuarter = participants.reduce(
+  const participantsByQuarter = filteredParticipants.reduce(
     (acc, participant) => {
       const quarter = participant.activity?.quarter?.name || "기타";
       if (!acc[quarter]) {
@@ -157,30 +169,14 @@ export default function MemberDetailPage() {
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">
       {/* Header with Back Button */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push("/manage/members")}
-            className="h-8 w-8"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">학회원 상세</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              학회원 정보와 활동 신청 내역을 확인합니다
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => router.push("/manage/members")}
-        >
-          목록으로
-        </Button>
-      </div>
+      <Button
+        variant="ghost"
+        onClick={() => router.push("/manage/members")}
+        className="mb-6"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        돌아가기
+      </Button>
 
       {/* Error State */}
       {error && (
@@ -282,6 +278,26 @@ export default function MemberDetailPage() {
                         <p className="font-medium">{member.joinedQuarter}</p>
                       </div>
                     )}
+
+                    {/* Phone Number */}
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        전화번호
+                      </p>
+                      <p className="font-medium">
+                        {(member as any).phoneNumber || "—"}
+                      </p>
+                    </div>
+
+                    {/* GitHub ID */}
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        GitHub ID
+                      </p>
+                      <p className="font-medium">
+                        {(member as any).githubId || "—"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -291,109 +307,257 @@ export default function MemberDetailPage() {
           {/* Activity Applications Section */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  활동 신청 내역
-                </span>
-                <span className="text-sm font-normal text-muted-foreground">
-                  총 {participants.length}건
-                </span>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                활동 신청 내역
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {participants.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg mb-2">활동 신청 내역이 없습니다</p>
-                  <p className="text-sm">활동을 신청하면 이곳에 표시됩니다</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {Object.entries(participantsByQuarter).map(
-                    ([quarter, quarterParticipants]) => (
-                      <div key={quarter}>
-                        {/* Quarter Header */}
-                        <div className="flex items-center gap-2 mb-3">
-                          <Badge variant="outline" className="text-xs">
-                            {quarter}
-                          </Badge>
-                          <Separator className="flex-1" />
-                        </div>
+              <Tabs
+                value={activeTab}
+                onValueChange={(v) => setActiveTab(v as "all" | "completed")}
+              >
+                <TabsList className="mb-6">
+                  <TabsTrigger value="all" className="gap-2">
+                    전체 활동
+                    <Badge variant="secondary" className="text-xs">
+                      {participants.length}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="completed" className="gap-2">
+                    수료 활동
+                    <Badge variant="secondary" className="text-xs">
+                      {completedCount}
+                    </Badge>
+                  </TabsTrigger>
+                </TabsList>
 
-                        {/* Applications Table */}
-                        <div className="rounded-md border">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="border-b">
-                                <TableHead className="w-[35%]">
-                                  활동명
-                                </TableHead>
-                                <TableHead className="text-center w-[15%]">
-                                  유형
-                                </TableHead>
-                                <TableHead className="w-[20%]">
-                                  활동 기간
-                                </TableHead>
-                                <TableHead className="text-center w-[15%]">
-                                  신청 상태
-                                </TableHead>
-                                <TableHead className="text-right w-[15%]">
-                                  신청일
-                                </TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {quarterParticipants.map((participant) => (
-                                <TableRow
-                                  key={participant.id}
-                                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                                  onClick={() =>
-                                    handleActivityClick(
-                                      participant.activity?.id,
-                                    )
-                                  }
-                                >
-                                  <TableCell className="font-semibold">
-                                    {participant.activity?.title || "—"}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs"
+                <TabsContent value="all" className="mt-0">
+                  {participants.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg mb-2">활동 신청 내역이 없습니다</p>
+                      <p className="text-sm">
+                        활동을 신청하면 이곳에 표시됩니다
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {Object.entries(participantsByQuarter).map(
+                        ([quarter, quarterParticipants]) => (
+                          <div key={quarter}>
+                            {/* Quarter Header */}
+                            <div className="flex items-center gap-2 mb-3">
+                              <Badge variant="outline" className="text-xs">
+                                {quarter}
+                              </Badge>
+                              <Separator className="flex-1" />
+                            </div>
+
+                            {/* Applications Table */}
+                            <div className="rounded-md border">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="border-b">
+                                    <TableHead className="w-[30%]">
+                                      활동명
+                                    </TableHead>
+                                    <TableHead className="text-center w-[12%]">
+                                      유형
+                                    </TableHead>
+                                    <TableHead className="w-[18%]">
+                                      활동 기간
+                                    </TableHead>
+                                    <TableHead className="text-center w-[12%]">
+                                      신청 상태
+                                    </TableHead>
+                                    <TableHead className="text-center w-[12%]">
+                                      수료
+                                    </TableHead>
+                                    <TableHead className="text-right w-[16%]">
+                                      신청일
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {quarterParticipants.map((participant) => (
+                                    <TableRow
+                                      key={participant.id}
+                                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                      onClick={() =>
+                                        handleActivityClick(
+                                          participant.activity?.id,
+                                        )
+                                      }
                                     >
-                                      {participant.activity?.activityType
-                                        ?.name || "—"}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-sm text-muted-foreground">
-                                    {participant.activity?.startDate &&
-                                    participant.activity?.endDate
-                                      ? `${formatDate(participant.activity.startDate)} ~ ${formatDate(participant.activity.endDate)}`
-                                      : "—"}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    <Badge
-                                      variant={getStatusBadgeVariant(
-                                        participant.status,
-                                      )}
-                                    >
-                                      {getStatusLabel(participant.status)}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-right text-sm text-muted-foreground">
-                                    {formatDateTime(participant.createdAt)}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </div>
-                    ),
+                                      <TableCell className="font-semibold">
+                                        {participant.activity?.title || "—"}
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
+                                          {participant.activity?.activityType
+                                            ?.name || "—"}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="text-sm text-muted-foreground">
+                                        {participant.activity?.startDate &&
+                                        participant.activity?.endDate
+                                          ? `${formatDate(participant.activity.startDate)} ~ ${formatDate(participant.activity.endDate)}`
+                                          : "—"}
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        <Badge
+                                          variant={getStatusBadgeVariant(
+                                            participant.status,
+                                          )}
+                                        >
+                                          {getStatusLabel(participant.status)}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        <Badge
+                                          variant={
+                                            participant.completed
+                                              ? "default"
+                                              : "secondary"
+                                          }
+                                        >
+                                          {participant.completed
+                                            ? "수료"
+                                            : "미수료"}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="text-right text-sm text-muted-foreground">
+                                        {formatDateTime(participant.createdAt)}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
                   )}
-                </div>
-              )}
+                </TabsContent>
+
+                <TabsContent value="completed" className="mt-0">
+                  {completedCount === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg mb-2">수료한 활동이 없습니다</p>
+                      <p className="text-sm">
+                        활동을 수료하면 이곳에 표시됩니다
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {Object.entries(participantsByQuarter).map(
+                        ([quarter, quarterParticipants]) => (
+                          <div key={quarter}>
+                            {/* Quarter Header */}
+                            <div className="flex items-center gap-2 mb-3">
+                              <Badge variant="outline" className="text-xs">
+                                {quarter}
+                              </Badge>
+                              <Separator className="flex-1" />
+                            </div>
+
+                            {/* Applications Table */}
+                            <div className="rounded-md border">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="border-b">
+                                    <TableHead className="w-[30%]">
+                                      활동명
+                                    </TableHead>
+                                    <TableHead className="text-center w-[12%]">
+                                      유형
+                                    </TableHead>
+                                    <TableHead className="w-[18%]">
+                                      활동 기간
+                                    </TableHead>
+                                    <TableHead className="text-center w-[12%]">
+                                      신청 상태
+                                    </TableHead>
+                                    <TableHead className="text-center w-[12%]">
+                                      수료
+                                    </TableHead>
+                                    <TableHead className="text-right w-[16%]">
+                                      신청일
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {quarterParticipants.map((participant) => (
+                                    <TableRow
+                                      key={participant.id}
+                                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                                      onClick={() =>
+                                        handleActivityClick(
+                                          participant.activity?.id,
+                                        )
+                                      }
+                                    >
+                                      <TableCell className="font-semibold">
+                                        {participant.activity?.title || "—"}
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
+                                          {participant.activity?.activityType
+                                            ?.name || "—"}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="text-sm text-muted-foreground">
+                                        {participant.activity?.startDate &&
+                                        participant.activity?.endDate
+                                          ? `${formatDate(participant.activity.startDate)} ~ ${formatDate(participant.activity.endDate)}`
+                                          : "—"}
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        <Badge
+                                          variant={getStatusBadgeVariant(
+                                            participant.status,
+                                          )}
+                                        >
+                                          {getStatusLabel(participant.status)}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        <Badge
+                                          variant={
+                                            participant.completed
+                                              ? "default"
+                                              : "secondary"
+                                          }
+                                        >
+                                          {participant.completed
+                                            ? "수료"
+                                            : "미수료"}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="text-right text-sm text-muted-foreground">
+                                        {formatDateTime(participant.createdAt)}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>

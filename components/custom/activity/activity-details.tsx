@@ -53,6 +53,7 @@ import {
   Pencil,
   Trash2,
   ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
 
 interface ActivityDetailsProps {
@@ -420,25 +421,14 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
         {/* Left Main Content (lg:col-span-2) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Breadcrumbs */}
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard">대시보드</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator>
-                <ChevronRight className="h-4 w-4" />
-              </BreadcrumbSeparator>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/activities">활동</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator>
-                <ChevronRight className="h-4 w-4" />
-              </BreadcrumbSeparator>
-              <BreadcrumbItem>
-                <BreadcrumbPage>{activity.title}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/activities")}
+            className="mb-6"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            돌아가기
+          </Button>
 
           {/* Header Section */}
           <div className="space-y-3">

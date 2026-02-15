@@ -24,23 +24,63 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import { reviewApplication } from "@/lib/api/application";
 
-type StatusFilter = "all" | "ACCEPTED" | "REJECTED" | "PENDING";
+type StatusFilter = "all" | "PASSED" | "REJECTED" | "WAITING";
 
 interface ApplicationsTableProps {
   applications: ApplicationResponse[];
 }
 
+// Helper function to determine if status is in waiting group
+function isWaitingStatus(status: string): boolean {
+  return ["APPLIED", "IN_PROGRESS", "WAITING", "HOLD"].includes(status);
+}
+
+// Helper function to get status group for filtering
+function getStatusGroup(
+  status: string,
+): "PASSED" | "REJECTED" | "WAITING" | "CANCELED" {
+  if (status === "PASSED") return "PASSED";
+  if (status === "REJECTED") return "REJECTED";
+  if (status === "CANCELED") return "CANCELED";
+  return "WAITING";
+}
+
 function getStatusBadge(status: string) {
   switch (status) {
-    case "ACCEPTED":
+    case "PASSED":
       return <Badge className="bg-green-600 hover:bg-green-700">합격</Badge>;
     case "REJECTED":
       return <Badge variant="destructive">불합격</Badge>;
-    case "PENDING":
+    case "APPLIED":
+      return <Badge variant="secondary">신청</Badge>;
+    case "IN_PROGRESS":
+      return <Badge variant="secondary">검토중</Badge>;
+    case "WAITING":
       return <Badge variant="secondary">대기</Badge>;
+    case "HOLD":
+      return (
+        <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
+          보류
+        </Badge>
+      );
+    case "CANCELED":
+      return <Badge variant="outline">취소</Badge>;
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
+}
+
+function getStatusLabel(status: string): string {
+  const statusMap: Record<string, string> = {
+    APPLIED: "신청",
+    IN_PROGRESS: "검토중",
+    WAITING: "대기",
+    HOLD: "보류",
+    PASSED: "합격",
+    REJECTED: "불합격",
+    CANCELED: "취소",
+  };
+  return statusMap[status] || status;
 }
 
 function formatDate(dateString: string): string {
@@ -67,8 +107,13 @@ export default function ApplicationsTable({
   const filteredApplications = useMemo(() => {
     return applications.filter((app) => {
       // Status filter
-      if (statusFilter !== "all" && app.status !== statusFilter) {
-        return false;
+      if (statusFilter !== "all") {
+        const group = getStatusGroup(app.status);
+        if (statusFilter === "WAITING") {
+          if (group !== "WAITING") return false;
+        } else if (group !== statusFilter) {
+          return false;
+        }
       }
 
       // Search filter (name or student ID)
@@ -111,16 +156,18 @@ export default function ApplicationsTable({
     router.push(`/manage/applications/${applicationId}`);
   }
 
-  // Calculate counts for tabs
-  const allCount = applications.length;
+  // Calculate counts for tabs (exclude CANCELED from total)
+  const allCount = applications.filter(
+    (app) => app.status !== "CANCELED",
+  ).length;
   const acceptedCount = applications.filter(
-    (app) => app.status === "ACCEPTED",
+    (app) => app.status === "PASSED",
   ).length;
   const rejectedCount = applications.filter(
     (app) => app.status === "REJECTED",
   ).length;
-  const pendingCount = applications.filter(
-    (app) => app.status === "PENDING",
+  const waitingCount = applications.filter((app) =>
+    isWaitingStatus(app.status),
   ).length;
 
   return (
@@ -142,9 +189,9 @@ export default function ApplicationsTable({
       >
         <TabsList>
           <TabsTrigger value="all">전체 ({allCount})</TabsTrigger>
-          <TabsTrigger value="ACCEPTED">합격 ({acceptedCount})</TabsTrigger>
+          <TabsTrigger value="PASSED">합격 ({acceptedCount})</TabsTrigger>
           <TabsTrigger value="REJECTED">불합격 ({rejectedCount})</TabsTrigger>
-          <TabsTrigger value="PENDING">대기 ({pendingCount})</TabsTrigger>
+          <TabsTrigger value="WAITING">대기 ({waitingCount})</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -228,9 +275,41 @@ export default function ApplicationsTable({
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() =>
-                              handleStatusChange(application.id, "ACCEPTED")
+                              handleStatusChange(application.id, "APPLIED")
                             }
-                            disabled={application.status === "ACCEPTED"}
+                            disabled={application.status === "APPLIED"}
+                          >
+                            신청
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleStatusChange(application.id, "IN_PROGRESS")
+                            }
+                            disabled={application.status === "IN_PROGRESS"}
+                          >
+                            검토중
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleStatusChange(application.id, "WAITING")
+                            }
+                            disabled={application.status === "WAITING"}
+                          >
+                            대기
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleStatusChange(application.id, "HOLD")
+                            }
+                            disabled={application.status === "HOLD"}
+                          >
+                            보류
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handleStatusChange(application.id, "PASSED")
+                            }
+                            disabled={application.status === "PASSED"}
                           >
                             합격
                           </DropdownMenuItem>
@@ -244,11 +323,11 @@ export default function ApplicationsTable({
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() =>
-                              handleStatusChange(application.id, "PENDING")
+                              handleStatusChange(application.id, "CANCELED")
                             }
-                            disabled={application.status === "PENDING"}
+                            disabled={application.status === "CANCELED"}
                           >
-                            대기
+                            취소
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

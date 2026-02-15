@@ -83,7 +83,7 @@ export default function EditFormPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-5xl py-8 px-4">
+      <div className="container mx-auto max-w-7xl py-8 px-4">
         <Skeleton className="h-12 w-64 mb-8" />
         <Card>
           <CardHeader>
@@ -101,7 +101,7 @@ export default function EditFormPage() {
 
   if (!form) {
     return (
-      <div className="container mx-auto max-w-5xl py-8 px-4">
+      <div className="container mx-auto max-w-7xl py-8 px-4">
         <div className="text-center">
           <p className="text-muted-foreground">폼을 찾을 수 없어요.</p>
           <Button className="mt-4" onClick={() => router.push("/manage/forms")}>
@@ -113,10 +113,12 @@ export default function EditFormPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-5xl py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">폼 수정</h1>
-        <p className="text-muted-foreground mt-2">폼 정보를 수정하세요</p>
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">폼 수정</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          폼 정보를 수정하세요
+        </p>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -156,10 +158,11 @@ export default function EditFormPage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-between mt-6">
+        <div className="flex items-center justify-between mt-8 pt-6 border-t">
           <Button
             type="button"
-            variant="destructive"
+            variant="ghost"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
             onClick={() => setDeleteDialogOpen(true)}
             disabled={isSubmitting}
           >
@@ -168,7 +171,7 @@ export default function EditFormPage() {
           <div className="flex gap-3">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={() => router.push("/manage/forms")}
               disabled={isSubmitting}
             >

@@ -26,7 +26,7 @@ export function FormPreview({ schema }: FormPreviewProps) {
     <div className="space-y-6">
       {schema.questions.map((question, index) => (
         <Card key={question.id}>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Label className="text-base font-medium">

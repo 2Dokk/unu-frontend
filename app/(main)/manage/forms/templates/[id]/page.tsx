@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { FormPreview } from "@/components/custom/form/form-preview";
+import { parseSchema } from "@/lib/interfaces/form-builder";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -101,37 +103,54 @@ export default function ViewFormTemplatePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl py-8 px-4">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{template.title}</h1>
-          <p className="text-muted-foreground mt-2">템플릿 상세 정보</p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/manage/forms/templates/${id}/edit`)}
-          >
-            <Pencil className="mr-2 h-4 w-4" />
-            수정
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            삭제
-          </Button>
-        </div>
-      </div>
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      {/* Header with Back Button */}
+      <Button
+        variant="ghost"
+        onClick={() => router.push("/manage/forms")}
+        className="mb-6"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        돌아가기
+      </Button>
 
       <div className="space-y-6">
         {/* Metadata Card */}
         <Card>
           <CardHeader>
-            <CardTitle>정보</CardTitle>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <CardTitle className="text-2xl mb-2">
+                  {template.title}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  템플릿 상세 정보
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    router.push(`/manage/forms/templates/${id}/edit`)
+                  }
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  수정
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  삭제
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            <Separator className="mb-4" />
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">생성일</p>
@@ -153,23 +172,30 @@ export default function ViewFormTemplatePage() {
           </CardContent>
         </Card>
 
-        {/* Schema Card */}
+        {/* Schema and Preview */}
         <Card>
           <CardHeader>
-            <CardTitle>스키마</CardTitle>
+            <CardTitle>템플릿 구조 및 미리보기</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-80 w-full rounded-md border bg-muted/50">
-              <pre className="p-4 text-sm font-mono">{template.schema}</pre>
-            </ScrollArea>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Preview */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold">미리보기</h3>
+                <ScrollArea className="h-[600px] w-full">
+                  <FormPreview schema={parseSchema(template.schema)} />
+                </ScrollArea>
+              </div>
+              {/* Schema JSON */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold">스키마 (JSON)</h3>
+                <ScrollArea className="h-[600px] w-full rounded-md border bg-muted/50">
+                  <pre className="p-4 text-sm font-mono">{template.schema}</pre>
+                </ScrollArea>
+              </div>
+            </div>
           </CardContent>
         </Card>
-      </div>
-
-      <div className="flex justify-start mt-6">
-        <Button variant="outline" onClick={() => router.push("/manage/forms")}>
-          목록으로 돌아가기
-        </Button>
       </div>
 
       {/* Delete Confirmation Dialog */}

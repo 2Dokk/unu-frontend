@@ -3,7 +3,8 @@
 import { Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { QuestionCard } from "./question-card";
 import { FormPreview } from "./form-preview";
@@ -26,7 +27,6 @@ export function FormBuilder({ initialSchema, onChange }: FormBuilderProps) {
   const [schema, setSchema] = useState<FormSchema>(() =>
     parseSchema(initialSchema),
   );
-  const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
 
   // Update schema when initialSchema changes (e.g., template selection)
   useEffect(() => {
@@ -104,67 +104,72 @@ export function FormBuilder({ initialSchema, onChange }: FormBuilderProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Tabs: Edit / Preview */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList>
-          <TabsTrigger value="edit">편집</TabsTrigger>
-          <TabsTrigger value="preview">미리보기</TabsTrigger>
-        </TabsList>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Left: Edit Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>질문 편집</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[600px]">
+            <div className="space-y-4 pr-4">
+              {schema.questions.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <p className="text-sm">
+                    아직 질문이 없어요. 아래 버튼으로 질문을 추가해보세요.
+                  </p>
+                </div>
+              )}
 
-        {/* Edit Tab */}
-        <TabsContent value="edit" className="space-y-6 mt-6">
-          {/* Question Cards */}
-          <div className="space-y-4">
-            {schema.questions.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                <p className="text-sm">
-                  아직 질문이 없어요. 아래 버튼으로 질문을 추가해보세요.
-                </p>
-              </div>
-            )}
+              {schema.questions.map((question, index) => (
+                <QuestionCard
+                  key={question.id}
+                  question={question}
+                  index={index}
+                  onUpdate={(updates) => handleUpdateQuestion(index, updates)}
+                  onDuplicate={() => handleDuplicateQuestion(index)}
+                  onDelete={() => handleDeleteQuestion(index)}
+                  onMoveUp={() => handleMoveQuestion(index, "up")}
+                  onMoveDown={() => handleMoveQuestion(index, "down")}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < schema.questions.length - 1}
+                />
+              ))}
 
-            {schema.questions.map((question, index) => (
-              <QuestionCard
-                key={question.id}
-                question={question}
-                index={index}
-                onUpdate={(updates) => handleUpdateQuestion(index, updates)}
-                onDuplicate={() => handleDuplicateQuestion(index)}
-                onDelete={() => handleDeleteQuestion(index)}
-                onMoveUp={() => handleMoveQuestion(index, "up")}
-                onMoveDown={() => handleMoveQuestion(index, "down")}
-                canMoveUp={index > 0}
-                canMoveDown={index < schema.questions.length - 1}
+              <Button
+                type="button"
+                onClick={handleAddQuestion}
+                variant="outline"
+                className="w-full border-dashed border-2 h-12"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                질문 추가
+              </Button>
+
+              <Separator className="my-4" />
+
+              <AdvancedJsonSection
+                jsonString={serializeSchema(schema)}
+                onJsonChange={handleJsonChange}
               />
-            ))}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
 
-            {/* Add Question Button - at the end */}
-            <Button
-              type="button"
-              onClick={handleAddQuestion}
-              variant="outline"
-              className="w-full border-dashed border-2 h-12"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              질문 추가
-            </Button>
-          </div>
-
-          <Separator />
-
-          {/* Advanced JSON Section */}
-          <AdvancedJsonSection
-            jsonString={serializeSchema(schema)}
-            onJsonChange={handleJsonChange}
-          />
-        </TabsContent>
-
-        {/* Preview Tab */}
-        <TabsContent value="preview" className="mt-6">
-          <FormPreview schema={schema} />
-        </TabsContent>
-      </Tabs>
+      {/* Right: Preview Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>미리보기</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-150">
+            <div className="pr-4">
+              <FormPreview schema={schema} />
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   );
 }

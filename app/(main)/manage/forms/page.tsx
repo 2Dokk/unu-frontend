@@ -41,7 +41,7 @@ import { FormTemplateResponse, FormResponse } from "@/lib/interfaces/form";
 
 export default function AdminFormsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("templates");
+  const [activeTab, setActiveTab] = useState("forms");
 
   // Templates state
   const [templates, setTemplates] = useState<FormTemplateResponse[]>([]);
@@ -135,16 +135,16 @@ export default function AdminFormsPage() {
   return (
     <div className="container mx-auto max-w-7xl py-8 px-4">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">폼 관리</h1>
+        <h1 className="text-3xl font-bold">신청서 관리</h1>
         <p className="text-muted-foreground mt-2">
-          템플릿과 폼을 생성하고 관리하세요
+          신청서를 생성하고 관리하세요
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="templates">템플릿</TabsTrigger>
-          <TabsTrigger value="forms">폼</TabsTrigger>
+          <TabsTrigger value="forms">신청서</TabsTrigger>
+          <TabsTrigger value="templates">신청서 템플릿</TabsTrigger>
         </TabsList>
 
         {/* Templates Tab */}
@@ -152,11 +152,11 @@ export default function AdminFormsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>템플릿 목록</CardTitle>
+                <CardTitle>신청서 템플릿 목록</CardTitle>
                 <Button
                   onClick={() => router.push("/manage/forms/templates/new")}
                 >
-                  <Plus className="mr-2 h-4 w-4" />새 템플릿
+                  <Plus className="mr-2 h-4 w-4" />새 신청서 템플릿
                 </Button>
               </div>
               <div className="relative mt-4">
@@ -258,15 +258,15 @@ export default function AdminFormsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>폼 목록</CardTitle>
+                <CardTitle>신청서 목록</CardTitle>
                 <Button onClick={() => router.push("/manage/forms/new")}>
-                  <Plus className="mr-2 h-4 w-4" />새 폼
+                  <Plus className="mr-2 h-4 w-4" />새 신청서
                 </Button>
               </div>
               <div className="relative mt-4">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="폼 제목 검색..."
+                  placeholder="신청서 제목 검색..."
                   value={formSearch}
                   onChange={(e) => setFormSearch(e.target.value)}
                   className="pl-9"
@@ -282,7 +282,7 @@ export default function AdminFormsPage() {
                 </div>
               ) : filteredForms.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  {formSearch ? "검색 결과가 없어요." : "아직 폼이 없어요."}
+                  {formSearch ? "검색 결과가 없어요." : "아직 신청서가 없어요."}
                 </div>
               ) : (
                 <Table>
@@ -358,7 +358,7 @@ export default function AdminFormsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>정말 삭제하시겠어요?</AlertDialogTitle>
             <AlertDialogDescription>
-              {itemToDelete?.type === "template" ? "템플릿" : "폼"} "
+              {itemToDelete?.type === "template" ? "신청서 템플릿" : "신청서"} "
               {itemToDelete?.title}"을(를) 삭제하면 되돌릴 수 없어요.
             </AlertDialogDescription>
           </AlertDialogHeader>

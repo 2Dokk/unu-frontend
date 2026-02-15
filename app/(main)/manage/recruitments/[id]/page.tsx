@@ -95,16 +95,18 @@ export default function RecruitmentDetailPage() {
     return "outline";
   }
 
-  // Calculate statistics
-  const totalApplicants = applications.length;
+  // Calculate statistics with new status mapping
+  const totalApplicants = applications.filter(
+    (app) => app.status !== "CANCELED",
+  ).length;
   const acceptedCount = applications.filter(
-    (app) => app.status === "ACCEPTED",
+    (app) => app.status === "PASSED",
   ).length;
   const rejectedCount = applications.filter(
     (app) => app.status === "REJECTED",
   ).length;
-  const pendingCount = applications.filter(
-    (app) => app.status === "PENDING",
+  const waitingCount = applications.filter((app) =>
+    ["APPLIED", "IN_PROGRESS", "WAITING", "HOLD"].includes(app.status),
   ).length;
 
   if (isLoading) {
@@ -289,7 +291,7 @@ export default function RecruitmentDetailPage() {
                   <span>대기</span>
                 </div>
                 <p className="text-3xl font-bold text-gray-600">
-                  {pendingCount}
+                  {waitingCount}
                 </p>
               </div>
             </div>
