@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { getRecruitmentById } from "@/lib/api/recruitment";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
-import RecruitmentForm from "../../components/RecruitmentForm";
+import RecruitmentForm from "@/components/custom/recruitment/recruitment-form";
 
 export default function EditRecruitmentPage() {
   const router = useRouter();

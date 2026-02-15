@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,9 +23,13 @@ import { serializeSchema } from "@/lib/interfaces/form-builder";
 
 export default function NewFormPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const templateIdFromQuery = searchParams.get("templateId");
   const [templates, setTemplates] = useState<FormTemplateResponse[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(true);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
+    templateIdFromQuery || "",
+  );
   const [title, setTitle] = useState("");
   const [schema, setSchema] = useState(
     serializeSchema({ version: 1, questions: [] }),
@@ -35,6 +39,18 @@ export default function NewFormPage() {
   useEffect(() => {
     loadTemplates();
   }, []);
+
+  useEffect(() => {
+    if (templateIdFromQuery && templates.length > 0) {
+      setSelectedTemplateId(templateIdFromQuery);
+      const template = templates.find(
+        (t) => t.id === Number(templateIdFromQuery),
+      );
+      if (template) {
+        setSchema(template.schema);
+      }
+    }
+  }, [templateIdFromQuery, templates]);
 
   async function loadTemplates() {
     try {
@@ -75,18 +91,18 @@ export default function NewFormPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-5xl py-8 px-4">
+    <div className="space-y-6 p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">새 폼 만들기</h1>
+        <h1 className="text-3xl font-bold">새 신청서 만들기</h1>
         <p className="text-muted-foreground mt-2">
-          템플릿을 선택하여 새로운 폼을 생성하세요
+          템플릿을 선택하여 새로운 신청서를 생성하세요
         </p>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
-            <CardTitle>폼 정보</CardTitle>
+            <CardTitle>신청서 정보</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -120,7 +136,7 @@ export default function NewFormPage() {
               <Label htmlFor="title">제목</Label>
               <Input
                 id="title"
-                placeholder="폼 제목을 입력하세요"
+                placeholder="신청서 제목을 입력하세요"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -146,7 +162,7 @@ export default function NewFormPage() {
             취소
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "생성 중..." : "폼 생성"}
+            {isSubmitting ? "생성 중..." : "신청서 생성"}
           </Button>
         </div>
       </form>

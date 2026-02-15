@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Plus, File } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +26,7 @@ import {
   deleteFormTemplate,
 } from "@/lib/api/form-template";
 import { FormTemplateResponse } from "@/lib/interfaces/form";
+import { formatDate } from "@/lib/utils/date-utils";
 
 export default function ViewFormTemplatePage() {
   const router = useRouter();
@@ -55,21 +56,11 @@ export default function ViewFormTemplatePage() {
   async function handleDelete() {
     try {
       await deleteFormTemplate(id);
-      router.push("/manage/forms");
+      router.push("/manage/forms/templates");
     } catch (error) {
       console.error("Failed to delete template:", error);
       setDeleteDialogOpen(false);
     }
-  }
-
-  function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   }
 
   if (isLoading) {
@@ -103,100 +94,91 @@ export default function ViewFormTemplatePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
+    <div className="space-y-6 p-8">
       {/* Header with Back Button */}
       <Button
         variant="ghost"
         onClick={() => router.push("/manage/forms")}
-        className="mb-6"
+        className="mb-2"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         돌아가기
       </Button>
 
-      <div className="space-y-6">
-        {/* Metadata Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <CardTitle className="text-2xl mb-2">
-                  {template.title}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  템플릿 상세 정보
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    router.push(`/manage/forms/templates/${id}/edit`)
-                  }
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  수정
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  삭제
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Separator className="mb-4" />
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">생성일</p>
-                <p className="font-medium">{formatDate(template.createdAt)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">수정일</p>
-                <p className="font-medium">{formatDate(template.modifiedAt)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">생성자</p>
-                <p className="font-medium">{template.createdBy}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">수정자</p>
-                <p className="font-medium">{template.modifiedBy}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Schema and Preview */}
-        <Card>
-          <CardHeader>
-            <CardTitle>템플릿 구조 및 미리보기</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Preview */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold">미리보기</h3>
-                <ScrollArea className="h-[600px] w-full">
-                  <FormPreview schema={parseSchema(template.schema)} />
-                </ScrollArea>
-              </div>
-              {/* Schema JSON */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold">스키마 (JSON)</h3>
-                <ScrollArea className="h-[600px] w-full rounded-md border bg-muted/50">
-                  <pre className="p-4 text-sm font-mono">{template.schema}</pre>
-                </ScrollArea>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="space-y-2 flex-1">
+          <h1 className="text-3xl font-bold">{template.title}</h1>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/manage/forms/templates/${id}/edit`)}
+          >
+            <Pencil className="mr-2 h-4 w-4" />
+            수정
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            삭제
+          </Button>
+        </div>
       </div>
+
+      <Separator />
+
+      {/* Create Form Action */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-lg mb-1">
+                이 템플릿으로 신청서 만들기
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                현재 템플릿을 기반으로 새로운 신청서를 생성할 수 있습니다
+              </p>
+            </div>
+            <Button
+              size="lg"
+              onClick={() => router.push(`/manage/forms/new?templateId=${id}`)}
+            >
+              <File className="mr-2 h-4 w-4" />
+              신청서 생성
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Schema and Preview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>템플릿 구조 및 미리보기</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Preview */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">미리보기</h3>
+              <ScrollArea className="h-150 w-full">
+                <FormPreview schema={parseSchema(template.schema)} />
+              </ScrollArea>
+            </div>
+            {/* Schema JSON */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">스키마 (JSON)</h3>
+              <ScrollArea className="h-150 w-full rounded-md border bg-muted/50">
+                <pre className="p-4 text-sm font-mono">{template.schema}</pre>
+              </ScrollArea>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

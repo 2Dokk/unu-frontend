@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getApplicationById, reviewApplication } from "@/lib/api/application";
 import { ApplicationResponse } from "@/lib/interfaces/application";
+import { formatDateTime } from "@/lib/utils/date-utils";
+import ApplicationStatusDropdown from "@/components/custom/application/application-status-dropdown";
 
 interface FormQuestion {
   id: string;
@@ -53,16 +55,6 @@ function getStatusBadge(status: string) {
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
-}
-
-function formatDateTime(dateString: string): string {
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}.${month}.${day} ${hours}:${minutes}`;
 }
 
 export default function ApplicationDetailPage() {
@@ -125,12 +117,12 @@ export default function ApplicationDetailPage() {
     }
   }
 
-  async function handleStatusChange(newStatus: string) {
+  async function handleStatusChange(id: number, newStatus: string) {
     if (!application) return;
 
     setIsUpdating(true);
     try {
-      const updated = await reviewApplication(applicationId, newStatus);
+      const updated = await reviewApplication(id, newStatus);
       setApplication(updated);
     } catch (error) {
       console.error("Failed to update status:", error);
@@ -197,7 +189,7 @@ export default function ApplicationDetailPage() {
   }
 
   return (
-    <div className="space-y-6 p-8 max-w-5xl mx-auto">
+    <div className="space-y-6 p-8">
       {/* Back button */}
       <Button
         onClick={handleBackToRecruitment}
@@ -206,7 +198,7 @@ export default function ApplicationDetailPage() {
         className="mb-2"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        모집 공고로
+        돌아가기
       </Button>
 
       {/* Header with Status */}
@@ -220,57 +212,12 @@ export default function ApplicationDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={isUpdating}>
-                {isUpdating ? "처리중..." : "상태 변경"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => handleStatusChange("APPLIED")}
-                disabled={application.status === "APPLIED"}
-              >
-                신청
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleStatusChange("IN_PROGRESS")}
-                disabled={application.status === "IN_PROGRESS"}
-              >
-                검토중
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleStatusChange("WAITING")}
-                disabled={application.status === "WAITING"}
-              >
-                대기
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleStatusChange("HOLD")}
-                disabled={application.status === "HOLD"}
-              >
-                보류
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleStatusChange("PASSED")}
-                disabled={application.status === "PASSED"}
-              >
-                합격
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleStatusChange("REJECTED")}
-                disabled={application.status === "REJECTED"}
-              >
-                불합격
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleStatusChange("CANCELED")}
-                disabled={application.status === "CANCELED"}
-              >
-                취소
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ApplicationStatusDropdown
+            applicationId={applicationId}
+            currentStatus={application.status}
+            onStatusChange={handleStatusChange}
+            isUpdating={isUpdating}
+          />
         </div>
       </div>
 

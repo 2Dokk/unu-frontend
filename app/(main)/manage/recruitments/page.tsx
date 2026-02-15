@@ -249,7 +249,12 @@ export default function AdminRecruitmentsPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredRecruitments.map((recruitment) => (
-                    <TableRow key={recruitment.id}>
+                    <TableRow
+                      key={recruitment.id}
+                      onClick={() =>
+                        router.push(`/manage/recruitments/${recruitment.id}`)
+                      }
+                    >
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {getStatusBadge(recruitment)}
@@ -297,21 +302,12 @@ export default function AdminRecruitmentsPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() =>
-                                router.push(
-                                  `/manage/recruitments/${recruitment.id}`,
-                                )
-                              }
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              상세
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 router.push(
                                   `/manage/recruitments/${recruitment.id}/edit`,
-                                )
-                              }
+                                );
+                              }}
                             >
                               <Pencil className="mr-2 h-4 w-4" />
                               수정

@@ -193,7 +193,12 @@ export default function AdminFormsPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredTemplates.map((template) => (
-                      <TableRow key={template.id}>
+                      <TableRow
+                        key={template.id}
+                        onClick={() =>
+                          router.push(`/manage/forms/templates/${template.id}`)
+                        }
+                      >
                         <TableCell className="font-medium">
                           {template.title}
                         </TableCell>
@@ -208,16 +213,6 @@ export default function AdminFormsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  router.push(
-                                    `/manage/forms/templates/${template.id}`,
-                                  )
-                                }
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                보기
-                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
                                   router.push(
@@ -296,7 +291,10 @@ export default function AdminFormsPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredForms.map((form) => (
-                      <TableRow key={form.id}>
+                      <TableRow
+                        key={form.id}
+                        onClick={() => router.push(`/manage/forms/${form.id}`)}
+                      >
                         <TableCell className="font-medium">
                           {form.title}
                         </TableCell>
@@ -314,14 +312,6 @@ export default function AdminFormsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  router.push(`/manage/forms/${form.id}`)
-                                }
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                보기
-                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
                                   router.push(`/manage/forms/${form.id}/edit`)

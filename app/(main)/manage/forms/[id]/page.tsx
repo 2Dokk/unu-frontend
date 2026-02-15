@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getFormById, deleteForm } from "@/lib/api/form";
 import { FormResponse } from "@/lib/interfaces/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDateTime } from "@/lib/utils/date-utils";
 
 export default function ViewFormPage() {
   const router = useRouter();
@@ -100,104 +102,134 @@ export default function ViewFormPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
+    <div className="space-y-6 p-8">
       {/* Header with Back Button */}
       <Button
         variant="ghost"
         onClick={() => router.push("/manage/forms")}
-        className="mb-6"
+        className="mb-2"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         돌아가기
       </Button>
 
-      <div className="space-y-6">
-        {/* Metadata Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <CardTitle className="text-2xl mb-2">{form.title}</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  지원서 상세 정보
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push(`/manage/forms/${id}/edit`)}
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  수정
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  삭제
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Separator className="mb-4" />
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">템플릿</p>
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{form.template.title}</span>
-                <Badge variant="secondary">ID: {form.template.id}</Badge>
-              </div>
-            </div>
-            <Separator />
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">생성일</p>
-                <p className="font-medium">{formatDate(form.createdAt)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">수정일</p>
-                <p className="font-medium">{formatDate(form.modifiedAt)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">생성자</p>
-                <p className="font-medium">{form.createdBy}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">수정자</p>
-                <p className="font-medium">{form.modifiedBy}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Schema and Preview */}
-        <Card>
-          <CardHeader>
-            <CardTitle>신청서 구조 및 미리보기</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Preview */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold">미리보기</h3>
-                <ScrollArea className="h-[600px] w-full">
-                  <FormPreview schema={parseSchema(form.schema)} />
-                </ScrollArea>
-              </div>
-              {/* Schema JSON */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold">스키마 (JSON)</h3>
-                <ScrollArea className="h-[600px] w-full rounded-md border bg-muted/50">
-                  <pre className="p-4 text-sm font-mono">{form.schema}</pre>
-                </ScrollArea>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="space-y-2 flex-1">
+          <h1 className="text-3xl font-bold">{form.title}</h1>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/manage/forms/${id}/edit`)}
+          >
+            <Pencil className="mr-2 h-4 w-4" />
+            수정
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            삭제
+          </Button>
+        </div>
       </div>
+
+      <Separator />
+      {/* Tabs */}
+      <Tabs defaultValue="info" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="info">기본 정보</TabsTrigger>
+          <TabsTrigger value="applications">신청 내역</TabsTrigger>
+        </TabsList>
+
+        {/* Tab 1: 기본 정보 */}
+        <TabsContent value="info" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>기본 정보</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-[120px_1fr] gap-y-3 gap-x-4">
+                <div className="text-sm font-medium text-muted-foreground">
+                  신청서 제목
+                </div>
+                <div className="text-sm">{form.title}</div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  신청서 템플릿
+                </div>
+                <div className="text-sm">{form.template.title}</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Schema and Preview */}
+          <Card>
+            <CardHeader>
+              <CardTitle>신청서 구조 및 미리보기</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Preview */}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">미리보기</h3>
+                  <ScrollArea className="h-[600px] w-full">
+                    <FormPreview schema={parseSchema(form.schema)} />
+                  </ScrollArea>
+                </div>
+                {/* Schema JSON */}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">스키마 (JSON)</h3>
+                  <ScrollArea className="h-[600px] w-full rounded-md border bg-muted/50">
+                    <pre className="p-4 text-sm font-mono">{form.schema}</pre>
+                  </ScrollArea>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Meta Info Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>메타 정보</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-[120px_1fr] gap-y-3 gap-x-4">
+                <div className="text-sm font-medium text-muted-foreground">
+                  생성일
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {formatDateTime(form.createdAt)}
+                </div>
+
+                <div className="text-sm font-medium text-muted-foreground">
+                  수정일
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {formatDateTime(form.modifiedAt)}
+                </div>
+
+                <div className="text-sm font-medium text-muted-foreground">
+                  생성자
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {form.createdBy || "알 수 없음"}
+                </div>
+
+                <div className="text-sm font-medium text-muted-foreground">
+                  수정자
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {form.modifiedBy || "알 수 없음"}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

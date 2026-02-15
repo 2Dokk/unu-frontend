@@ -23,6 +23,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import { reviewApplication } from "@/lib/api/application";
+import ApplicationStatusDropdown from "./application-status-dropdown";
 
 type StatusFilter = "all" | "PASSED" | "REJECTED" | "WAITING";
 
@@ -218,7 +219,12 @@ export default function ApplicationsTable({
               const isUpdating = updatingIds.has(application.id);
 
               return (
-                <TableRow key={application.id}>
+                <TableRow
+                  key={application.id}
+                  onClick={() => {
+                    router.push(`/manage/applications/${application.id}`);
+                  }}
+                >
                   <TableCell className="font-medium text-sm py-4">
                     {application.name}
                   </TableCell>
@@ -244,94 +250,13 @@ export default function ApplicationsTable({
                   <TableCell className="text-sm py-4 text-muted-foreground text-center">
                     {formatDate(application.createdAt)}
                   </TableCell>
-                  <TableCell className="text-right py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewDetail(application.id)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        상세
-                      </Button>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={isUpdating}
-                          >
-                            {isUpdating ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                처리중
-                              </>
-                            ) : (
-                              "상태 변경"
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleStatusChange(application.id, "APPLIED")
-                            }
-                            disabled={application.status === "APPLIED"}
-                          >
-                            신청
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleStatusChange(application.id, "IN_PROGRESS")
-                            }
-                            disabled={application.status === "IN_PROGRESS"}
-                          >
-                            검토중
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleStatusChange(application.id, "WAITING")
-                            }
-                            disabled={application.status === "WAITING"}
-                          >
-                            대기
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleStatusChange(application.id, "HOLD")
-                            }
-                            disabled={application.status === "HOLD"}
-                          >
-                            보류
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleStatusChange(application.id, "PASSED")
-                            }
-                            disabled={application.status === "PASSED"}
-                          >
-                            합격
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleStatusChange(application.id, "REJECTED")
-                            }
-                            disabled={application.status === "REJECTED"}
-                          >
-                            불합격
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleStatusChange(application.id, "CANCELED")
-                            }
-                            disabled={application.status === "CANCELED"}
-                          >
-                            취소
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                  <TableCell className="text-center py-4">
+                    <ApplicationStatusDropdown
+                      applicationId={application.id}
+                      currentStatus={application.status}
+                      onStatusChange={handleStatusChange}
+                      isUpdating={isUpdating}
+                    />
                   </TableCell>
                 </TableRow>
               );
