@@ -34,6 +34,7 @@ import { getAllUsers, searchUsers } from "@/lib/api/user";
 import { getAllQuarters } from "@/lib/api/quarter";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
+import { getRoleBadgeVariant, getRoleLabel } from "@/lib/utils/role-utils";
 
 type RoleFilter = "ALL" | "MEMBER" | "MANAGER" | "ADMIN";
 type ActiveFilter = "ALL" | "ACTIVE" | "INACTIVE";
@@ -120,32 +121,6 @@ export default function MembersManagementPage() {
     router.push(`/manage/members/${memberId}`);
   }
 
-  function getRoleBadgeVariant(role?: string) {
-    switch (role) {
-      case "ADMIN":
-        return "destructive";
-      case "MANAGER":
-        return "default";
-      case "MEMBER":
-        return "secondary";
-      default:
-        return "outline";
-    }
-  }
-
-  function getRoleLabel(role?: string): string {
-    switch (role) {
-      case "ADMIN":
-        return "관리자";
-      case "MANAGER":
-        return "매니저";
-      case "MEMBER":
-        return "회원";
-      default:
-        return "미지정";
-    }
-  }
-
   const filteredMembers = members;
   const hasFilters =
     roleFilter !== "ALL" ||
@@ -178,8 +153,8 @@ export default function MembersManagementPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">전체 역할</SelectItem>
-                <SelectItem value="MEMBER">회원</SelectItem>
-                <SelectItem value="MANAGER">매니저</SelectItem>
+                <SelectItem value="MEMBER">학회원</SelectItem>
+                <SelectItem value="MANAGER">운영자</SelectItem>
                 <SelectItem value="ADMIN">관리자</SelectItem>
               </SelectContent>
             </Select>
@@ -239,18 +214,29 @@ export default function MembersManagementPage() {
               />
             </div>
 
-            {/* Clear Button */}
-            {hasFilters && (
+            {/* Action Buttons */}
+            <div className="ml-auto flex gap-2">
               <Button
-                onClick={handleReset}
-                variant="ghost"
+                onClick={handleSearch}
+                variant="outline"
                 size="sm"
-                className="h-9"
+                className="h-9 px-10"
               >
-                <X className="h-4 w-4 mr-1" />
-                초기화
+                <Search className="h-4 w-4 mr-2" />
+                검색
               </Button>
-            )}
+              {hasFilters && (
+                <Button
+                  onClick={handleReset}
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-4"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  초기화
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -366,15 +352,22 @@ export default function MembersManagementPage() {
                     <TableCell className="text-muted-foreground">
                       {member.username}
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={getRoleBadgeVariant(member.role)}>
-                        {getRoleLabel(member.role)}
-                      </Badge>
+                    <TableCell className="space-x-1">
+                      {member.userRoles?.length ? (
+                        member.userRoles.map((role) => (
+                          <Badge
+                            key={role.id}
+                            variant={getRoleBadgeVariant(role.role.name)}
+                          >
+                            {getRoleLabel(role.role.name)}
+                          </Badge>
+                        ))
+                      ) : (
+                        <Badge variant="outline">없음</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
-                      {member.isActive === undefined ? (
-                        <Badge variant="outline">미정</Badge>
-                      ) : member.isActive ? (
+                      {member.isActive ? (
                         <Badge variant="default" className="gap-1">
                           <UserCheck className="h-3 w-3" />
                           활성
@@ -387,7 +380,7 @@ export default function MembersManagementPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {member.joinedQuarter || "—"}
+                      {member.joinedQuarter.name || "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {member.email}

@@ -21,6 +21,7 @@ import { getUserById } from "@/lib/api/user";
 import { getActivityParticipantsByUserId } from "@/lib/api/activity-participant";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
+import { getRoleBadgeVariant, getRoleLabel } from "@/lib/utils/role-utils";
 
 // ========================
 // HELPER FUNCTIONS
@@ -42,34 +43,6 @@ function formatDateTime(dateString: string): string {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${year}.${month}.${day} ${hours}:${minutes}`;
-}
-
-function getRoleLabel(role?: string): string {
-  switch (role) {
-    case "ADMIN":
-      return "관리자";
-    case "MANAGER":
-      return "매니저";
-    case "MEMBER":
-      return "회원";
-    default:
-      return "미지정";
-  }
-}
-
-function getRoleBadgeVariant(
-  role?: string,
-): "destructive" | "default" | "secondary" | "outline" {
-  switch (role) {
-    case "ADMIN":
-      return "destructive";
-    case "MANAGER":
-      return "default";
-    case "MEMBER":
-      return "secondary";
-    default:
-      return "outline";
-  }
 }
 
 function getStatusLabel(status: string): string {
@@ -125,6 +98,7 @@ export default function MemberDetailPage() {
         ]);
 
         setMember(memberData);
+        console.log("Fetched member data:", memberData);
         setParticipants(participantsData);
       } catch (err) {
         console.error("Failed to load member data:", err);
@@ -225,9 +199,18 @@ export default function MemberDetailPage() {
                     {member.name || member.username}
                   </h2>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant={getRoleBadgeVariant(member.role)}>
-                      {getRoleLabel(member.role)}
-                    </Badge>
+                    {member.userRoles?.length ? (
+                      member.userRoles.map((role) => (
+                        <Badge
+                          key={role.id}
+                          variant={getRoleBadgeVariant(role.role.name)}
+                        >
+                          {getRoleLabel(role.role.name)}
+                        </Badge>
+                      ))
+                    ) : (
+                      <Badge variant="outline">없음</Badge>
+                    )}
                     {member.isActive !== undefined && (
                       <Badge
                         variant={member.isActive ? "default" : "secondary"}
@@ -275,7 +258,9 @@ export default function MemberDetailPage() {
                         <p className="text-sm text-muted-foreground mb-1">
                           가입 분기
                         </p>
-                        <p className="font-medium">{member.joinedQuarter}</p>
+                        <p className="font-medium">
+                          {member.joinedQuarter?.name}
+                        </p>
                       </div>
                     )}
 

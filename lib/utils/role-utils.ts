@@ -1,0 +1,27 @@
+export function getRoleLabel(role?: string): string {
+  switch (role) {
+    case "ADMIN":
+      return "관리자";
+    case "MANAGER":
+      return "운영자";
+    case "MEMBER":
+      return "학회원";
+    default:
+      return "없음";
+  }
+}
+
+export function getRoleBadgeVariant(
+  role?: string,
+): "destructive" | "default" | "secondary" | "outline" {
+  switch (role) {
+    case "ADMIN":
+      return "destructive";
+    case "MANAGER":
+      return "default";
+    case "MEMBER":
+      return "secondary";
+    default:
+      return "outline";
+  }
+}
