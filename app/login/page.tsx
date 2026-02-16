@@ -1,6 +1,5 @@
 "use client";
 
-import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,12 +16,14 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { login } from "@/lib/api/auth";
+import { login as loginApi } from "@/lib/api/auth";
 import { LoginRequest } from "@/lib/interfaces/auth";
 import { useState } from "react";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 const LoginPage = () => {
   const router = useRouter();
+  const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -40,10 +41,10 @@ const LoginPage = () => {
         username: username as string,
         password: password as string,
       };
-      const response = await login(data);
+      const response = await loginApi(data);
 
-      Cookies.set("token", response.token);
-      Cookies.set("refreshToken", response.refreshToken);
+      // AuthContext를 통해 로그인 상태 업데이트
+      login(response.token, response.refreshToken);
 
       console.log("Login successful:", response);
 

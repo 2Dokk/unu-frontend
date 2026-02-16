@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import { getMenuByRole } from "@/lib/constants/menu-config";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const userRole = useUserRole();
+  const { userRole } = useAuth();
   const menuItems = getMenuByRole(userRole);
 
   console.log(menuItems);
@@ -64,7 +64,7 @@ export function Sidebar() {
  * Sidebar가 표시될 때 메인 콘텐츠를 밀어내기 위한 Wrapper
  */
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
-  const userRole = useUserRole();
+  const { userRole } = useAuth();
 
   return (
     <div className="flex min-h-screen">

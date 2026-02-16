@@ -32,51 +32,39 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { getUserRole, logout, isAuthenticated } from "@/lib/utils/auth-utils";
 import { getCurrentQuarter } from "@/lib/api/quarter";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 export function NavigationBar() {
   const router = useRouter();
-  const pathname = usePathname();
-  const [userRole, setUserRole] = React.useState<
-    "admin" | "member" | "anonymous"
-  >("anonymous");
+  const { userRole, logout: handleLogout, isLoading } = useAuth();
   const [currentQuarter, setCurrentQuarter] =
     React.useState<QuarterResponse | null>(null);
-  const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
-    setMounted(true);
-    const role = getUserRole();
-    setUserRole(role);
-
     // Fetch current quarter if user is logged in
-    if (role === "member" || role === "admin") {
+    if (userRole === "MEMBER" || userRole === "ADMIN") {
       getCurrentQuarter()
         .then(setCurrentQuarter)
         .catch((error) => {
           console.error("Failed to fetch current quarter:", error);
         });
     }
-  }, []);
-
-  const handleLogout = () => {
-    logout();
-  };
+  }, [userRole]);
 
   const getLogoLink = () => {
-    if (userRole === "admin") return "/manage";
-    if (userRole === "member") return "/activities";
+    if (userRole === "ADMIN") return "/manage";
+    if (userRole === "MEMBER") return "/activities";
     return "/apply";
   };
 
   const renderRightContent = () => {
-    if (!mounted) {
+    if (isLoading) {
       return null; // Avoid hydration mismatch
     }
 
-    if (userRole === "anonymous") {
+    if (userRole === "GUEST") {
       return (
         <div className="flex items-center gap-3">
           <Button
@@ -93,7 +81,7 @@ export function NavigationBar() {
       );
     }
 
-    if (userRole === "admin") {
+    if (userRole === "ADMIN") {
       return (
         <div className="flex items-center gap-4">
           <Badge variant="secondary" className="text-xs font-semibold">
@@ -127,7 +115,7 @@ export function NavigationBar() {
       );
     }
 
-    // Member
+    // MEMBER
     return (
       <div className="flex items-center gap-4">
         {currentQuarter && (
