@@ -3,14 +3,13 @@ import { UserResponseDto } from "./auth";
 
 export interface ActivityParticipantResponse {
   id: number;
-  activityId: number;
   userId: number;
   status: "APPLIED" | "APPROVED" | "REJECTED";
   completed: boolean;
   createdAt: string;
   modifiedAt: string;
-  activity?: ActivityResponse;
-  user?: UserResponseDto;
+  activity: ActivityResponse;
+  user: UserResponseDto;
 }
 
 export interface ActivityParticipantRequest {

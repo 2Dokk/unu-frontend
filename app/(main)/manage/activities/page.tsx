@@ -226,7 +226,7 @@ export default function ActivitiesManagementPage() {
     searchInput.trim() !== "";
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
+    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

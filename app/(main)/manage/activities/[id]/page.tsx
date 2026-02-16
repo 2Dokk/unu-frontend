@@ -962,7 +962,7 @@ export default function ActivityDetailManagePage() {
   }
 
   return (
-    <div className="space-y-6 p-8">
+    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
       {/* Back button */}
       <Button
         onClick={handleBackToList}

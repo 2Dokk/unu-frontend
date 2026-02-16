@@ -53,12 +53,6 @@ export function NavigationBar() {
     }
   }, [userRole]);
 
-  const getLogoLink = () => {
-    if (userRole === "ADMIN") return "/manage";
-    if (userRole === "MEMBER") return "/activities";
-    return "/apply";
-  };
-
   const renderRightContent = () => {
     if (isLoading) {
       return null; // Avoid hydration mismatch
@@ -81,11 +75,11 @@ export function NavigationBar() {
       );
     }
 
-    if (userRole === "ADMIN") {
+    if (userRole === "MANAGER") {
       return (
         <div className="flex items-center gap-4">
           <Badge variant="secondary" className="text-xs font-semibold">
-            ADMIN
+            MANAGER
           </Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -150,14 +144,14 @@ export function NavigationBar() {
     <header className="sticky top-0 z-50 flex w-full h-16 items-center justify-between border-b px-6 bg-background">
       {/* Logo */}
       <Link
-        href={getLogoLink()}
+        href="/"
         className="flex items-center gap-2 hover:opacity-80 transition-opacity"
       >
         <div className="flex items-center gap-2">
-          <span className="text-xl font-bold">ItNU</span>
+          <span className="text-xl font-bold">UNU</span>
           <Separator orientation="vertical" className="h-5" />
           <span className="text-sm font-light text-muted-foreground">
-            IT and You
+            CNU 페이지
           </span>
         </div>
       </Link>

@@ -106,3 +106,12 @@ export async function getActivityParticipantsByActivityId(data: {
   );
   return response.data;
 }
+
+export async function getMyActivityParticipants(): Promise<
+  ActivityParticipantResponse[]
+> {
+  const response = await axiosInstance.get<ActivityParticipantResponse[]>(
+    "/activity-participants/me",
+  );
+  return response.data;
+}

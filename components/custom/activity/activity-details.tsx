@@ -385,7 +385,7 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
 
   if (!activity) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-7xl">
+      <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
         <Card>
           <CardContent className="py-16 text-center">
             <p className="text-muted-foreground text-lg">

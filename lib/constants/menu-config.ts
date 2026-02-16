@@ -28,7 +28,7 @@ export const menuConfig: MenuConfig = {
   common: [
     {
       label: "홈",
-      href: "/",
+      href: "/home",
       icon: Home,
     },
   ],
