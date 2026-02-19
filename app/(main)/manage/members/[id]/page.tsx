@@ -141,16 +141,22 @@ export default function MemberDetailPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
-      {/* Header with Back Button */}
-      <Button
-        variant="ghost"
-        onClick={() => router.push("/manage/members")}
-        className="mb-6"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        돌아가기
-      </Button>
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+      {/* Header */}
+      <div className="border-b pb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/manage/members")}
+          className="mb-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          돌아가기
+        </Button>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {member?.name || "학회원 상세"}
+        </h1>
+      </div>
 
       {/* Error State */}
       {error && (

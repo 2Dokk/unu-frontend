@@ -65,7 +65,7 @@ export default function ViewFormTemplatePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-4xl py-8 px-4">
+      <div className="mx-auto w-full max-w-4xl px-6 py-8">
         <Skeleton className="h-12 w-64 mb-8" />
         <Card>
           <CardHeader>
@@ -82,7 +82,7 @@ export default function ViewFormTemplatePage() {
 
   if (!template) {
     return (
-      <div className="container mx-auto max-w-4xl py-8 px-4">
+      <div className="mx-auto w-full max-w-4xl px-6 py-8">
         <div className="text-center">
           <p className="text-muted-foreground">템플릿을 찾을 수 없어요.</p>
           <Button className="mt-4" onClick={() => router.push("/manage/forms")}>
@@ -94,43 +94,40 @@ export default function ViewFormTemplatePage() {
   }
 
   return (
-    <div className="space-y-6 p-8">
-      {/* Header with Back Button */}
-      <Button
-        variant="ghost"
-        onClick={() => router.push("/manage/forms")}
-        className="mb-2"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        돌아가기
-      </Button>
-
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-2 flex-1">
-          <h1 className="text-3xl font-bold">{template.title}</h1>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/manage/forms/templates/${id}/edit`)}
-          >
-            <Pencil className="mr-2 h-4 w-4" />
-            수정
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            삭제
-          </Button>
+      <div className="border-b pb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/manage/forms")}
+          className="mb-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          돌아가기
+        </Button>
+        <div className="flex items-start justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">{template.title}</h1>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/manage/forms/templates/${id}/edit`)}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              수정
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              삭제
+            </Button>
+          </div>
         </div>
       </div>
-
-      <Separator />
 
       {/* Create Form Action */}
       <Card className="border-primary/20 bg-primary/5">

@@ -37,6 +37,7 @@ import {
   Plus,
   Filter,
   X,
+  SquarePlus,
 } from "lucide-react";
 
 // ========================
@@ -211,7 +212,7 @@ function ActivityCard({ activity, onClick }: ActivityCardProps) {
 
   return (
     <Card
-      className="cursor-pointer transition-all hover:shadow-md hover:border-slate-300 border-slate-200"
+      className="cursor-pointer transition-all hover:shadow-md hover:border-slate-300 border-slate-200 p-0"
       onClick={() => onClick(activity.id)}
       role="button"
       tabIndex={0}
@@ -222,7 +223,7 @@ function ActivityCard({ activity, onClick }: ActivityCardProps) {
         }
       }}
     >
-      <CardContent className="p-5">
+      <CardContent className="p-6">
         {/* Header Row */}
         <div className="flex items-start justify-between gap-4 mb-3">
           <Badge variant="outline" className="bg-slate-50 text-slate-700">
@@ -385,10 +386,6 @@ const ActivityPage = () => {
     router.push(`/activities/${activityId}`);
   };
 
-  const handleCreateActivity = () => {
-    router.push("/activities/new");
-  };
-
   const handlePrevQuarter = () => {
     if (hasPrevQuarter) {
       const prevQuarter = quarters[selectedQuarterIndex - 1];
@@ -415,87 +412,87 @@ const ActivityPage = () => {
     activityTypeFilter !== "all" || statusFilter !== "all" || searchTerm !== "";
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
-      {/* Page Header with Semester Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">활동 목록</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            프로젝트와 스터디를 확인하세요
-          </p>
-        </div>
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+      {/* Page Header */}
+      <div className="border-b pb-6">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight">활동 목록</h1>
+            <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+              프로젝트와 스터디를 확인하세요
+            </p>
+          </div>
 
-        {/* Semester Selector */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handlePrevQuarter}
-            disabled={!hasPrevQuarter}
-            aria-label="이전 분기"
-            className="h-9 w-9"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-
-          <Select
-            value={selectedQuarterId}
-            onValueChange={setSelectedQuarterId}
-          >
-            <SelectTrigger className="w-40 h-9">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <SelectValue placeholder="분기 선택" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {quarters.map((quarter) => (
-                <SelectItem key={quarter.id} value={quarter.id.toString()}>
-                  {quarter.year} {quarter.season}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleNextQuarter}
-            disabled={!hasNextQuarter}
-            aria-label="다음 분기"
-            className="h-9 w-9"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-
-          {viewer.isAdmin && (
+          {/* Semester Selector */}
+          <div className="flex items-center gap-2">
             <Button
-              onClick={handleCreateActivity}
-              className="ml-2 h-9 rounded-lg bg-primary hover:bg-primary/90 transition-colors"
-              aria-label="새 활동을 생성합니다"
+              variant="outline"
+              size="icon"
+              onClick={handlePrevQuarter}
+              disabled={!hasPrevQuarter}
+              aria-label="이전 분기"
+              className="h-9 w-9"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              활동 생성
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-          )}
+
+            <Select
+              value={selectedQuarterId}
+              onValueChange={setSelectedQuarterId}
+            >
+              <SelectTrigger className="w-40 h-9">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <SelectValue placeholder="분기 선택" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {quarters.map((quarter) => (
+                  <SelectItem key={quarter.id} value={quarter.id.toString()}>
+                    {quarter.year} {quarter.season}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleNextQuarter}
+              disabled={!hasNextQuarter}
+              aria-label="다음 분기"
+              className="h-9 w-9"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+
+            {viewer.isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/activities/new")}
+              >
+                <SquarePlus className="h-4 w-4 mr-1" />
+                활동 생성
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Compact Filter Toolbar */}
-      <div className="mb-5">
-        <FilterToolbar
-          activityTypes={activityTypes}
-          activityTypeFilter={activityTypeFilter}
-          setActivityTypeFilter={setActivityTypeFilter}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          searchInput={searchInput}
-          setSearchInput={setSearchInput}
-          onSearch={handleSearch}
-          onClearFilters={handleClearFilters}
-          hasFilters={hasFilters}
-        />
-      </div>
+      <FilterToolbar
+        activityTypes={activityTypes}
+        activityTypeFilter={activityTypeFilter}
+        setActivityTypeFilter={setActivityTypeFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        searchInput={searchInput}
+        setSearchInput={setSearchInput}
+        onSearch={handleSearch}
+        onClearFilters={handleClearFilters}
+        hasFilters={hasFilters}
+      />
 
       {/* Loading State */}
       {loading && initialLoad && (
@@ -535,8 +532,12 @@ const ActivityPage = () => {
                 </p>
               </div>
               {viewer.isAdmin && (
-                <Button onClick={handleCreateActivity} className="mt-2">
-                  <Plus className="h-4 w-4 mr-2" />첫 활동 만들기
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push("/activities/new")}
+                >
+                  <SquarePlus className="h-4 w-4 mr-1" />첫 활동 만들기
                 </Button>
               )}
             </div>

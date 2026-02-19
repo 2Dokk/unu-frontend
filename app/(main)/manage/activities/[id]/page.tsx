@@ -943,7 +943,7 @@ export default function ActivityDetailManagePage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-8">
+      <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
         <LoadingSkeleton />
       </div>
     );
@@ -962,53 +962,51 @@ export default function ActivityDetailManagePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
-      {/* Back button */}
-      <Button
-        onClick={handleBackToList}
-        variant="ghost"
-        size="sm"
-        className="mb-2"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        목록으로
-      </Button>
-
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-2 flex-1">
-          <h1 className="text-3xl font-bold">{activity.title}</h1>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <Badge variant={getActivityStatusVariant(activity.status)}>
-              {getActivityStatusLabel(activity.status)}
-            </Badge>
-            <span>•</span>
-            <span>{activity.activityType.name}</span>
-            <span>•</span>
-            <span>{activity.quarter.name}</span>
-            <span>•</span>
-            <span>
-              {formatDate(activity.startDate)} ~ {formatDate(activity.endDate)}
-            </span>
+      <div className="border-b pb-6">
+        <Button
+          onClick={handleBackToList}
+          variant="ghost"
+          size="sm"
+          className="mb-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          목록으로
+        </Button>
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight">{activity.title}</h1>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <Badge variant={getActivityStatusVariant(activity.status)}>
+                {getActivityStatusLabel(activity.status)}
+              </Badge>
+              <span>•</span>
+              <span>{activity.activityType.name}</span>
+              <span>•</span>
+              <span>{activity.quarter.name}</span>
+              <span>•</span>
+              <span>
+                {formatDate(activity.startDate)} ~ {formatDate(activity.endDate)}
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleEdit} variant="outline" size="sm">
+              <Edit className="mr-2 h-4 w-4" />
+              수정
+            </Button>
+            <Button
+              onClick={() => setShowDeleteDialog(true)}
+              variant="destructive"
+              size="sm"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              삭제
+            </Button>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={handleEdit} variant="outline" size="sm">
-            <Edit className="mr-2 h-4 w-4" />
-            수정
-          </Button>
-          <Button
-            onClick={() => setShowDeleteDialog(true)}
-            variant="destructive"
-            size="sm"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            삭제
-          </Button>
-        </div>
       </div>
-
-      <Separator />
 
       {/* Tabs */}
       <Tabs defaultValue="info" className="space-y-4">

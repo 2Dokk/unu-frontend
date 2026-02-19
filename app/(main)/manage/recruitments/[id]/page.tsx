@@ -111,7 +111,7 @@ export default function RecruitmentDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-8">
+      <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
         <Skeleton className="h-10 w-24" />
         <Skeleton className="h-10 w-3/4" />
         <Skeleton className="h-6 w-1/2" />
@@ -126,7 +126,7 @@ export default function RecruitmentDetailPage() {
 
   if (error || !recruitment) {
     return (
-      <div className="space-y-6 p-8">
+      <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
         <div className="flex flex-col items-center justify-center min-h-100 space-y-4">
           <p className="text-muted-foreground">
             {error || "모집 공고를 찾을 수 없습니다."}
@@ -148,35 +148,35 @@ export default function RecruitmentDetailPage() {
   const status = getRecruitmentStatus();
 
   return (
-    <div className="space-y-6 p-8">
-      {/* Back button */}
-      <Button
-        onClick={() => router.push("/manage/recruitments")}
-        variant="ghost"
-        size="sm"
-        className="mb-2"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        목록으로
-      </Button>
-
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-2 flex-1">
-          <div className="flex items-center gap-6">
-            <h1 className="text-3xl font-bold">{recruitment.title}</h1>{" "}
-            <Badge variant={getStatusVariant(status)}>{status}</Badge>
+      <div className="space-y-3 border-b pb-6">
+        <Button
+          onClick={() => router.push("/manage/recruitments")}
+          variant="ghost"
+          size="sm"
+          className="mb-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          목록으로
+        </Button>
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight">
+                {recruitment.title}
+              </h1>
+              <Badge variant={getStatusVariant(status)}>{status}</Badge>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span>{recruitment.quarter.name}</span>
+              <span>•</span>
+              <span>
+                {formatDate(recruitment.startAt)} ~{" "}
+                {formatDate(recruitment.endAt)}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <span>{recruitment.quarter.name}</span>
-            <span>•</span>
-            <span>
-              {formatDate(recruitment.startAt)} ~{" "}
-              {formatDate(recruitment.endAt)}
-            </span>
-          </div>
-        </div>
-        <div className="flex gap-2">
           <Button
             onClick={() =>
               router.push(`/manage/recruitments/${recruitmentId}/edit`)
@@ -189,8 +189,6 @@ export default function RecruitmentDetailPage() {
           </Button>
         </div>
       </div>
-
-      <Separator />
 
       {/* Main Content */}
       <div className="space-y-4">

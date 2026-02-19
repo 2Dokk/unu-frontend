@@ -130,18 +130,17 @@ export default function MembersManagementPage() {
     studentIdSearch.trim() !== "";
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">학회원</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+      <div className="space-y-2 border-b pb-6">
+        <h1 className="text-2xl font-bold tracking-tight">학회원</h1>
+        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
           학회원 정보를 조회하고 관리합니다
         </p>
       </div>
 
       {/* Compact Filter Toolbar */}
-      <div className="mb-5">
-        <div className="bg-slate-50 border border-slate-200 rounded-lg">
+      <div className="bg-slate-50 border border-slate-200 rounded-lg">
           <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
             {/* Role Filter */}
             <Select
@@ -239,7 +238,6 @@ export default function MembersManagementPage() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Error State */}
       {error && (

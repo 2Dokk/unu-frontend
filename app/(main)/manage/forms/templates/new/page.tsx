@@ -34,10 +34,10 @@ export default function NewFormTemplatePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-5xl py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">새 템플릿 만들기</h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+      <div className="space-y-2 border-b pb-6">
+        <h1 className="text-2xl font-bold tracking-tight">새 템플릿 만들기</h1>
+        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
           재사용 가능한 폼 템플릿을 생성하세요
         </p>
       </div>

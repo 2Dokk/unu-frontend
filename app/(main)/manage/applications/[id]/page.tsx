@@ -154,7 +154,7 @@ export default function ApplicationDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-8">
+      <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
         <Skeleton className="h-10 w-24" />
         <Skeleton className="h-10 w-3/4" />
         <Skeleton className="h-6 w-1/2" />
@@ -169,7 +169,7 @@ export default function ApplicationDetailPage() {
 
   if (error || !application) {
     return (
-      <div className="space-y-6 p-8">
+      <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
         <div className="flex flex-col items-center justify-center min-h-100 space-y-4">
           <p className="text-muted-foreground">
             {error || "지원서를 찾을 수 없습니다."}
@@ -190,38 +190,36 @@ export default function ApplicationDetailPage() {
 
   return (
     <div className="space-y-6 p-8">
-      {/* Back button */}
-      <Button
-        onClick={handleBackToRecruitment}
-        variant="ghost"
-        size="sm"
-        className="mb-2"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        돌아가기
-      </Button>
-
-      {/* Header with Status */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-2 flex-1">
-          <h1 className="text-3xl font-bold">{application.name}의 지원서</h1>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            {getStatusBadge(application.status)}
-            <span>•</span>
-            <span>{formatDateTime(application.createdAt)} 제출</span>
+      {/* Header */}
+      <div className="border-b pb-6">
+        <Button
+          onClick={handleBackToRecruitment}
+          variant="ghost"
+          size="sm"
+          className="mb-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          돌아가기
+        </Button>
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight">{application.name}의 지원서</h1>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              {getStatusBadge(application.status)}
+              <span>•</span>
+              <span>{formatDateTime(application.createdAt)} 제출</span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <ApplicationStatusDropdown
+              applicationId={applicationId}
+              currentStatus={application.status}
+              onStatusChange={handleStatusChange}
+              isUpdating={isUpdating}
+            />
           </div>
         </div>
-        <div className="flex gap-2">
-          <ApplicationStatusDropdown
-            applicationId={applicationId}
-            currentStatus={application.status}
-            onStatusChange={handleStatusChange}
-            isUpdating={isUpdating}
-          />
-        </div>
       </div>
-
-      <Separator />
 
       {/* Applicant Info */}
       <Card>

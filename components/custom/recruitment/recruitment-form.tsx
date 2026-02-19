@@ -176,7 +176,6 @@ export default function RecruitmentForm({
     }
   }
 
-  const pageTitle = mode === "create" ? "모집 생성" : "모집 수정";
   const submitButtonText =
     mode === "create"
       ? isSubmitting
@@ -187,267 +186,254 @@ export default function RecruitmentForm({
         : "모집 수정";
 
   return (
-    <div className="container mx-auto max-w-7xl py-8 px-4">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">{pageTitle}</h1>
-        <p className="text-muted-foreground mt-2">
-          모집 기간과 사용할 지원서 양식을 선택하세요.
-        </p>
-      </div>
+    <form onSubmit={handleSubmit}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: Recruitment Settings */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>모집 정보</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Title */}
+              <div className="space-y-2">
+                <Label htmlFor="title">
+                  모집 제목 <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="title"
+                  placeholder="모집 제목을 입력하세요"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: Recruitment Settings */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>모집 정보</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Title */}
-                <div className="space-y-2">
-                  <Label htmlFor="title">
-                    모집 제목 <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="title"
-                    placeholder="모집 제목을 입력하세요"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    required
-                  />
-                </div>
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description">설명</Label>
+                <Textarea
+                  id="description"
+                  placeholder="모집에 대한 설명을 입력하세요"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                />
+              </div>
 
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label htmlFor="description">설명</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="모집에 대한 설명을 입력하세요"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={4}
-                  />
-                </div>
+              {/* Quarter */}
+              <div className="space-y-2">
+                <Label htmlFor="quarter">
+                  분기 선택 <span className="text-destructive">*</span>
+                </Label>
+                {quartersLoading ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select value={quarterId} onValueChange={setQuarterId}>
+                    <SelectTrigger id="quarter">
+                      <SelectValue placeholder="분기를 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {quarters.map((quarter) => (
+                        <SelectItem
+                          key={quarter.id}
+                          value={quarter.id.toString()}
+                        >
+                          {quarter.year}년 {quarter.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
 
-                {/* Quarter */}
-                <div className="space-y-2">
-                  <Label htmlFor="quarter">
-                    분기 선택 <span className="text-destructive">*</span>
-                  </Label>
-                  {quartersLoading ? (
-                    <Skeleton className="h-10 w-full" />
-                  ) : (
-                    <Select value={quarterId} onValueChange={setQuarterId}>
-                      <SelectTrigger id="quarter">
-                        <SelectValue placeholder="분기를 선택하세요" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {quarters.map((quarter) => (
-                          <SelectItem
-                            key={quarter.id}
-                            value={quarter.id.toString()}
-                          >
-                            {quarter.year}년 {quarter.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
+              <Separator />
 
-                <Separator />
+              {/* Start Date */}
+              <div className="space-y-2">
+                <Label htmlFor="startAt">
+                  모집 시작 <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="startAt"
+                  type="datetime-local"
+                  value={startAt}
+                  onChange={(e) => setStartAt(e.target.value)}
+                  required
+                />
+              </div>
 
-                {/* Start Date */}
-                <div className="space-y-2">
-                  <Label htmlFor="startAt">
-                    모집 시작 <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="startAt"
-                    type="datetime-local"
-                    value={startAt}
-                    onChange={(e) => setStartAt(e.target.value)}
-                    required
-                  />
-                </div>
+              {/* End Date */}
+              <div className="space-y-2">
+                <Label htmlFor="endAt">
+                  모집 종료 <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="endAt"
+                  type="datetime-local"
+                  value={endAt}
+                  onChange={(e) => setEndAt(e.target.value)}
+                  required
+                />
+              </div>
 
-                {/* End Date */}
-                <div className="space-y-2">
-                  <Label htmlFor="endAt">
-                    모집 종료 <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="endAt"
-                    type="datetime-local"
-                    value={endAt}
-                    onChange={(e) => setEndAt(e.target.value)}
-                    required
-                  />
-                </div>
+              <Separator />
 
-                <Separator />
+              {/* Form Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="form">
+                  사용 지원서 양식 선택{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                {formsLoading ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select value={formId} onValueChange={handleFormSelect}>
+                    <SelectTrigger id="form">
+                      <SelectValue placeholder="지원서 양식을 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {forms.map((form) => (
+                        <SelectItem key={form.id} value={form.id.toString()}>
+                          {form.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  선택한 지원서 양식의 질문 목록이 오른쪽에 표시됩니다.
+                </p>
+              </div>
 
-                {/* Form Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="form">
-                    사용 지원서 양식 선택{" "}
-                    <span className="text-destructive">*</span>
-                  </Label>
-                  {formsLoading ? (
-                    <Skeleton className="h-10 w-full" />
-                  ) : (
-                    <Select value={formId} onValueChange={handleFormSelect}>
-                      <SelectTrigger id="form">
-                        <SelectValue placeholder="지원서 양식을 선택하세요" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {forms.map((form) => (
-                          <SelectItem key={form.id} value={form.id.toString()}>
-                            {form.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    선택한 지원서 양식의 질문 목록이 오른쪽에 표시됩니다.
+              {/* Active Toggle */}
+              <div className="flex items-center gap-2 pt-2">
+                <Switch
+                  id="active"
+                  checked={active}
+                  onCheckedChange={setActive}
+                />
+                <Label htmlFor="active" className="cursor-pointer">
+                  활성화
+                </Label>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: Form Preview */}
+        <div className="lg:sticky lg:top-8 lg:self-start">
+          <Card>
+            <CardHeader>
+              <CardTitle>지원서 미리보기</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!formId ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p className="text-sm">
+                    왼쪽에서 지원서 양식을 선택하면 질문 목록이 표시됩니다.
                   </p>
                 </div>
-
-                {/* Active Toggle */}
-                <div className="flex items-center gap-2 pt-2">
-                  <Switch
-                    id="active"
-                    checked={active}
-                    onCheckedChange={setActive}
-                  />
-                  <Label htmlFor="active" className="cursor-pointer">
-                    활성화
-                  </Label>
+              ) : formLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Action Buttons */}
-            <div className="flex justify-between">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() =>
-                  router.push(
-                    mode === "edit"
-                      ? `/manage/recruitments/${initialData?.id}`
-                      : "/manage/recruitments",
-                  )
-                }
-                disabled={isSubmitting}
-              >
-                취소
-              </Button>
-              <Button type="submit" disabled={isSubmitting} size="lg">
-                {submitButtonText}
-              </Button>
-            </div>
-          </div>
-
-          {/* Right: Form Preview */}
-          <div className="lg:sticky lg:top-8 lg:self-start">
-            <Card>
-              <CardHeader>
-                <CardTitle>지원서 미리보기</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!formId ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <p className="text-sm">
-                      왼쪽에서 지원서 양식을 선택하면 질문 목록이 표시됩니다.
+              ) : selectedForm && formSchema ? (
+                <div className="space-y-4">
+                  {/* Form Title */}
+                  <div className="pb-3 border-b">
+                    <h3 className="font-semibold text-lg">
+                      {selectedForm.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formSchema.questions.length}개 질문
                     </p>
                   </div>
-                ) : formLoading ? (
-                  <div className="space-y-3">
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-2/3" />
-                  </div>
-                ) : selectedForm && formSchema ? (
-                  <div className="space-y-4">
-                    {/* Form Title */}
-                    <div className="pb-3 border-b">
-                      <h3 className="font-semibold text-lg">
-                        {selectedForm.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formSchema.questions.length}개 질문
-                      </p>
-                    </div>
 
-                    {/* Questions List */}
-                    {formSchema.questions.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <p className="text-sm">질문이 없습니다.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {formSchema.questions.map((question, index) => (
-                          <div
-                            key={question.id}
-                            className="border rounded-lg p-3 bg-muted/30"
-                          >
-                            <div className="flex items-start gap-2">
-                              <Badge
-                                variant="secondary"
-                                className="shrink-0 text-xs"
-                              >
-                                {index + 1}
-                              </Badge>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm break-words">
-                                  {question.title || "(제목 없음)"}
-                                </p>
-                                <div className="flex flex-wrap gap-1.5 mt-2">
-                                  <Badge variant="outline" className="text-xs">
-                                    {QUESTION_TYPE_LABELS[question.type]}
+                  {/* Questions List */}
+                  {formSchema.questions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p className="text-sm">질문이 없습니다.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {formSchema.questions.map((question, index) => (
+                        <div
+                          key={question.id}
+                          className="border rounded-lg p-3 bg-muted/30"
+                        >
+                          <div className="flex items-start gap-2">
+                            <Badge
+                              variant="secondary"
+                              className="shrink-0 text-xs"
+                            >
+                              {index + 1}
+                            </Badge>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm break-words">
+                                {question.title || "(제목 없음)"}
+                              </p>
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {QUESTION_TYPE_LABELS[question.type]}
+                                </Badge>
+                                {question.required && (
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-xs"
+                                  >
+                                    필수
                                   </Badge>
-                                  {question.required && (
-                                    <Badge
-                                      variant="destructive"
-                                      className="text-xs"
-                                    >
-                                      필수
-                                    </Badge>
-                                  )}
-                                </div>
-                                {question.options &&
-                                  question.options.length > 0 && (
-                                    <div className="mt-2 text-xs text-muted-foreground">
-                                      <span className="font-medium">
-                                        선택지:
-                                      </span>{" "}
-                                      {question.options.join(", ")}
-                                    </div>
-                                  )}
+                                )}
                               </div>
+                              {question.options &&
+                                question.options.length > 0 && (
+                                  <div className="mt-2 text-xs text-muted-foreground">
+                                    <span className="font-medium">선택지:</span>{" "}
+                                    {question.options.join(", ")}
+                                  </div>
+                                )}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-destructive">
-                    <p className="text-sm">
-                      지원서 양식을 불러오는데 실패했습니다.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-destructive">
+                  <p className="text-sm">
+                    지원서 양식을 불러오는데 실패했습니다.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
-      </form>
-    </div>
+      </div>
+      {/* Action Buttons */}
+      <div className="flex items-center justify-end gap-4 mt-6">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() =>
+            router.push(
+              mode === "edit"
+                ? `/manage/recruitments/${initialData?.id}`
+                : "/manage/recruitments",
+            )
+          }
+          disabled={isSubmitting}
+        >
+          취소
+        </Button>
+        <Button type="submit" disabled={isSubmitting} size="lg">
+          {submitButtonText}
+        </Button>
+      </div>
+    </form>
   );
 }

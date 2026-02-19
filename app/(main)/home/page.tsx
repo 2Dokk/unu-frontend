@@ -141,7 +141,7 @@ export default function HomePage() {
 
   if (authLoading || (loading && isAuthenticated)) {
     return (
-      <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
+      <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
         <div className="grid gap-4 md:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i}>
@@ -162,11 +162,11 @@ export default function HomePage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">내 활동</h1>
-        <p className="text-muted-foreground mt-2">
+      <div className="space-y-2 border-b pb-6">
+        <h1 className="text-2xl font-bold tracking-tight">내 활동</h1>
+        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
           활동 참여 현황과 출석 정보를 확인하세요
         </p>
       </div>
@@ -237,7 +237,7 @@ export default function HomePage() {
       {/* Current Quarter Activities */}
       <section className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">이번 분기 활동</h2>
+          <h2 className="text-xl font-bold tracking-tight">이번 분기 활동</h2>
           <p className="text-muted-foreground mt-1">
             {currentQuarter?.name} 진행 중인 활동
           </p>
@@ -324,7 +324,7 @@ export default function HomePage() {
       {/* All Activities History */}
       <section className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">전체 활동</h2>
+          <h2 className="text-xl font-bold tracking-tight">전체 활동</h2>
           <p className="text-muted-foreground mt-1">모든 활동 참여 이력</p>
         </div>
 

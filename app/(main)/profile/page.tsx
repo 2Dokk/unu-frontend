@@ -21,7 +21,9 @@ import {
   GitBranch,
   ChevronLeft,
   CalendarDays,
+  Github,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // Validation schemas
 const profileSchema = z.object({
@@ -65,11 +67,6 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [profile, setProfile] = useState<UserInfoResponseDto | null>(null);
-  const [toast, setToast] = useState<{
-    message: string;
-    visible: boolean;
-    type: "success" | "error";
-  }>({ message: "", visible: false, type: "success" });
 
   const {
     register: registerProfile,
@@ -104,9 +101,8 @@ export default function ProfilePage() {
           githubId: userData.githubId || "",
         });
       } catch (error: any) {
-        showToast(
+        toast.error(
           error.response?.data?.message || "프로필을 불러오는데 실패했습니다",
-          "error",
         );
       } finally {
         setIsLoading(false);
@@ -116,28 +112,16 @@ export default function ProfilePage() {
     fetchProfile();
   }, [resetProfile]);
 
-  const showToast = (
-    message: string,
-    type: "success" | "error" = "success",
-  ) => {
-    setToast({ message, visible: true, type });
-    setTimeout(
-      () => setToast({ message: "", visible: false, type: "success" }),
-      3000,
-    );
-  };
-
   const onSubmitProfile = async (data: ProfileFormData) => {
     try {
       setIsSaving(true);
       await updateMe(data);
       setProfile((prev) => (prev ? { ...prev, ...data } : prev));
-      showToast("프로필이 성공적으로 업데이트되었습니다");
+      toast.success("프로필이 성공적으로 업데이트되었습니다");
       setMode("view");
     } catch (error: any) {
-      showToast(
+      toast.error(
         error.response?.data?.message || "프로필 업데이트에 실패했습니다",
-        "error",
       );
     } finally {
       setIsSaving(false);
@@ -148,13 +132,12 @@ export default function ProfilePage() {
     try {
       setIsSaving(true);
       await changePassword(data);
-      showToast("비밀번호가 성공적으로 변경되었습니다");
+      toast.success("비밀번호가 성공적으로 변경되었습니다");
       resetPassword();
       setMode("view");
     } catch (error: any) {
-      showToast(
+      toast.error(
         error.response?.data?.message || "비밀번호 변경에 실패했습니다",
-        "error",
       );
     } finally {
       setIsSaving(false);
@@ -205,20 +188,9 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-6">
-      {/* Toast Notification */}
-      {toast.visible && (
-        <div
-          className={`fixed right-4 top-4 z-50 rounded-md px-4 py-3 text-white shadow-lg text-sm ${
-            toast.type === "error" ? "bg-destructive" : "bg-green-600"
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
-
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Page Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-4 border-b pb-6">
         {mode !== "view" && (
           <Button
             variant="ghost"
@@ -234,7 +206,7 @@ export default function ProfilePage() {
             {mode === "edit" && "정보 수정"}
             {mode === "password" && "비밀번호 변경"}
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
             {mode === "view" && "내 계정 정보를 확인합니다"}
             {mode === "edit" && "변경할 정보를 입력하세요"}
             {mode === "password" && "새로운 비밀번호를 설정합니다"}
@@ -281,7 +253,7 @@ export default function ProfilePage() {
                 value={profile.phoneNumber}
               />
               <InfoRow
-                icon={<GitBranch className="h-4 w-4" />}
+                icon={<Github className="h-4 w-4" />}
                 label="GitHub ID"
                 value={profile.githubId}
               />

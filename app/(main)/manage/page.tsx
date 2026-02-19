@@ -187,7 +187,7 @@ export default function ManagePage() {
 
   if (authLoading || (loading && isAuthenticated)) {
     return (
-      <div className="container mx-auto max-w-7xl px-4 py-8">
+      <div className="mx-auto w-full max-w-4xl px-6 py-8">
         <Skeleton className="h-12 w-64 mb-8" />
         <Skeleton className="h-96 w-full" />
       </div>
@@ -197,15 +197,13 @@ export default function ManagePage() {
   if (!isAuthenticated || !hasRole("MANAGER")) return null;
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8 space-y-4">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">운영 대시보드</h1>
-          <p className="text-muted-foreground mt-1">
-            활동 세션 일정 및 참석 관리
-          </p>
-        </div>
+      <div className="space-y-2 border-b pb-6">
+        <h1 className="text-2xl font-bold tracking-tight">운영 대시보드</h1>
+        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+          활동 세션 일정 및 참석 관리
+        </p>
       </div>
 
       {/* Controls */}

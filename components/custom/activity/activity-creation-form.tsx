@@ -121,13 +121,11 @@ export function ActivityCreationForm({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">
-          새 활동 만들기
-        </h1>
-        <p className="text-sm text-muted-foreground">
+      <div className="space-y-3 border-b pb-6">
+        <h1 className="text-2xl font-bold tracking-tight">새 활동 만들기</h1>
+        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
           프로젝트나 스터디를 생성하고 팀원들과 함께 시작하세요
         </p>
       </div>

@@ -90,13 +90,9 @@ export function NavigationBar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => router.push("/manage")}>
+              <DropdownMenuItem onClick={() => router.push("/profile")}>
                 <Shield className="mr-2 h-4 w-4" />
-                관리자 홈
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/activities")}>
-                <User className="mr-2 h-4 w-4" />
-                학회원 화면으로 이동
+                프로필
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
@@ -126,8 +122,9 @@ export function NavigationBar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => router.push("/activities")}>
-              <Home className="mr-2 h-4 w-4" />내 페이지
+            <DropdownMenuItem onClick={() => router.push("/profile")}>
+              <Home className="mr-2 h-4 w-4" />
+              프로필
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>

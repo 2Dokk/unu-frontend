@@ -11,6 +11,7 @@ import {
   Filter,
   MoreVertical,
   Eye,
+  SquarePlus,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -226,19 +227,25 @@ export default function ActivitiesManagementPage() {
     searchInput.trim() !== "";
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">활동 관리</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            학회 활동을 조회하고 관리합니다
-          </p>
+      <div className="border-b pb-6">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight">활동 관리</h1>
+            <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+              학회 활동을 조회하고 관리합니다
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/activities/new")}
+          >
+            <SquarePlus className="h-4 w-4 mr-1" />
+            활동 생성
+          </Button>
         </div>
-        <Button onClick={() => router.push("/activities/new")}>
-          <Plus className="h-4 w-4 mr-2" />
-          활동 생성
-        </Button>
       </div>
 
       {/* Error State */}
@@ -249,80 +256,78 @@ export default function ActivitiesManagementPage() {
       )}
 
       {/* Filters */}
-      <div className="mb-5">
-        <div className="bg-slate-50 border border-slate-200 rounded-lg">
-          <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
-            {/* Activity Type Filter */}
-            <Select
-              value={activityTypeFilter}
-              onValueChange={setActivityTypeFilter}
-            >
-              <SelectTrigger className="w-32 h-9 bg-white">
-                <SelectValue placeholder="전체 유형" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">전체 유형</SelectItem>
-                {activityTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id.toString()}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="bg-slate-50 border border-slate-200 rounded-lg">
+        <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
+          {/* Activity Type Filter */}
+          <Select
+            value={activityTypeFilter}
+            onValueChange={setActivityTypeFilter}
+          >
+            <SelectTrigger className="w-32 h-9 bg-white">
+              <SelectValue placeholder="전체 유형" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">전체 유형</SelectItem>
+              {activityTypes.map((type) => (
+                <SelectItem key={type.id} value={type.id.toString()}>
+                  {type.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            {/* Quarter Filter */}
-            <Select value={quarterFilter} onValueChange={setQuarterFilter}>
-              <SelectTrigger className="w-40 h-9 bg-white">
-                <SelectValue placeholder="전체 분기" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">전체 분기</SelectItem>
-                {quarters.map((quarter) => (
-                  <SelectItem key={quarter.id} value={quarter.id.toString()}>
-                    {quarter.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Quarter Filter */}
+          <Select value={quarterFilter} onValueChange={setQuarterFilter}>
+            <SelectTrigger className="w-40 h-9 bg-white">
+              <SelectValue placeholder="전체 분기" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">전체 분기</SelectItem>
+              {quarters.map((quarter) => (
+                <SelectItem key={quarter.id} value={quarter.id.toString()}>
+                  {quarter.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-32 h-9 bg-white">
-                <SelectValue placeholder="전체 상태" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">전체 상태</SelectItem>
-                <SelectItem value="CREATED">준비 중</SelectItem>
-                <SelectItem value="OPEN">모집 중</SelectItem>
-                <SelectItem value="ONGOING">진행 중</SelectItem>
-                <SelectItem value="COMPLETED">종료</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Status Filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-32 h-9 bg-white">
+              <SelectValue placeholder="전체 상태" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">전체 상태</SelectItem>
+              <SelectItem value="CREATED">준비 중</SelectItem>
+              <SelectItem value="OPEN">모집 중</SelectItem>
+              <SelectItem value="ONGOING">진행 중</SelectItem>
+              <SelectItem value="COMPLETED">종료</SelectItem>
+            </SelectContent>
+          </Select>
 
-            {/* Search Input */}
-            <div className="flex-1 min-w-40">
-              <Input
-                placeholder="활동명 검색"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                className="h-9 bg-white"
-              />
-            </div>
-
-            {/* Clear Button */}
-            {hasFilters && (
-              <Button
-                onClick={handleReset}
-                variant="ghost"
-                size="sm"
-                className="h-9"
-              >
-                <X className="h-4 w-4 mr-1" />
-                초기화
-              </Button>
-            )}
+          {/* Search Input */}
+          <div className="flex-1 min-w-40">
+            <Input
+              placeholder="활동명 검색"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              className="h-9 bg-white"
+            />
           </div>
+
+          {/* Clear Button */}
+          {hasFilters && (
+            <Button
+              onClick={handleReset}
+              variant="ghost"
+              size="sm"
+              className="h-9"
+            >
+              <X className="h-4 w-4 mr-1" />
+              초기화
+            </Button>
+          )}
         </div>
       </div>
 

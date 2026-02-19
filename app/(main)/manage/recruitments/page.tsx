@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, MoreVertical, Eye, Pencil, Clock } from "lucide-react";
+import {
+  Search,
+  Plus,
+  MoreVertical,
+  Eye,
+  Pencil,
+  Clock,
+  SquarePlus,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -150,12 +158,12 @@ export default function AdminRecruitmentsPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl py-8 px-4">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">모집 관리</h1>
-        <p className="text-muted-foreground mt-2">
-          모든 모집 공고를 조회하고 상태를 관리합니다.
+      <div className="space-y-2 border-b pb-6">
+        <h1 className="text-2xl font-bold tracking-tight">모집 관리</h1>
+        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+          모든 모집 공고를 조회하고 상태를 관리합니다
         </p>
       </div>
 
@@ -163,8 +171,12 @@ export default function AdminRecruitmentsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>모집 목록</CardTitle>
-            <Button onClick={() => router.push("/manage/recruitments/new")}>
-              <Plus className="mr-2 h-4 w-4" />새 모집 생성
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/manage/recruitments/new")}
+            >
+              <SquarePlus className="mr-1 h-4 w-4" />새 모집 생성
             </Button>
           </div>
 

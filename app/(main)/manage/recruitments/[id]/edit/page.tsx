@@ -82,26 +82,23 @@ export default function EditRecruitmentPage() {
   }
 
   return (
-    <div>
-      {/* Breadcrumb */}
-      <div className="container mx-auto max-w-7xl py-4 px-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <button
-            onClick={() => router.push("/manage/recruitments")}
-            className="hover:text-foreground transition-colors"
-          >
-            모집관리
-          </button>
-          <span>/</span>
-          <button
-            onClick={() => router.push(`/manage/recruitments/${recruitmentId}`)}
-            className="hover:text-foreground transition-colors"
-          >
-            상세
-          </button>
-          <span>/</span>
-          <span className="text-foreground font-medium">수정</span>
-        </div>
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+      {/* Header */}
+      <div className="space-y-3 border-b pb-6">
+        <Button
+          onClick={() => router.push("/manage/recruitments")}
+          variant="ghost"
+          size="sm"
+          className="mb-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          목록으로
+        </Button>
+
+        <h1 className="text-2xl font-bold tracking-tight">모집 공고 수정</h1>
+        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+          모집 기간과 사용할 지원서 양식을 선택하세요.
+        </p>
       </div>
 
       <RecruitmentForm mode="edit" initialData={recruitment} />

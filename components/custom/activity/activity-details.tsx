@@ -415,281 +415,270 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
   });
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
-      {/* Mobile/Desktop Responsive Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Main Content (lg:col-span-2) */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Breadcrumbs */}
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/activities")}
-            className="mb-6"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            돌아가기
-          </Button>
+    <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-10">
+      <div className="space-y-4 border-b pb-6">
+        {/* Breadcrumbs */}
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/activities")}
+          className="mb-6"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          돌아가기
+        </Button>
 
-          {/* Header Section */}
-          <div className="space-y-3">
-            <div className="flex items-start justify-between gap-4">
-              <h1 className="text-3xl font-bold tracking-tight">
-                {activity.title}
-              </h1>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                variant={activityStatusMeta.variant}
-                className={activityStatusMeta.className}
-              >
-                {activityStatusMeta.label}
-              </Badge>
-              <Badge variant="outline" className="bg-slate-50">
-                {activity.activityType.name}
-              </Badge>
+        {/* Header Section */}
+        <div className="space-y-3">
+          <h1 className="text-3xl font-bold tracking-tight">
+            {activity.title}
+          </h1>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant={activityStatusMeta.variant}
+              className={activityStatusMeta.className}
+            >
+              {activityStatusMeta.label}
+            </Badge>
+            <Badge variant="outline" className="bg-slate-50">
+              {activity.activityType.name}
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      {/* My Participant Status Card (Mobile Priority) */}
+      <Card className="lg:hidden border-l-4 border-l-primary">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <participantMeta.icon className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">내 참여 상태</p>
+                <p className="font-semibold">{participantMeta.label}</p>
+                {myParticipant && (
+                  <Badge
+                    variant={myParticipant.completed ? "default" : "outline"}
+                    className="mt-1"
+                  >
+                    {myParticipant.completed ? "완료" : "미완료"}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* My Participant Status Card (Mobile Priority) */}
-          <Card className="lg:hidden border-l-4 border-l-primary">
+      {/* Tabs */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">개요</TabsTrigger>
+          <TabsTrigger value="participants">참여 상태</TabsTrigger>
+          <TabsTrigger value="records">기록</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>활동 설명</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {activity.description ? (
+                <div className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap">
+                  {activity.description}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">
+                  설명이 아직 없어요.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="participants" className="space-y-4 mt-6">
+          <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <participantMeta.icon className="h-5 w-5 text-muted-foreground" />
-                  <div>
+              <p className="text-muted-foreground text-center py-8">
+                참여자 목록 기능은 준비 중입니다.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="records" className="space-y-4 mt-6">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-muted-foreground text-center py-8">
+                활동 기록 기능은 준비 중입니다.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Right Sidebar (Sticky) */}
+      <div className="lg:col-span-1">
+        <div className="sticky top-6 space-y-4">
+          {/* Summary Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+              <CardTitle className="text-lg font-semibold">활동 정보</CardTitle>
+              {viewer.isAdmin && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      aria-label="관리 메뉴"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleEdit}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      수정
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleStatusChange}>
+                      <ClipboardList className="h-4 w-4 mr-2" />
+                      상태 변경
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setDeleteDialogOpen(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      삭제
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Quarter */}
+              {activity.quarter && (
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">분기</p>
+                    <p className="font-medium">
+                      {activity.quarter.year} {activity.quarter.season}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Period */}
+              <div className="flex items-start gap-3">
+                <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">기간</p>
+                  <p className="font-medium">
+                    {formatDate(activity.startDate)} ~{" "}
+                    {formatDate(activity.endDate)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Assignee */}
+              <div className="flex items-start gap-3">
+                <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">담당자</p>
+                  <p className="font-medium">
+                    {activity.assignee.name ||
+                      activity.assignee.username ||
+                      activity.assignee.email}
+                  </p>
+                  {activity.assignee.name && (
+                    <p className="text-xs text-muted-foreground">
+                      {activity.assignee.email}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* My Participant Status (Desktop Only) */}
+              <div className="hidden lg:block">
+                <div className="flex items-start gap-3">
+                  <participantMeta.icon className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
                     <p className="text-sm text-muted-foreground">
                       내 참여 상태
                     </p>
-                    <p className="font-semibold">{participantMeta.label}</p>
-                    {myParticipant && (
-                      <Badge
-                        variant={
-                          myParticipant.completed ? "default" : "outline"
-                        }
-                        className="mt-1"
-                      >
-                        {myParticipant.completed ? "완료" : "미완료"}
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant={participantMeta.variant}>
+                        {participantMeta.label}
                       </Badge>
-                    )}
+                      {myParticipant && (
+                        <Badge
+                          variant={
+                            myParticipant.completed ? "default" : "outline"
+                          }
+                          className="text-xs"
+                        >
+                          {myParticipant.completed ? "완료" : "미완료"}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
+
+              <Separator />
+
+              {/* Primary CTA */}
+              <div className="space-y-2">
+                <Button
+                  className="w-full"
+                  variant={ctaConfig.variant}
+                  disabled={ctaConfig.disabled || actionLoading}
+                  onClick={ctaConfig.onClick}
+                  aria-label={ctaConfig.label}
+                >
+                  {actionLoading ? "처리 중..." : ctaConfig.label}
+                </Button>
+                {ctaConfig.disabledReason && ctaConfig.disabled && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    {ctaConfig.disabledReason}
+                  </p>
+                )}
+                {ctaConfig.secondaryActions &&
+                  ctaConfig.secondaryActions.map((action, index) => (
+                    <Button
+                      key={index}
+                      className="w-full"
+                      variant={action.variant}
+                      onClick={action.onClick}
+                      disabled={actionLoading}
+                    >
+                      {action.label}
+                    </Button>
+                  ))}
+              </div>
+
+              <Separator />
+
+              {/* Meta Info (Collapsed) */}
+              <details className="text-xs text-muted-foreground space-y-1">
+                <summary className="cursor-pointer hover:text-foreground">
+                  메타 정보
+                </summary>
+                <div className="mt-2 space-y-1 pl-2">
+                  <p>생성: {formatDateTime(activity.createdAt)}</p>
+                  <p>수정: {formatDateTime(activity.modifiedAt)}</p>
+                  <p>생성자: {activity.createdBy}</p>
+                  <p>수정자: {activity.modifiedBy}</p>
+                </div>
+              </details>
             </CardContent>
           </Card>
-
-          {/* Tabs */}
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="overview">개요</TabsTrigger>
-              <TabsTrigger value="participants">참여 상태</TabsTrigger>
-              <TabsTrigger value="records">기록</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-4 mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>활동 설명</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {activity.description ? (
-                    <div className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap">
-                      {activity.description}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-8">
-                      설명이 아직 없어요.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="participants" className="space-y-4 mt-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground text-center py-8">
-                    참여자 목록 기능은 준비 중입니다.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="records" className="space-y-4 mt-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground text-center py-8">
-                    활동 기록 기능은 준비 중입니다.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Right Sidebar (Sticky) */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-6 space-y-4">
-            {/* Summary Card */}
-            <Card>
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
-                <CardTitle className="text-lg font-semibold">
-                  활동 정보
-                </CardTitle>
-                {viewer.isAdmin && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        aria-label="관리 메뉴"
-                      >
-                        <Settings className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={handleEdit}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        수정
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleStatusChange}>
-                        <ClipboardList className="h-4 w-4 mr-2" />
-                        상태 변경
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => setDeleteDialogOpen(true)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        삭제
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Quarter */}
-                {activity.quarter && (
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm text-muted-foreground">분기</p>
-                      <p className="font-medium">
-                        {activity.quarter.year} {activity.quarter.season}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Period */}
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">기간</p>
-                    <p className="font-medium">
-                      {formatDate(activity.startDate)} ~{" "}
-                      {formatDate(activity.endDate)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Assignee */}
-                <div className="flex items-start gap-3">
-                  <User className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">담당자</p>
-                    <p className="font-medium">
-                      {activity.assignee.name ||
-                        activity.assignee.username ||
-                        activity.assignee.email}
-                    </p>
-                    {activity.assignee.name && (
-                      <p className="text-xs text-muted-foreground">
-                        {activity.assignee.email}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* My Participant Status (Desktop Only) */}
-                <div className="hidden lg:block">
-                  <div className="flex items-start gap-3">
-                    <participantMeta.icon className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm text-muted-foreground">
-                        내 참여 상태
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant={participantMeta.variant}>
-                          {participantMeta.label}
-                        </Badge>
-                        {myParticipant && (
-                          <Badge
-                            variant={
-                              myParticipant.completed ? "default" : "outline"
-                            }
-                            className="text-xs"
-                          >
-                            {myParticipant.completed ? "완료" : "미완료"}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Primary CTA */}
-                <div className="space-y-2">
-                  <Button
-                    className="w-full"
-                    variant={ctaConfig.variant}
-                    disabled={ctaConfig.disabled || actionLoading}
-                    onClick={ctaConfig.onClick}
-                    aria-label={ctaConfig.label}
-                  >
-                    {actionLoading ? "처리 중..." : ctaConfig.label}
-                  </Button>
-                  {ctaConfig.disabledReason && ctaConfig.disabled && (
-                    <p className="text-xs text-muted-foreground text-center">
-                      {ctaConfig.disabledReason}
-                    </p>
-                  )}
-                  {ctaConfig.secondaryActions &&
-                    ctaConfig.secondaryActions.map((action, index) => (
-                      <Button
-                        key={index}
-                        className="w-full"
-                        variant={action.variant}
-                        onClick={action.onClick}
-                        disabled={actionLoading}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
-                </div>
-
-                <Separator />
-
-                {/* Meta Info (Collapsed) */}
-                <details className="text-xs text-muted-foreground space-y-1">
-                  <summary className="cursor-pointer hover:text-foreground">
-                    메타 정보
-                  </summary>
-                  <div className="mt-2 space-y-1 pl-2">
-                    <p>생성: {formatDateTime(activity.createdAt)}</p>
-                    <p>수정: {formatDateTime(activity.modifiedAt)}</p>
-                    <p>생성자: {activity.createdBy}</p>
-                    <p>수정자: {activity.modifiedBy}</p>
-                  </div>
-                </details>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
 
