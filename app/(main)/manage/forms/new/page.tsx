@@ -93,7 +93,7 @@ export default function NewFormPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       <div className="space-y-2 border-b pb-6">
-        <h1 className="text-2xl font-bold tracking-tight">새 신청서 만들기</h1>
+        <h1 className="text-xl font-bold tracking-tight">새 신청서 만들기</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
           템플릿을 선택하여 새로운 신청서를 생성하세요
         </p>

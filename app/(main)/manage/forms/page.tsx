@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, MoreVertical, Eye, Pencil, Trash2 } from "lucide-react";
+import {
+  Search,
+  Plus,
+  MoreVertical,
+  Eye,
+  Pencil,
+  Trash2,
+  SquarePlus,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -154,9 +162,11 @@ export default function AdminFormsPage() {
               <div className="flex items-center justify-between">
                 <CardTitle>신청서 템플릿 목록</CardTitle>
                 <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => router.push("/manage/forms/templates/new")}
                 >
-                  <Plus className="mr-2 h-4 w-4" />새 신청서 템플릿
+                  <SquarePlus className="mr-2 h-4 w-4" />새 템플릿
                 </Button>
               </div>
               <div className="relative mt-4">
@@ -254,8 +264,12 @@ export default function AdminFormsPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>신청서 목록</CardTitle>
-                <Button onClick={() => router.push("/manage/forms/new")}>
-                  <Plus className="mr-2 h-4 w-4" />새 신청서
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push("/manage/forms/new")}
+                >
+                  <SquarePlus className="mr-2 h-4 w-4" />새 신청서
                 </Button>
               </div>
               <div className="relative mt-4">

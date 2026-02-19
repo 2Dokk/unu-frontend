@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,16 +123,22 @@ export default function EditFormTemplatePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-5xl py-8 px-4">
-      <div className="mb-8">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+      <div className="border-b pb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/manage/forms")}
+          className="mb-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          돌아가기
+        </Button>
         <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">폼 템플릿 편집</h1>
-            <p className="text-muted-foreground mt-2">
-              다양한 학회 활동에서 사용할 폼 구조를 구성합니다.
-            </p>
-            <p className="text-sm text-muted-foreground/80 mt-1">
-              이 템플릿은 여러 활동에서 재사용될 수 있습니다.
+          <div className="space-y-3">
+            <h1 className="text-2xl font-bold">신청서 템플릿 편집</h1>
+            <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+              신청서 템플릿을 수정할 수 있습니다.
             </p>
           </div>
           <div className="text-sm text-right">
@@ -185,7 +191,6 @@ export default function EditFormTemplatePage() {
             onClick={() => setDeleteDialogOpen(true)}
             disabled={isSubmitting}
           >
-            <Trash2 className="mr-2 h-4 w-4" />
             삭제
           </Button>
           <div className="flex gap-3">
@@ -197,12 +202,7 @@ export default function EditFormTemplatePage() {
             >
               취소
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              size="lg"
-              className="min-w-[120px]"
-            >
+            <Button type="submit" disabled={isSubmitting} size="lg">
               {isSubmitting ? "저장 중..." : "저장"}
             </Button>
           </div>

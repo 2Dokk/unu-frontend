@@ -107,7 +107,9 @@ export default function ViewFormTemplatePage() {
           돌아가기
         </Button>
         <div className="flex items-start justify-between">
-          <h1 className="text-2xl font-bold tracking-tight">{template.title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {template.title}
+          </h1>
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -134,15 +136,15 @@ export default function ViewFormTemplatePage() {
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-lg mb-1">
+              <h3 className="font-semibold text-sm mb-1">
                 이 템플릿으로 신청서 만들기
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 현재 템플릿을 기반으로 새로운 신청서를 생성할 수 있습니다
               </p>
             </div>
             <Button
-              size="lg"
+              size="sm"
               onClick={() => router.push(`/manage/forms/new?templateId=${id}`)}
             >
               <File className="mr-2 h-4 w-4" />

@@ -38,7 +38,8 @@ export default function NewFormTemplatePage() {
       <div className="space-y-2 border-b pb-6">
         <h1 className="text-2xl font-bold tracking-tight">새 템플릿 만들기</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          재사용 가능한 폼 템플릿을 생성하세요
+          다양한 학회 활동에서 사용할 신청서 구조를 구성합니다.
+          <br />이 템플릿은 여러 활동에서 재사용될 수 있습니다.
         </p>
       </div>
 

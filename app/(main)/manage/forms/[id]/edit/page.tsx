@@ -22,6 +22,7 @@ import {
 import { FormBuilder } from "@/components/custom/form/form-builder";
 import { getFormById, updateForm, deleteForm } from "@/lib/api/form";
 import { FormResponse } from "@/lib/interfaces/form";
+import { ArrowLeft } from "lucide-react";
 
 export default function EditFormPage() {
   const router = useRouter();
@@ -113,11 +114,22 @@ export default function EditFormPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">폼 수정</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          폼 정보를 수정하세요
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+      {/* Header */}
+      <div className="space-y-3 border-b pb-6">
+        <Button
+          onClick={() => router.push("/manage/forms")}
+          variant="ghost"
+          size="sm"
+          className="mb-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          목록으로
+        </Button>
+
+        <h1 className="text-2xl font-bold tracking-tight">신청서 정보 수정</h1>
+        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+          신청서를 수정할 수 있습니다.
         </p>
       </div>
 
