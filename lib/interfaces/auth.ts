@@ -19,7 +19,34 @@ export interface UserResponseDto {
   email: string;
   name: string;
   studentId: string;
+  phoneNumber: string;
+  githubId: string;
   isActive: boolean;
   joinedQuarter: QuarterResponse;
   userRoles: UserRoleResponse[];
+}
+
+export interface UserInfoResponseDto {
+  username: string;
+  email: string;
+  name: string;
+  studentId: string;
+  phoneNumber: string;
+  githubId: string;
+  isActive: boolean;
+  joinedQuarter: QuarterResponse;
+}
+
+export interface UpdateProfileRequest {
+  name: string;
+  username: string;
+  studentId: string;
+  email: string;
+  phoneNumber: string;
+  githubId: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }

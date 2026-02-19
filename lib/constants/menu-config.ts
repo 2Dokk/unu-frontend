@@ -8,13 +8,22 @@ import {
   Settings,
   type LucideIcon,
   FileText,
+  ClipboardCheck,
+  UserRound,
+  UserRoundPlus,
+  UsersRound,
 } from "lucide-react";
 
-export interface MenuItem {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-}
+export type MenuItem =
+  | {
+      label: string;
+      href: string;
+      icon: LucideIcon;
+      type?: "item";
+    }
+  | {
+      type: "separator";
+    };
 
 export interface MenuConfig {
   common: MenuItem[];
@@ -27,16 +36,16 @@ export const menuConfig: MenuConfig = {
   // 모든 로그인 사용자에게 공통으로 표시되는 메뉴
   common: [
     {
-      label: "홈",
+      label: "내 활동",
       href: "/home",
-      icon: Home,
+      icon: UserRound,
     },
   ],
 
   // MEMBER 권한 사용자에게만 표시되는 메뉴
   member: [
     {
-      label: "활동",
+      label: "모든 활동",
       href: "/activities",
       icon: Calendar,
     },
@@ -45,9 +54,14 @@ export const menuConfig: MenuConfig = {
   // MANAGER 권한 사용자에게만 표시되는 메뉴
   manager: [
     {
+      label: "일정 관리",
+      href: "/manage",
+      icon: Calendar,
+    },
+    {
       label: "학회원 관리",
       href: "/manage/members",
-      icon: Users,
+      icon: UsersRound,
     },
     {
       label: "신청서 관리",
@@ -62,7 +76,7 @@ export const menuConfig: MenuConfig = {
     {
       label: "모집 관리",
       href: "/manage/recruitments",
-      icon: UserPlus,
+      icon: UserRoundPlus,
     },
     {
       label: "활동 관리",
@@ -104,6 +118,7 @@ export function getMenuByRole(
 
   // MANAGER 이상의 권한
   if (role === "MANAGER" || role === "ADMIN") {
+    menus.push({ type: "separator" });
     menus.push(...menuConfig.manager);
   }
 

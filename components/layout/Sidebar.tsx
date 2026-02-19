@@ -22,7 +22,13 @@ export function Sidebar() {
         {/* Navigation Menu */}
         <ScrollArea className="flex-1 px-3 py-4">
           <nav className="space-y-1">
-            {menuItems.map((item) => {
+            {menuItems.map((item, index) => {
+              if (item.type === "separator") {
+                return (
+                  <Separator key={`separator-${index}`} className="my-2" />
+                );
+              }
+
               const isActive = pathname === item.href;
               const Icon = item.icon;
 

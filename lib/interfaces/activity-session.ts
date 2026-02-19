@@ -1,3 +1,5 @@
+import { ActivityResponse } from "./activity";
+
 export interface ActivitySessionRequestDto {
   activityId: number;
   sessionNumber: number;
@@ -7,7 +9,7 @@ export interface ActivitySessionRequestDto {
 
 export interface ActivitySessionResponseDto {
   id: number;
-  activityId: number;
+  activity: ActivityResponse;
   sessionNumber: number;
   date: string; // ISO date string format (YYYY-MM-DD)
   description: string;
