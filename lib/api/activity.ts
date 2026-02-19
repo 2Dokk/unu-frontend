@@ -48,7 +48,18 @@ export async function updateActivity(
 }
 
 export async function deleteActivity(activityId: number): Promise<void> {
-  await axiosInstance.delete(`/activity-types/${activityId}`);
+  await axiosInstance.delete(`/activities/${activityId}`);
+}
+
+export async function updateActivityStatus(
+  activityId: number,
+  status: string,
+): Promise<ActivityResponse> {
+  const response = await axiosInstance.patch<ActivityResponse>(
+    `/activities/${activityId}/status`,
+    { status },
+  );
+  return response.data;
 }
 
 export interface ActivitySearchParams {

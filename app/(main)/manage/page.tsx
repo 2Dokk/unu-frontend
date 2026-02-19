@@ -12,7 +12,7 @@ import {
   ActivityTypeResponse,
 } from "@/lib/interfaces/activity";
 import { AttendanceResponseDto } from "@/lib/interfaces/attendance";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,11 +23,15 @@ import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   ChevronLeft,
   ChevronRight,
@@ -277,23 +281,33 @@ export default function ManagePage() {
         </Card>
       </div>
 
-      {/* Main Content: Calendar + Detail Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
-        {/* Calendar */}
-        <CalendarView
-          currentDate={currentDate}
-          sessions={filteredSessions}
-          selectedSession={selectedSession}
-          onSelectSession={setSelectedSession}
-          activityTypes={activityTypes}
-        />
+      {/* Calendar (full width) */}
+      <CalendarView
+        currentDate={currentDate}
+        sessions={filteredSessions}
+        selectedSession={selectedSession}
+        onSelectSession={setSelectedSession}
+        activityTypes={activityTypes}
+      />
 
-        {/* Session Detail Panel */}
-        <SessionDetailPanel
-          session={selectedSession}
-          onClose={() => setSelectedSession(null)}
-        />
-      </div>
+      {/* Session Detail Sheet */}
+      <Sheet
+        open={!!selectedSession}
+        onOpenChange={(open) => !open && setSelectedSession(null)}
+      >
+        <SheetContent className="sm:max-w-md overflow-y-auto">
+          <SheetHeader className="sr-only">
+            <SheetTitle>세션 상세</SheetTitle>
+            <SheetDescription>선택한 세션의 상세 정보</SheetDescription>
+          </SheetHeader>
+          {selectedSession && (
+            <SessionDetailPanel
+              session={selectedSession}
+              onClose={() => setSelectedSession(null)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -496,18 +510,7 @@ interface SessionDetailPanelProps {
 }
 
 function SessionDetailPanel({ session }: SessionDetailPanelProps) {
-  if (!session) {
-    return (
-      <Card className="lg:sticky lg:top-4">
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">
-            세션을 선택하면 상세 정보가 표시됩니다.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (!session) return null;
 
   const { session: sessionData, attendances } = session;
   const categoryName = session.session.activity?.activityType?.name || "";
@@ -523,22 +526,23 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
   };
 
   return (
-    <Card className="lg:sticky lg:top-4">
-      <CardHeader>
-        <div className="space-y-2">
-          <CardTitle className="text-xl">
-            {session.session.activity?.title || "활동명 없음"}
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className={categoryColor}>
-              {categoryName || "기타"}
-            </Badge>
-            <Badge variant="secondary">세션 {sessionData.sessionNumber}</Badge>
-          </div>
+    <div className="space-y-6 p-6 pt-12">
+      {/* Title & Badges */}
+      <div className="space-y-2">
+        <h2 className="text-xl font-bold">
+          {session.session.activity?.title || "활동명 없음"}
+        </h2>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={categoryColor}>
+            {categoryName || "기타"}
+          </Badge>
+          <Badge variant="secondary">세션 {sessionData.sessionNumber}</Badge>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-6">
+      <Separator />
+
+      <div className="space-y-6">
         {/* Session Info */}
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm">
@@ -656,7 +660,7 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
             </div>
           </ScrollArea>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

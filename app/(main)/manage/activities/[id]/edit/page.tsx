@@ -242,40 +242,23 @@ export default function ActivityEditPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-8 space-y-12">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push("/manage/activities")}
-            className="h-8 w-8"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">활동 수정</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              활동 정보를 수정합니다
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleCancel} disabled={saving}>
-            취소
-          </Button>
-          <Button onClick={handleSave} disabled={!isDirty || saving}>
-            {saving ? (
-              <>저장 중...</>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                저장
-              </>
-            )}
-          </Button>
-        </div>
+      <div className="space-y-3 border-b pb-6">
+        <Button
+          onClick={() => router.push("/manage/activities")}
+          variant="ghost"
+          size="sm"
+          className="mb-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          목록으로
+        </Button>
+
+        <h1 className="text-2xl font-bold tracking-tight">활동 정보 수정</h1>
+        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+          활동의 기본 정보와 일정을 수정할 수 있습니다.
+        </p>
       </div>
 
       {/* Success Message */}
@@ -515,6 +498,26 @@ export default function ActivityEditPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-4">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleCancel}
+              disabled={saving}
+            >
+              취소
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              size="lg"
+            >
+              {saving ? "저장 중..." : "저장"}
+            </Button>
+          </div>
         </div>
       )}
 

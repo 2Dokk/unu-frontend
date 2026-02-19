@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Breadcrumb,
@@ -22,6 +21,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -33,7 +35,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getActivityById } from "@/lib/api/activity";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import {
+  getActivityById,
+  deleteActivity,
+  updateActivityStatus,
+} from "@/lib/api/activity";
 import {
   getMyParticipantByActivityId,
   createMyParticipantByActivityId,
@@ -55,6 +63,7 @@ import {
   ChevronRight,
   ArrowLeft,
 } from "lucide-react";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 interface ActivityDetailsProps {
   activityId: number;
@@ -255,6 +264,35 @@ function deriveCtaConfig(
   };
 }
 
+const STATUS_OPTIONS = [
+  { value: "CREATED", label: "생성됨" },
+  { value: "OPEN", label: "모집중" },
+  { value: "ONGOING", label: "진행중" },
+  { value: "COMPLETED", label: "완료됨" },
+];
+
+// ========================
+// INFO ROW COMPONENT
+// ========================
+
+interface InfoRowProps {
+  icon: React.ReactNode;
+  label: string;
+  value?: string | null;
+}
+
+function InfoRow({ icon, label, value }: InfoRowProps) {
+  return (
+    <div className="flex items-start gap-3 py-3">
+      <div className="mt-0.5 text-muted-foreground">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+        <p className="text-sm font-medium truncate">{value || "—"}</p>
+      </div>
+    </div>
+  );
+}
+
 // ========================
 // MAIN COMPONENT
 // ========================
@@ -269,8 +307,7 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
-  // TODO: Replace with actual viewer logic (e.g., from context or session)
-  const viewer = { userId: 1, isAdmin: false };
+  const { userRole } = useAuth();
 
   useEffect(() => {
     const fetchActivityDetails = async () => {
@@ -348,19 +385,29 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
   };
 
   const handleEdit = () => {
-    // TODO: Navigate to edit page
-    router.push(`/activities/${activityId}/edit`);
+    router.push(`/manage/activities/${activityId}/edit`);
   };
 
-  const handleStatusChange = () => {
-    // TODO: Open status change dialog
-    console.log("Open status change dialog");
+  const handleStatusChange = async (newStatus: string) => {
+    if (!activity) return;
+    try {
+      const updated = await updateActivityStatus(activity.id, newStatus);
+      setActivity(updated);
+    } catch (error) {
+      console.error("Failed to update activity status:", error);
+    }
   };
 
   const handleDelete = async () => {
-    // TODO: Implement delete logic
-    console.log("Delete activity");
-    setDeleteDialogOpen(false);
+    if (!activity) return;
+    try {
+      await deleteActivity(activity.id);
+      router.push("/activities");
+    } catch (error) {
+      console.error("Failed to delete activity:", error);
+    } finally {
+      setDeleteDialogOpen(false);
+    }
   };
 
   // ========================
@@ -415,13 +462,14 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
   });
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-10">
-      <div className="space-y-4 border-b pb-6">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+      <div className="space-y-2 border-b pb-6">
         {/* Breadcrumbs */}
         <Button
           variant="ghost"
           onClick={() => router.push("/activities")}
-          className="mb-6"
+          className="mb-2"
+          size="sm"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           돌아가기
@@ -429,7 +477,7 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
 
         {/* Header Section */}
         <div className="space-y-3">
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight">
             {activity.title}
           </h1>
 
@@ -446,6 +494,80 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
           </div>
         </div>
       </div>
+
+      {/* Overview / Description Card */}
+      {activity.description && (
+        <Card>
+          <CardHeader>
+            <CardTitle>개요</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => (
+                  <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-lg font-semibold mt-3 mb-2">
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-base font-semibold mt-2 mb-1">
+                    {children}
+                  </h3>
+                ),
+                p: ({ children }) => (
+                  <p className="text-sm text-muted-foreground mb-2 last:mb-0 leading-relaxed">
+                    {children}
+                  </p>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc pl-5 mb-2 space-y-1">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal pl-5 mb-2 space-y-1">
+                    {children}
+                  </ol>
+                ),
+                li: ({ children }) => (
+                  <li className="text-sm text-muted-foreground">{children}</li>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-semibold text-foreground">
+                    {children}
+                  </strong>
+                ),
+                em: ({ children }) => <em className="italic">{children}</em>,
+                code: ({ children }) => (
+                  <code className="bg-muted text-foreground rounded px-1 py-0.5 text-xs font-mono">
+                    {children}
+                  </code>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-4 border-muted pl-3 italic text-muted-foreground my-2">
+                    {children}
+                  </blockquote>
+                ),
+                hr: () => <hr className="my-3 border-border" />,
+                a: ({ href, children }) => (
+                  <a
+                    href={href}
+                    className="text-primary underline underline-offset-2 hover:opacity-80"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {children}
+                  </a>
+                ),
+              }}
+            >
+              {activity.description}
+            </ReactMarkdown>
+          </CardContent>
+        </Card>
+      )}
 
       {/* My Participant Status Card (Mobile Priority) */}
       <Card className="lg:hidden border-l-4 border-l-primary">
@@ -470,62 +592,14 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
         </CardContent>
       </Card>
 
-      {/* Tabs */}
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">개요</TabsTrigger>
-          <TabsTrigger value="participants">참여 상태</TabsTrigger>
-          <TabsTrigger value="records">기록</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>활동 설명</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {activity.description ? (
-                <div className="prose prose-sm max-w-none text-muted-foreground whitespace-pre-wrap">
-                  {activity.description}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-8">
-                  설명이 아직 없어요.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="participants" className="space-y-4 mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-muted-foreground text-center py-8">
-                참여자 목록 기능은 준비 중입니다.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="records" className="space-y-4 mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-muted-foreground text-center py-8">
-                활동 기록 기능은 준비 중입니다.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
       {/* Right Sidebar (Sticky) */}
       <div className="lg:col-span-1">
         <div className="sticky top-6 space-y-4">
           {/* Summary Card */}
           <Card>
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
-              <CardTitle className="text-lg font-semibold">활동 정보</CardTitle>
-              {viewer.isAdmin && (
+              <CardTitle className="text-md font-semibold">활동 정보</CardTitle>
+              {userRole === "MANAGER" && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -542,10 +616,23 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
                       <Pencil className="h-4 w-4 mr-2" />
                       수정
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleStatusChange}>
-                      <ClipboardList className="h-4 w-4 mr-2" />
-                      상태 변경
-                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <ClipboardList className="h-4 w-4 mr-2" />
+                        상태 변경
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {STATUS_OPTIONS.map(({ value, label }) => (
+                          <DropdownMenuItem
+                            key={value}
+                            disabled={activity.status === value}
+                            onClick={() => handleStatusChange(value)}
+                          >
+                            {label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => setDeleteDialogOpen(true)}
@@ -558,83 +645,60 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
                 </DropdownMenu>
               )}
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Quarter */}
+            <CardContent className="divide-y divide-border px-6 pb-4 pt-0">
               {activity.quarter && (
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">분기</p>
-                    <p className="font-medium">
-                      {activity.quarter.year} {activity.quarter.season}
-                    </p>
-                  </div>
-                </div>
+                <InfoRow
+                  icon={<Calendar className="h-4 w-4" />}
+                  label="분기"
+                  value={`${activity.quarter.year} ${activity.quarter.season}`}
+                />
               )}
 
-              {/* Period */}
-              <div className="flex items-start gap-3">
-                <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">기간</p>
-                  <p className="font-medium">
-                    {formatDate(activity.startDate)} ~{" "}
-                    {formatDate(activity.endDate)}
-                  </p>
-                </div>
-              </div>
+              <InfoRow
+                icon={<Clock className="h-4 w-4" />}
+                label="기간"
+                value={`${formatDate(activity.startDate)} ~ ${formatDate(activity.endDate)}`}
+              />
 
-              {/* Assignee */}
-              <div className="flex items-start gap-3">
-                <User className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">담당자</p>
-                  <p className="font-medium">
-                    {activity.assignee.name ||
-                      activity.assignee.username ||
-                      activity.assignee.email}
-                  </p>
-                  {activity.assignee.name && (
-                    <p className="text-xs text-muted-foreground">
-                      {activity.assignee.email}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
+              <InfoRow
+                icon={<User className="h-4 w-4" />}
+                label="담당자"
+                value={
+                  activity.assignee.name ||
+                  activity.assignee.username ||
+                  activity.assignee.email
+                }
+              />
 
               {/* My Participant Status (Desktop Only) */}
-              <div className="hidden lg:block">
-                <div className="flex items-start gap-3">
-                  <participantMeta.icon className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">
-                      내 참여 상태
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={participantMeta.variant}>
-                        {participantMeta.label}
+              <div className="hidden lg:flex items-start gap-3 py-3">
+                <div className="mt-0.5 text-muted-foreground">
+                  <participantMeta.icon className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground mb-0.5">
+                    내 참여 상태
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={participantMeta.variant}>
+                      {participantMeta.label}
+                    </Badge>
+                    {myParticipant && (
+                      <Badge
+                        variant={
+                          myParticipant.completed ? "default" : "outline"
+                        }
+                        className="text-xs"
+                      >
+                        {myParticipant.completed ? "완료" : "미완료"}
                       </Badge>
-                      {myParticipant && (
-                        <Badge
-                          variant={
-                            myParticipant.completed ? "default" : "outline"
-                          }
-                          className="text-xs"
-                        >
-                          {myParticipant.completed ? "완료" : "미완료"}
-                        </Badge>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <Separator />
-
               {/* Primary CTA */}
-              <div className="space-y-2">
+              <div className="space-y-2 pt-4">
                 <Button
                   className="w-full"
                   variant={ctaConfig.variant}
@@ -662,21 +726,6 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
                     </Button>
                   ))}
               </div>
-
-              <Separator />
-
-              {/* Meta Info (Collapsed) */}
-              <details className="text-xs text-muted-foreground space-y-1">
-                <summary className="cursor-pointer hover:text-foreground">
-                  메타 정보
-                </summary>
-                <div className="mt-2 space-y-1 pl-2">
-                  <p>생성: {formatDateTime(activity.createdAt)}</p>
-                  <p>수정: {formatDateTime(activity.modifiedAt)}</p>
-                  <p>생성자: {activity.createdBy}</p>
-                  <p>수정자: {activity.modifiedBy}</p>
-                </div>
-              </details>
             </CardContent>
           </Card>
         </div>
