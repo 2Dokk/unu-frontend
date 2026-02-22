@@ -32,7 +32,7 @@ export const createActivitySession = async (
  * Get activity session by ID
  */
 export const getActivitySessionById = async (
-  id: number,
+  id: string,
 ): Promise<ActivitySessionResponseDto> => {
   const response = await axiosInstance.get<ActivitySessionResponseDto>(
     `/activity-sessions/${id}`,
@@ -44,7 +44,7 @@ export const getActivitySessionById = async (
  * Update activity session by ID
  */
 export const updateActivitySession = async (
-  id: number,
+  id: string,
   data: ActivitySessionRequestDto,
 ): Promise<ActivitySessionResponseDto> => {
   const response = await axiosInstance.put<ActivitySessionResponseDto>(
@@ -57,7 +57,7 @@ export const updateActivitySession = async (
 /**
  * Delete activity session by ID
  */
-export const deleteActivitySession = async (id: number): Promise<void> => {
+export const deleteActivitySession = async (id: string): Promise<void> => {
   await axiosInstance.delete(`/activity-sessions/${id}`);
 };
 
@@ -65,7 +65,7 @@ export const deleteActivitySession = async (id: number): Promise<void> => {
  * Get all activity sessions by activity ID
  */
 export const getActivitySessionsByActivityId = async (
-  activityId: number,
+  activityId: string,
 ): Promise<ActivitySessionResponseDto[]> => {
   const response = await axiosInstance.get<ActivitySessionResponseDto[]>(
     `/activity-sessions/activities/${activityId}`,

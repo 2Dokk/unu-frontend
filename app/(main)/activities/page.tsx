@@ -203,7 +203,7 @@ function FilterToolbar({
 
 interface ActivityCardProps {
   activity: ActivityResponse;
-  onClick: (id: number) => void;
+  onClick: (id: string) => void;
 }
 
 function ActivityCard({ activity, onClick }: ActivityCardProps) {
@@ -382,7 +382,7 @@ const ActivityPage = () => {
     }
   };
 
-  const handleActivityClick = (activityId: number) => {
+  const handleActivityClick = (activityId: string) => {
     router.push(`/activities/${activityId}`);
   };
 

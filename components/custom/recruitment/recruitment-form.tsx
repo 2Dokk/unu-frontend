@@ -125,7 +125,7 @@ export default function RecruitmentForm({
 
     try {
       setFormLoading(true);
-      const form = await getFormById(parseInt(selectedFormId));
+      const form = await getFormById(selectedFormId);
       setSelectedForm(form);
       const schema = parseSchema(form.schema);
       setFormSchema(schema);
@@ -157,8 +157,8 @@ export default function RecruitmentForm({
         description,
         startAt: new Date(startAt).toISOString(),
         endAt: new Date(endAt).toISOString(),
-        quarterId: parseInt(quarterId),
-        formId: parseInt(formId),
+        quarterId: quarterId,
+        formId: formId,
         active,
       };
 

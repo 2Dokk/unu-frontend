@@ -8,7 +8,7 @@ export async function getAllActivities(): Promise<ActivityResponse[]> {
 }
 
 export async function getActivityById(
-  activityId: number,
+  activityId: string,
 ): Promise<ActivityResponse> {
   const response = await axiosInstance.get<ActivityResponse>(
     `/activities/${activityId}`,
@@ -37,7 +37,7 @@ export async function createActivityForMe(
 }
 
 export async function updateActivity(
-  activityId: number,
+  activityId: string,
   data: ActivityRequest,
 ): Promise<ActivityResponse> {
   const response = await axiosInstance.put<ActivityResponse>(
@@ -47,12 +47,12 @@ export async function updateActivity(
   return response.data;
 }
 
-export async function deleteActivity(activityId: number): Promise<void> {
+export async function deleteActivity(activityId: string): Promise<void> {
   await axiosInstance.delete(`/activities/${activityId}`);
 }
 
 export async function updateActivityStatus(
-  activityId: number,
+  activityId: string,
   status: string,
 ): Promise<ActivityResponse> {
   const response = await axiosInstance.patch<ActivityResponse>(

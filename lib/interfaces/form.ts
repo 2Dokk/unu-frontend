@@ -1,11 +1,11 @@
 export interface FormRequest {
-  templateId: number;
+  templateId: string;
   title: string;
   schema: string;
 }
 
 export interface FormResponse {
-  id: number;
+  id: string;
   template: FormTemplateResponse;
   title: string;
   schema: string;
@@ -21,7 +21,7 @@ export interface FormTemplateRequest {
 }
 
 export interface FormTemplateResponse {
-  id: number;
+  id: string;
   title: string;
   schema: string;
   createdAt: string;

@@ -102,7 +102,7 @@ export default function ApplicationsTable({
   const [applications, setApplications] = useState(initialApplications);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
-  const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
 
   // Filter applications
   const filteredApplications = useMemo(() => {
@@ -130,7 +130,7 @@ export default function ApplicationsTable({
     });
   }, [applications, statusFilter, search]);
 
-  async function handleStatusChange(applicationId: number, newStatus: string) {
+  async function handleStatusChange(applicationId: string, newStatus: string) {
     // Optimistic update
     setUpdatingIds((prev) => new Set(prev).add(applicationId));
 
@@ -153,7 +153,7 @@ export default function ApplicationsTable({
     }
   }
 
-  function handleViewDetail(applicationId: number) {
+  function handleViewDetail(applicationId: string) {
     router.push(`/manage/applications/${applicationId}`);
   }
 

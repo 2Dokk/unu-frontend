@@ -26,7 +26,7 @@ type RecruitmentStatus = "모집중" | "모집 예정" | "모집 마감";
 export default function RecruitmentDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const recruitmentId = Number(params.id);
+  const recruitmentId = params.id as string;
 
   const [recruitment, setRecruitment] = useState<RecruitmentResponse | null>(
     null,

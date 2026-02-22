@@ -44,7 +44,7 @@ export async function getAllUsers(): Promise<UserResponseDto[]> {
   return response.data;
 }
 
-export async function getUserById(userId: number): Promise<UserResponseDto> {
+export async function getUserById(userId: string): Promise<UserResponseDto> {
   const response = await axiosInstance.get<UserResponseDto>(`/users/${userId}`);
   return response.data;
 }

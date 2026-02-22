@@ -55,7 +55,7 @@ export const bulkUpdateAttendances = async (
  * Get attendance by ID
  */
 export const getAttendanceById = async (
-  id: number,
+  id: string,
 ): Promise<AttendanceResponseDto> => {
   const response = await axiosInstance.get<AttendanceResponseDto>(
     `/attendances/${id}`,
@@ -67,7 +67,7 @@ export const getAttendanceById = async (
  * Update attendance by ID
  */
 export const updateAttendance = async (
-  id: number,
+  id: string,
   data: AttendanceRequestDto,
 ): Promise<AttendanceResponseDto> => {
   const response = await axiosInstance.put<AttendanceResponseDto>(
@@ -80,7 +80,7 @@ export const updateAttendance = async (
 /**
  * Delete attendance by ID
  */
-export const deleteAttendance = async (id: number): Promise<void> => {
+export const deleteAttendance = async (id: string): Promise<void> => {
   await axiosInstance.delete(`/attendances/${id}`);
 };
 
@@ -88,7 +88,7 @@ export const deleteAttendance = async (id: number): Promise<void> => {
  * Get all attendances by session ID
  */
 export const getAttendancesBySessionId = async (
-  sessionId: number,
+  sessionId: string,
 ): Promise<AttendanceResponseDto[]> => {
   const response = await axiosInstance.get<AttendanceResponseDto[]>(
     `/attendances/sessions/${sessionId}`,
@@ -100,7 +100,7 @@ export const getAttendancesBySessionId = async (
  * Get all attendances by participant ID
  */
 export const getAttendancesByParticipantId = async (
-  participantId: number,
+  participantId: string,
 ): Promise<AttendanceResponseDto[]> => {
   const response = await axiosInstance.get<AttendanceResponseDto[]>(
     `/attendances/participants/${participantId}`,
@@ -112,7 +112,7 @@ export const getAttendancesByParticipantId = async (
  * Get attendance statistics by participant ID
  */
 export const getAttendanceStatsByParticipantId = async (
-  participantId: number,
+  participantId: string,
 ): Promise<AttendanceStatsResponseDto> => {
   const response = await axiosInstance.get<AttendanceStatsResponseDto>(
     `/attendances/stats/participants/${participantId}`,

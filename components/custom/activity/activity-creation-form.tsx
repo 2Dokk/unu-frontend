@@ -51,8 +51,8 @@ export function ActivityCreationForm({
     title: "",
     description: "",
     status: "CREATED",
-    activityTypeId: 0,
-    quarterId: 0,
+    activityTypeId: "",
+    quarterId: "",
     startDate: "",
     endDate: "",
   });

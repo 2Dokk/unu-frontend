@@ -84,7 +84,7 @@ export default function ManagePage() {
   const { isAuthenticated, hasRole, isLoading: authLoading } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedActivityTypeIds, setSelectedActivityTypeIds] = useState<
-    number[]
+    string[]
   >([]);
   const [sessions, setSessions] = useState<EnrichedSession[]>([]);
   const [selectedSession, setSelectedSession] =
@@ -115,7 +115,7 @@ export default function ManagePage() {
           ]);
 
         // Create activity lookup map
-        const activityMap = new Map<number, ActivityResponse>();
+        const activityMap = new Map<string, ActivityResponse>();
         activitiesData.forEach((activity) => {
           activityMap.set(activity.id, activity);
         });
@@ -165,7 +165,7 @@ export default function ManagePage() {
       : false;
   });
 
-  const handleActivityTypeToggle = (typeId: number) => {
+  const handleActivityTypeToggle = (typeId: string) => {
     setSelectedActivityTypeIds((prev) =>
       prev.includes(typeId)
         ? prev.filter((id) => id !== typeId)

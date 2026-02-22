@@ -20,21 +20,21 @@ import React from "react";
 interface AttendanceInputContentProps {
   participants: ActivityParticipantResponse[];
   attendanceData: {
-    present: Set<number>;
-    absent: Set<number>;
-    excused: Set<number>;
+    present: Set<string>;
+    absent: Set<string>;
+    excused: Set<string>;
   };
-  selectedParticipants: Set<number>;
+  selectedParticipants: Set<string>;
   attendanceSearchQuery: string;
   attendanceStatusTab: "present" | "absent" | "excused";
   isEditingAttendance: boolean;
-  onToggleSelection: (id: number) => void;
+  onToggleSelection: (id: string) => void;
   onBulkAssignStatus: (status: "present" | "absent" | "excused") => void;
   onMoveParticipant: (
-    id: number,
+    id: string,
     status: "present" | "absent" | "excused",
   ) => void;
-  onRemoveParticipant: (id: number) => void;
+  onRemoveParticipant: (id: string) => void;
   onSearchChange: (query: string) => void;
   onTabChange: (tab: "present" | "absent" | "excused") => void;
   onSelectAll: () => void;

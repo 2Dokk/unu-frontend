@@ -7,5 +7,5 @@ export default async function Page({
 }) {
   const { id } = await params;
 
-  return <ActivityDetails activityId={Number(id)} />;
+  return <ActivityDetails activityId={id} />;
 }

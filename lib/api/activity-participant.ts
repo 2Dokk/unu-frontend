@@ -14,7 +14,7 @@ export async function getAllActivityParticipants(): Promise<
 }
 
 export async function getActivityParticipantById(
-  id: number,
+  id: string,
 ): Promise<ActivityParticipantResponse> {
   const response = await axiosInstance.get<ActivityParticipantResponse>(
     `/activity-participants/${id}`,
@@ -33,7 +33,7 @@ export async function createActivityParticipant(
 }
 
 export async function updateActivityParticipantStatus(
-  id: number,
+  id: string,
   data: ActivityParticipantRequest,
 ): Promise<ActivityParticipantResponse> {
   const response = await axiosInstance.patch<ActivityParticipantResponse>(
@@ -44,7 +44,7 @@ export async function updateActivityParticipantStatus(
 }
 
 export async function updateActivityParticipantCompleted(
-  id: number,
+  id: string,
 ): Promise<ActivityParticipantResponse> {
   const response = await axiosInstance.patch<ActivityParticipantResponse>(
     `/activity-participants/${id}/completed`,
@@ -53,7 +53,7 @@ export async function updateActivityParticipantCompleted(
 }
 
 export async function updateActivityParticipant(
-  id: number,
+  id: string,
   data: ActivityParticipantRequest,
 ): Promise<ActivityParticipantResponse> {
   const response = await axiosInstance.put<ActivityParticipantResponse>(
@@ -63,12 +63,12 @@ export async function updateActivityParticipant(
   return response.data;
 }
 
-export async function deleteActivityParticipant(id: number): Promise<void> {
+export async function deleteActivityParticipant(id: string): Promise<void> {
   await axiosInstance.delete(`/activity-participants/${id}`);
 }
 
 export async function getMyParticipantByActivityId(
-  activityId: number,
+  activityId: string,
 ): Promise<ActivityParticipantResponse | null> {
   try {
     const response = await axiosInstance.get<ActivityParticipantResponse>(
@@ -81,7 +81,7 @@ export async function getMyParticipantByActivityId(
 }
 
 export async function createMyParticipantByActivityId(data: {
-  activityId: number;
+  activityId: string;
 }): Promise<ActivityParticipantResponse> {
   const response = await axiosInstance.post<ActivityParticipantResponse>(
     `/activity-participants/activities/${data.activityId}/me`,
@@ -90,7 +90,7 @@ export async function createMyParticipantByActivityId(data: {
 }
 
 export async function getActivityParticipantsByUserId(data: {
-  userId: number;
+  userId: string;
 }): Promise<ActivityParticipantResponse[]> {
   const response = await axiosInstance.get<ActivityParticipantResponse[]>(
     `/activity-participants/users/${data.userId}`,
@@ -99,7 +99,7 @@ export async function getActivityParticipantsByUserId(data: {
 }
 
 export async function getActivityParticipantsByActivityId(data: {
-  activityId: number;
+  activityId: string;
 }): Promise<ActivityParticipantResponse[]> {
   const response = await axiosInstance.get<ActivityParticipantResponse[]>(
     `/activity-participants/activities/${data.activityId}`,

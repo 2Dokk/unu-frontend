@@ -1,5 +1,5 @@
 export interface QuarterResponse {
-  id: number;
+  id: string;
   name: string;
   year: number;
   season: string;

@@ -15,9 +15,9 @@ const STATUS_OPTIONS = [
 ];
 
 interface ActivityStatusDropdownProps {
-  activityId: number;
+  activityId: string;
   currentStatus: string;
-  onStatusChange: (activityId: number, newStatus: string) => void;
+  onStatusChange: (activityId: string, newStatus: string) => void;
   isUpdating: boolean;
 }
 

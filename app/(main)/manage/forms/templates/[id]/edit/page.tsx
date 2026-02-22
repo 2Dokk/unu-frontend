@@ -30,7 +30,7 @@ import { FormTemplateResponse } from "@/lib/interfaces/form";
 export default function EditFormTemplatePage() {
   const router = useRouter();
   const params = useParams();
-  const id = Number(params.id);
+  const id = params.id as string;
 
   const [template, setTemplate] = useState<FormTemplateResponse | null>(null);
   const [title, setTitle] = useState("");

@@ -9,7 +9,7 @@ export async function getCurrentQuarter(): Promise<QuarterResponse> {
 }
 
 export async function updateCurrentQuarter(data: {
-  quarterId: number;
+  quarterId: string;
 }): Promise<QuarterResponse> {
   const response = await axiosInstance.put<QuarterResponse>(
     "/current-quarter",
@@ -24,7 +24,7 @@ export async function getAllQuarters(): Promise<QuarterResponse[]> {
 }
 
 export async function getQuarterById(
-  quarterId: number,
+  quarterId: string,
 ): Promise<QuarterResponse> {
   const response = await axiosInstance.get<QuarterResponse>(
     `/quarters/${quarterId}`,
@@ -40,7 +40,7 @@ export async function createQuarter(
 }
 
 export async function updateQuarter(
-  quarterId: number,
+  quarterId: string,
   data: QuarterRequest,
 ): Promise<QuarterResponse> {
   const response = await axiosInstance.put<QuarterResponse>(
@@ -50,7 +50,7 @@ export async function updateQuarter(
   return response.data;
 }
 
-export async function deleteQuarter(quarterId: number): Promise<void> {
+export async function deleteQuarter(quarterId: string): Promise<void> {
   await axiosInstance.delete(`/quarters/${quarterId}`);
 }
 

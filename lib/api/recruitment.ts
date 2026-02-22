@@ -11,7 +11,7 @@ export async function getAllRecruitments(): Promise<RecruitmentResponse[]> {
 }
 
 export async function getRecruitmentById(
-  id: number,
+  id: string,
 ): Promise<RecruitmentResponse> {
   const response = await axiosInstance.get<RecruitmentResponse>(
     `/recruitments/${id}`,
@@ -30,7 +30,7 @@ export async function createRecruitment(
 }
 
 export async function updateRecruitment(
-  id: number,
+  id: string,
   data: RecruitmentRequest,
 ): Promise<RecruitmentResponse> {
   const response = await axiosInstance.put<RecruitmentResponse>(
@@ -40,7 +40,7 @@ export async function updateRecruitment(
   return response.data;
 }
 
-export async function deleteRecruitment(id: number): Promise<void> {
+export async function deleteRecruitment(id: string): Promise<void> {
   await axiosInstance.delete(`/recruitments/${id}`);
 }
 

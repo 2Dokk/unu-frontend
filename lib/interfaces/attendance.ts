@@ -2,8 +2,8 @@ import { ActivityParticipantResponse } from "./activity-participant";
 import { ActivitySessionResponseDto } from "./activity-session";
 
 export interface AttendanceRequestDto {
-  sessionId: number;
-  participantId: number;
+  sessionId: string;
+  participantId: string;
   status: string;
 }
 
@@ -14,10 +14,10 @@ export interface AttendanceResponseDto {
 }
 
 export interface AttendanceBulkRequestDto {
-  sessionId: number;
-  presentParticipantIds: number[];
-  absentParticipantIds: number[];
-  excusedParticipantIds: number[];
+  sessionId: string;
+  presentParticipantIds: string[];
+  absentParticipantIds: string[];
+  excusedParticipantIds: string[];
 }
 
 export interface AttendanceStatsResponseDto {

@@ -27,7 +27,7 @@ import { ArrowLeft } from "lucide-react";
 export default function EditFormPage() {
   const router = useRouter();
   const params = useParams();
-  const id = Number(params.id);
+  const id = params.id as string;
 
   const [form, setForm] = useState<FormResponse | null>(null);
   const [title, setTitle] = useState("");

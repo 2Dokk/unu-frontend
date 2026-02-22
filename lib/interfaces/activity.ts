@@ -9,12 +9,12 @@ export const ACTIVITY_STATUS_MAP: Record<string, string> = {
 };
 
 export interface ActivityTypeResponse {
-  id: number;
+  id: string;
   name: string;
 }
 
 export interface ActivityResponse {
-  id: number;
+  id: string;
   title: string;
   description: string;
   status: string;
@@ -33,15 +33,15 @@ export interface ActivityRequest {
   title: string;
   description: string;
   status?: string;
-  activityTypeId: number;
-  assigneeId?: number;
-  quarterId: number;
+  activityTypeId: string;
+  assigneeId?: string;
+  quarterId: string;
   startDate: string;
   endDate: string;
 }
 
 export interface ActivityTypeReponse {
-  id: number;
+  id: string;
   name: string;
 }
 

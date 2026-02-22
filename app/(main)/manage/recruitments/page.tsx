@@ -95,12 +95,12 @@ export default function AdminRecruitmentsPage() {
     return "모집중";
   }
 
-  function getFormTitle(formId: number): string {
+  function getFormTitle(formId: string): string {
     const form = forms.find((f) => f.id === formId);
     return form?.title || `Form #${formId}`;
   }
 
-  function getQuarterLabel(quarterId: number): string {
+  function getQuarterLabel(quarterId: string): string {
     const quarter = quarters.find((q) => q.id === quarterId);
     return quarter ? `${quarter.year}년 ${quarter.name}분기` : `Q${quarterId}`;
   }

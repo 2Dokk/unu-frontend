@@ -65,7 +65,7 @@ export default function AdminFormsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{
     type: "template" | "form";
-    id: number;
+    id: string;
     title: string;
   } | null>(null);
 
@@ -98,7 +98,7 @@ export default function AdminFormsPage() {
     }
   }
 
-  function confirmDelete(type: "template" | "form", id: number, title: string) {
+  function confirmDelete(type: "template" | "form", id: string, title: string) {
     setItemToDelete({ type, id, title });
     setDeleteDialogOpen(true);
   }

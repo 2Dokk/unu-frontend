@@ -13,7 +13,7 @@ import RecruitmentForm from "@/components/custom/recruitment/recruitment-form";
 export default function EditRecruitmentPage() {
   const router = useRouter();
   const params = useParams();
-  const recruitmentId = Number(params.id);
+  const recruitmentId = params.id as string;
 
   const [recruitment, setRecruitment] = useState<RecruitmentResponse | null>(
     null,

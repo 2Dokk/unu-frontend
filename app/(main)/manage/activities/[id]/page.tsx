@@ -178,7 +178,7 @@ function LoadingSkeleton() {
 export default function ActivityDetailManagePage() {
   const params = useParams();
   const router = useRouter();
-  const activityId = Number(params.id);
+  const activityId = params.id as string;
 
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [participants, setParticipants] = useState<
@@ -196,13 +196,13 @@ export default function ActivityDetailManagePage() {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [attendanceStats, setAttendanceStats] = useState<
     Map<
-      number,
+      string,
       { presentCount: number; absentCount: number; excusedCount: number }
     >
   >(new Map());
   const [sessionAttendanceStatus, setSessionAttendanceStatus] = useState<
     Map<
-      number,
+      string,
       { present: number; absent: number; excused: number; total: number }
     >
   >(new Map());
@@ -218,11 +218,11 @@ export default function ActivityDetailManagePage() {
   const [selectedSession, setSelectedSession] =
     useState<ActivitySessionResponseDto | null>(null);
   const [attendanceData, setAttendanceData] = useState<{
-    present: Set<number>;
-    absent: Set<number>;
-    excused: Set<number>;
+    present: Set<string>;
+    absent: Set<string>;
+    excused: Set<string>;
   }>({ present: new Set(), absent: new Set(), excused: new Set() });
-  const [selectedParticipants, setSelectedParticipants] = useState<Set<number>>(
+  const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(
     new Set(),
   );
   const [attendanceSearchQuery, setAttendanceSearchQuery] = useState("");
@@ -244,8 +244,8 @@ export default function ActivityDetailManagePage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Selection states
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
 
   // Bulk update states
   const [bulkStatus, setBulkStatus] = useState<string>("");
@@ -302,7 +302,7 @@ export default function ActivityDetailManagePage() {
     sessionsData: ActivitySessionResponseDto[],
   ) {
     const statusMap = new Map<
-      number,
+      string,
       { present: number; absent: number; excused: number; total: number }
     >();
 
@@ -357,7 +357,7 @@ export default function ActivityDetailManagePage() {
 
       const statsResults = await Promise.all(statsPromises);
       const statsMap = new Map<
-        number,
+        string,
         { presentCount: number; absentCount: number; excusedCount: number }
       >();
 
@@ -421,7 +421,7 @@ export default function ActivityDetailManagePage() {
     router.push("/manage/activities");
   }
 
-  function handleMemberClick(userId: number, e: React.MouseEvent) {
+  function handleMemberClick(userId: string, e: React.MouseEvent) {
     e.stopPropagation();
     router.push(`/manage/members/${userId}`);
   }
@@ -436,7 +436,7 @@ export default function ActivityDetailManagePage() {
     }
   }
 
-  function handleSelectOne(id: number, checked: boolean) {
+  function handleSelectOne(id: string, checked: boolean) {
     const newSelected = new Set(selectedIds);
     if (checked) {
       newSelected.add(id);
@@ -447,7 +447,7 @@ export default function ActivityDetailManagePage() {
   }
 
   // Per-row status update
-  async function handleStatusChange(participantId: number, newStatus: string) {
+  async function handleStatusChange(participantId: string, newStatus: string) {
     if (updatingIds.has(participantId)) return;
 
     setUpdatingIds((prev) => new Set(prev).add(participantId));
@@ -657,7 +657,7 @@ export default function ActivityDetailManagePage() {
     }
   }
 
-  async function handleDeleteSession(sessionId: number) {
+  async function handleDeleteSession(sessionId: string) {
     if (!confirm("이 회차를 삭제하시겠습니까?")) return;
 
     try {
@@ -697,9 +697,9 @@ export default function ActivityDetailManagePage() {
       try {
         const existingAttendances = await getAttendancesBySessionId(session.id);
         const newData = {
-          present: new Set<number>(),
-          absent: new Set<number>(),
-          excused: new Set<number>(),
+          present: new Set<string>(),
+          absent: new Set<string>(),
+          excused: new Set<string>(),
         };
 
         existingAttendances.forEach((att) => {
@@ -721,7 +721,7 @@ export default function ActivityDetailManagePage() {
     setShowAttendanceDialog(true);
   }
 
-  function handleToggleParticipantSelection(participantId: number) {
+  function handleToggleParticipantSelection(participantId: string) {
     setSelectedParticipants((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(participantId)) {
@@ -759,7 +759,7 @@ export default function ActivityDetailManagePage() {
   }
 
   function handleMoveParticipant(
-    participantId: number,
+    participantId: string,
     toStatus: "present" | "absent" | "excused",
   ) {
     setAttendanceData((prev) => {
@@ -781,7 +781,7 @@ export default function ActivityDetailManagePage() {
     });
   }
 
-  function handleRemoveParticipantFromStatus(participantId: number) {
+  function handleRemoveParticipantFromStatus(participantId: string) {
     setAttendanceData((prev) => ({
       present: new Set([...prev.present].filter((id) => id !== participantId)),
       absent: new Set([...prev.absent].filter((id) => id !== participantId)),
@@ -976,7 +976,9 @@ export default function ActivityDetailManagePage() {
         </Button>
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight">{activity.title}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {activity.title}
+            </h1>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <Badge variant={getActivityStatusVariant(activity.status)}>
                 {getActivityStatusLabel(activity.status)}
@@ -987,7 +989,8 @@ export default function ActivityDetailManagePage() {
               <span>{activity.quarter.name}</span>
               <span>•</span>
               <span>
-                {formatDate(activity.startDate)} ~ {formatDate(activity.endDate)}
+                {formatDate(activity.startDate)} ~{" "}
+                {formatDate(activity.endDate)}
               </span>
             </div>
           </div>

@@ -2,8 +2,8 @@ import { ActivityResponse } from "./activity";
 import { UserResponseDto } from "./auth";
 
 export interface ActivityParticipantResponse {
-  id: number;
-  userId: number;
+  id: string; // UUID
+  userId: string; // UUID
   status: "APPLIED" | "APPROVED" | "REJECTED";
   completed: boolean;
   createdAt: string;
@@ -13,7 +13,7 @@ export interface ActivityParticipantResponse {
 }
 
 export interface ActivityParticipantRequest {
-  activityId: number;
+  activityId: string;
   status?: "APPLIED" | "APPROVED" | "REJECTED";
 }
 

@@ -1,10 +1,10 @@
 export interface UserRoleResponse {
-  id: number;
-  userId: number;
+  id: string;
+  userId: string;
   role: RoleResponse;
 }
 
 export interface RoleResponse {
-  id: number;
+  id: string;
   name: string;
 }

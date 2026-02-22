@@ -14,7 +14,7 @@ export interface LoginResponse {
 }
 
 export interface UserResponseDto {
-  id: number;
+  id: string;
   username: string;
   email: string;
   name: string;

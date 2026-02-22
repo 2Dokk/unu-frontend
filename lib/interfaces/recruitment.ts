@@ -6,13 +6,13 @@ export interface RecruitmentRequest {
   description: string;
   startAt: string;
   endAt: string;
-  quarterId: number;
-  formId: number;
+  quarterId: string;
+  formId: string;
   active: boolean;
 }
 
 export interface RecruitmentResponse {
-  id: number;
+  id: string;
   title: string;
   description: string;
   startAt: string;

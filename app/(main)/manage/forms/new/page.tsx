@@ -21,7 +21,9 @@ import { getAllFormTemplates } from "@/lib/api/form-template";
 import { FormTemplateResponse } from "@/lib/interfaces/form";
 import { serializeSchema } from "@/lib/interfaces/form-builder";
 
-export default function NewFormPage() {
+import { Suspense } from "react";
+
+function NewFormPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const templateIdFromQuery = searchParams.get("templateId");
@@ -43,9 +45,7 @@ export default function NewFormPage() {
   useEffect(() => {
     if (templateIdFromQuery && templates.length > 0) {
       setSelectedTemplateId(templateIdFromQuery);
-      const template = templates.find(
-        (t) => t.id === Number(templateIdFromQuery),
-      );
+      const template = templates.find((t) => t.id === templateIdFromQuery);
       if (template) {
         setSchema(template.schema);
       }
@@ -66,7 +66,7 @@ export default function NewFormPage() {
 
   function handleTemplateChange(templateId: string) {
     setSelectedTemplateId(templateId);
-    const template = templates.find((t) => t.id === Number(templateId));
+    const template = templates.find((t) => t.id === templateId);
     if (template) {
       setSchema(template.schema);
     }
@@ -79,7 +79,7 @@ export default function NewFormPage() {
     try {
       setIsSubmitting(true);
       await createForm({
-        templateId: Number(selectedTemplateId),
+        templateId: selectedTemplateId,
         title,
         schema,
       });
@@ -167,5 +167,13 @@ export default function NewFormPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewFormPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewFormPageInner />
+    </Suspense>
   );
 }

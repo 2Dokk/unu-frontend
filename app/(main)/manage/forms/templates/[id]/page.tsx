@@ -31,7 +31,7 @@ import { formatDate } from "@/lib/utils/date-utils";
 export default function ViewFormTemplatePage() {
   const router = useRouter();
   const params = useParams();
-  const id = Number(params.id);
+  const id = params.id as string;
 
   const [template, setTemplate] = useState<FormTemplateResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);

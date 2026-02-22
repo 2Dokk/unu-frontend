@@ -127,7 +127,7 @@ export default function ActivitiesManagementPage() {
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activityToDelete, setActivityToDelete] = useState<{
-    id: number;
+    id: string;
     title: string;
   } | null>(null);
 
@@ -191,11 +191,11 @@ export default function ActivitiesManagementPage() {
     loadInitialData();
   }
 
-  function handleActivityClick(activityId: number) {
+  function handleActivityClick(activityId: string) {
     router.push(`/manage/activities/${activityId}`);
   }
 
-  function handleEditClick(activityId: number, e: React.MouseEvent) {
+  function handleEditClick(activityId: string, e: React.MouseEvent) {
     e.stopPropagation();
     router.push(`/manage/activities/${activityId}/edit`);
   }

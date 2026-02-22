@@ -8,9 +8,9 @@ import { DropdownMenu } from "@radix-ui/react-dropdown-menu";
 import { Loader2 } from "lucide-react";
 
 interface ApplicationStatusDropdownProps {
-  applicationId: number;
+  applicationId: string;
   currentStatus: string;
-  onStatusChange: (applicationId: number, newStatus: string) => void;
+  onStatusChange: (applicationId: string, newStatus: string) => void;
   isUpdating: boolean;
 }
 

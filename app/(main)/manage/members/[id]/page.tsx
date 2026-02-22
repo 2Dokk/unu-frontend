@@ -76,7 +76,7 @@ function getStatusBadgeVariant(
 export default function MemberDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const memberId = parseInt(params.id as string);
+  const memberId = params.id as string;
 
   const [member, setMember] = useState<UserResponseDto | null>(null);
   const [participants, setParticipants] = useState<
@@ -111,7 +111,7 @@ export default function MemberDetailPage() {
     loadData();
   }, [memberId]);
 
-  const handleActivityClick = (activityId?: number) => {
+  const handleActivityClick = (activityId?: string) => {
     if (activityId) {
       router.push(`/activities/${activityId}`);
     }

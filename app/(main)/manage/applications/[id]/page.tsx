@@ -60,7 +60,7 @@ function getStatusBadge(status: string) {
 export default function ApplicationDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const applicationId = Number(params.id);
+  const applicationId = params.id as string;
 
   const [application, setApplication] = useState<ApplicationResponse | null>(
     null,
@@ -117,7 +117,7 @@ export default function ApplicationDetailPage() {
     }
   }
 
-  async function handleStatusChange(id: number, newStatus: string) {
+  async function handleStatusChange(id: string, newStatus: string) {
     if (!application) return;
 
     setIsUpdating(true);
@@ -203,7 +203,9 @@ export default function ApplicationDetailPage() {
         </Button>
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight">{application.name}의 지원서</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {application.name}의 지원서
+            </h1>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               {getStatusBadge(application.status)}
               <span>•</span>

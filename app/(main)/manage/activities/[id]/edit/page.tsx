@@ -85,7 +85,7 @@ const STATUS_OPTIONS = [
 export default function ActivityEditPage() {
   const params = useParams();
   const router = useRouter();
-  const activityId = parseInt(params.id as string);
+  const activityId = params.id as string;
 
   // Data state
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
@@ -104,9 +104,9 @@ export default function ActivityEditPage() {
     title: "",
     description: "",
     status: "",
-    activityTypeId: 0,
-    assigneeId: 0,
-    quarterId: 0,
+    activityTypeId: "",
+    assigneeId: "",
+    quarterId: "",
     startDate: "",
     endDate: "",
   });

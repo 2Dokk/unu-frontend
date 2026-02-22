@@ -41,7 +41,7 @@ export async function lookupApplication(
  * PUT /api/public/applications/{id}
  */
 export async function updateApplication(
-  id: number,
+  id: string,
   data: ApplicationRequest,
 ): Promise<ApplicationResponse> {
   const response = await axiosInstance.put<ApplicationResponse>(
@@ -56,7 +56,7 @@ export async function updateApplication(
  * PATCH /api/public/applications/{id}/cancel
  */
 export async function cancelApplicationWithPassword(
-  id: number,
+  id: string,
   password: string,
 ): Promise<void> {
   await axiosInstance.patch(`/public/applications/${id}/cancel`, {
@@ -69,7 +69,7 @@ export async function cancelApplicationWithPassword(
  * POST /api/public/applications/{id}/verify
  */
 export async function verifyApplication(
-  id: number,
+  id: string,
   password: string,
 ): Promise<ApplicationResponse> {
   const response = await axiosInstance.post<ApplicationResponse>(
@@ -87,7 +87,7 @@ export async function verifyApplication(
  * GET /api/applications/{id}
  */
 export async function getApplicationById(
-  id: number,
+  id: string,
 ): Promise<ApplicationResponse> {
   const response = await axiosInstance.get<ApplicationResponse>(
     `/applications/${id}`,
@@ -100,7 +100,7 @@ export async function getApplicationById(
  * GET /api/applications/{recruitmentId}/applications
  */
 export async function getApplicationsByRecruitmentId(
-  recruitmentId: number,
+  recruitmentId: string,
 ): Promise<ApplicationResponse[]> {
   const response = await axiosInstance.get<ApplicationResponse[]>(
     `/applications/recruitments/${recruitmentId}`,
@@ -113,7 +113,7 @@ export async function getApplicationsByRecruitmentId(
  * PATCH /api/applications/{id}/review
  */
 export async function reviewApplication(
-  id: number,
+  id: string,
   status: string,
 ): Promise<ApplicationResponse> {
   const response = await axiosInstance.patch<ApplicationResponse>(
@@ -127,7 +127,7 @@ export async function reviewApplication(
  * 지원서 취소 (관리자)
  * POST /api/applications/{id}/cancel
  */
-export async function cancelApplication(id: number): Promise<void> {
+export async function cancelApplication(id: string): Promise<void> {
   await axiosInstance.post(`/applications/${id}/cancel`);
 }
 
@@ -135,6 +135,6 @@ export async function cancelApplication(id: number): Promise<void> {
  * 지원서 삭제 (관리자)
  * DELETE /api/applications/{id}
  */
-export async function deleteApplication(id: number): Promise<void> {
+export async function deleteApplication(id: string): Promise<void> {
   await axiosInstance.delete(`/applications/${id}`);
 }

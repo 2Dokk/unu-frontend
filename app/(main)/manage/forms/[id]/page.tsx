@@ -29,7 +29,7 @@ import { formatDateTime } from "@/lib/utils/date-utils";
 export default function ViewFormPage() {
   const router = useRouter();
   const params = useParams();
-  const id = Number(params.id);
+  const id = params.id as string;
 
   const [form, setForm] = useState<FormResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);

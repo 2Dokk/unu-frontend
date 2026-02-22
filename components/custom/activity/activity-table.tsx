@@ -44,10 +44,10 @@ export function ActivityTable({
   const [activities, setActivities] = useState<ActivityResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [participantMap, setParticipantMap] = useState<
-    Record<number, ActivityParticipantResponse | null>
+    Record<string, ActivityParticipantResponse | null>
   >({});
-  const [applyingId, setApplyingId] = useState<number | null>(null);
-  const [cancelingId, setCancelingId] = useState<number | null>(null);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchActivities = async () => {
@@ -63,7 +63,7 @@ export function ActivityTable({
 
         // Fetch participant status for each activity
         const participantData: Record<
-          number,
+          string,
           ActivityParticipantResponse | null
         > = {};
         await Promise.all(
@@ -83,7 +83,7 @@ export function ActivityTable({
     fetchActivities();
   }, [quarter, activityType, status, searchTerm]);
 
-  const handleApply = async (activityId: number) => {
+  const handleApply = async (activityId: string) => {
     setApplyingId(activityId);
     try {
       const participant = await createMyParticipantByActivityId({ activityId });
@@ -98,7 +98,7 @@ export function ActivityTable({
     }
   };
 
-  const handleCancel = async (activityId: number, participantId: number) => {
+  const handleCancel = async (activityId: string, participantId: string) => {
     setCancelingId(activityId);
     try {
       await deleteActivityParticipant(participantId);
@@ -113,7 +113,7 @@ export function ActivityTable({
     }
   };
 
-  const handleRowClick = (activityId: number) => {
+  const handleRowClick = (activityId: string) => {
     router.push(`/activities/${activityId}`);
   };
 

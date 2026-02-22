@@ -18,7 +18,7 @@ export async function createFormTemplate(
 }
 
 export async function getFormTemplateById(
-  id: number,
+  id: string,
 ): Promise<FormTemplateResponse> {
   const response = await axiosInstance.get<FormTemplateResponse>(
     `/form-templates/${id}`,
@@ -27,7 +27,7 @@ export async function getFormTemplateById(
 }
 
 export async function updateFormTemplate(
-  id: number,
+  id: string,
   data: FormTemplateRequest,
 ): Promise<FormTemplateResponse> {
   const response = await axiosInstance.put<FormTemplateResponse>(
@@ -37,6 +37,6 @@ export async function updateFormTemplate(
   return response.data;
 }
 
-export async function deleteFormTemplate(id: number): Promise<void> {
+export async function deleteFormTemplate(id: string): Promise<void> {
   await axiosInstance.delete(`/form-templates/${id}`);
 }

@@ -1,6 +1,6 @@
 export interface ApplicationRequest {
-  recruitmentId: number;
-  formId: number;
+  recruitmentId: string;
+  formId: string;
   name: string;
   studentId: string;
   major: string;
@@ -13,9 +13,9 @@ export interface ApplicationRequest {
 }
 
 export interface ApplicationResponse {
-  id: number;
-  recruitmentId: number;
-  formId: number;
+  id: string;
+  recruitmentId: string;
+  formId: string;
   formSnapshot: string; // JSON string of form schema snapshot
   name: string;
   studentId: string;

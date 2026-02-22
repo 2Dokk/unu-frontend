@@ -5,44 +5,43 @@ import {
 import axiosInstance from "./axiosInstance";
 
 export async function getAllActivityTypes(): Promise<ActivityTypeResponse[]> {
-  const response = await axiosInstance.get<ActivityTypeResponse[]>(
-    "/activity-types"
-  );
+  const response =
+    await axiosInstance.get<ActivityTypeResponse[]>("/activity-types");
   return response.data;
 }
 
 export async function getActivityTypeById(
-  activityTypeId: number
+  activityTypeId: string,
 ): Promise<ActivityTypeResponse> {
   const response = await axiosInstance.get<ActivityTypeResponse>(
-    `/activity-types/${activityTypeId}`
+    `/activity-types/${activityTypeId}`,
   );
   return response.data;
 }
 
 export async function createActivityType(
-  data: ActivityTypeRequest
+  data: ActivityTypeRequest,
 ): Promise<ActivityTypeResponse> {
   const response = await axiosInstance.post<ActivityTypeResponse>(
     "/ActivityTypes",
-    data
+    data,
   );
   return response.data;
 }
 
 export async function updateActivityType(
-  activityTypeId: number,
-  data: ActivityTypeRequest
+  activityTypeId: string,
+  data: ActivityTypeRequest,
 ): Promise<ActivityTypeResponse> {
   const response = await axiosInstance.put<ActivityTypeResponse>(
     `/activity-types/${activityTypeId}`,
-    data
+    data,
   );
   return response.data;
 }
 
 export async function deleteActivityType(
-  activityTypeId: number
+  activityTypeId: string,
 ): Promise<void> {
   await axiosInstance.delete(`/activity-types/${activityTypeId}`);
 }

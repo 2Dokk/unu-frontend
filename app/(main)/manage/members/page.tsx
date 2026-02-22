@@ -117,7 +117,7 @@ export default function MembersManagementPage() {
     loadInitialData();
   }
 
-  function handleRowClick(memberId: number) {
+  function handleRowClick(memberId: string) {
     router.push(`/manage/members/${memberId}`);
   }
 
@@ -141,103 +141,103 @@ export default function MembersManagementPage() {
 
       {/* Compact Filter Toolbar */}
       <div className="bg-slate-50 border border-slate-200 rounded-lg">
-          <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
-            {/* Role Filter */}
-            <Select
-              value={roleFilter}
-              onValueChange={(value) => setRoleFilter(value as RoleFilter)}
+        <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
+          {/* Role Filter */}
+          <Select
+            value={roleFilter}
+            onValueChange={(value) => setRoleFilter(value as RoleFilter)}
+          >
+            <SelectTrigger className="w-32 h-9 bg-white">
+              <SelectValue placeholder="전체 역할" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">전체 역할</SelectItem>
+              <SelectItem value="MEMBER">학회원</SelectItem>
+              <SelectItem value="MANAGER">운영자</SelectItem>
+              <SelectItem value="ADMIN">관리자</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Active Status Filter */}
+          <Select
+            value={activeFilter}
+            onValueChange={(value) => setActiveFilter(value as ActiveFilter)}
+          >
+            <SelectTrigger className="w-32 h-9 bg-white">
+              <SelectValue placeholder="전체 상태" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">전체 상태</SelectItem>
+              <SelectItem value="ACTIVE">활성</SelectItem>
+              <SelectItem value="INACTIVE">비활성</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Joined Quarter Filter */}
+          <Select
+            value={joinedQuarterFilter}
+            onValueChange={setJoinedQuarterFilter}
+          >
+            <SelectTrigger className="w-40 h-9 bg-white">
+              <SelectValue placeholder="전체 분기" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">전체 분기</SelectItem>
+              {quarters.map((quarter) => (
+                <SelectItem key={quarter.id} value={quarter.name}>
+                  {quarter.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Name Search */}
+          <div className="flex-1 min-w-40">
+            <Input
+              placeholder="이름 검색"
+              value={nameSearch}
+              onChange={(e) => setNameSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              className="h-9 bg-white"
+            />
+          </div>
+
+          {/* Student ID Search */}
+          <div className="flex-1 min-w-40">
+            <Input
+              placeholder="학번 검색"
+              value={studentIdSearch}
+              onChange={(e) => setStudentIdSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              className="h-9 bg-white"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="ml-auto flex gap-2">
+            <Button
+              onClick={handleSearch}
+              variant="outline"
+              size="sm"
+              className="h-9 px-10"
             >
-              <SelectTrigger className="w-32 h-9 bg-white">
-                <SelectValue placeholder="전체 역할" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">전체 역할</SelectItem>
-                <SelectItem value="MEMBER">학회원</SelectItem>
-                <SelectItem value="MANAGER">운영자</SelectItem>
-                <SelectItem value="ADMIN">관리자</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Active Status Filter */}
-            <Select
-              value={activeFilter}
-              onValueChange={(value) => setActiveFilter(value as ActiveFilter)}
-            >
-              <SelectTrigger className="w-32 h-9 bg-white">
-                <SelectValue placeholder="전체 상태" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">전체 상태</SelectItem>
-                <SelectItem value="ACTIVE">활성</SelectItem>
-                <SelectItem value="INACTIVE">비활성</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Joined Quarter Filter */}
-            <Select
-              value={joinedQuarterFilter}
-              onValueChange={setJoinedQuarterFilter}
-            >
-              <SelectTrigger className="w-40 h-9 bg-white">
-                <SelectValue placeholder="전체 분기" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">전체 분기</SelectItem>
-                {quarters.map((quarter) => (
-                  <SelectItem key={quarter.id} value={quarter.name}>
-                    {quarter.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Name Search */}
-            <div className="flex-1 min-w-40">
-              <Input
-                placeholder="이름 검색"
-                value={nameSearch}
-                onChange={(e) => setNameSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                className="h-9 bg-white"
-              />
-            </div>
-
-            {/* Student ID Search */}
-            <div className="flex-1 min-w-40">
-              <Input
-                placeholder="학번 검색"
-                value={studentIdSearch}
-                onChange={(e) => setStudentIdSearch(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                className="h-9 bg-white"
-              />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="ml-auto flex gap-2">
+              <Search className="h-4 w-4 mr-2" />
+              검색
+            </Button>
+            {hasFilters && (
               <Button
-                onClick={handleSearch}
-                variant="outline"
+                onClick={handleReset}
+                variant="ghost"
                 size="sm"
-                className="h-9 px-10"
+                className="h-9 px-4"
               >
-                <Search className="h-4 w-4 mr-2" />
-                검색
+                <X className="h-4 w-4 mr-2" />
+                초기화
               </Button>
-              {hasFilters && (
-                <Button
-                  onClick={handleReset}
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 px-4"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  초기화
-                </Button>
-              )}
-            </div>
+            )}
           </div>
         </div>
+      </div>
 
       {/* Error State */}
       {error && (

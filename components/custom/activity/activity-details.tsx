@@ -66,7 +66,7 @@ import {
 import { useAuth } from "@/lib/contexts/AuthContext";
 
 interface ActivityDetailsProps {
-  activityId: number;
+  activityId: string
 }
 
 // ========================
