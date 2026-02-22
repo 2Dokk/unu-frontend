@@ -2,6 +2,9 @@ import {
   ChangePasswordRequest,
   LoginRequest,
   LoginResponse,
+  SignUpRequestDto,
+  SignUpResponseDto,
+  SignupTokenResponseDto,
   UpdateProfileRequest,
   UserInfoResponseDto,
   UserResponseDto,
@@ -29,4 +32,23 @@ export async function changePassword(
   data: ChangePasswordRequest,
 ): Promise<void> {
   await axiosInstance.patch("/auth/me/password", data);
+}
+
+export async function signup(
+  data: SignUpRequestDto,
+  token: string,
+): Promise<SignUpResponseDto> {
+  const response = await axiosInstance.post<SignUpResponseDto>(
+    "/auth/signup",
+    data,
+    { params: { token } },
+  );
+  return response.data;
+}
+
+export async function generateSignupToken(): Promise<SignupTokenResponseDto> {
+  const response = await axiosInstance.post<SignupTokenResponseDto>(
+    "/admin/auth/token",
+  );
+  return response.data;
 }

@@ -124,6 +124,7 @@ export function getMenuByRole(
 
   // ADMIN 전용
   if (role === "ADMIN") {
+    menus.push({ type: "separator" });
     menus.push(...menuConfig.admin);
   }
 

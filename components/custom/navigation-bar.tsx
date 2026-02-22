@@ -145,10 +145,17 @@ export function NavigationBar() {
         className="flex items-center gap-2 hover:opacity-80 transition-opacity"
       >
         <div className="flex items-center gap-2">
-          <span className="text-xl font-bold">UNU</span>
+          <div className="flex items-baseline">
+            <span className="text-2xl font-semibold tracking-tight">CNU</span>
+            <span className="text-xl font-extrabold text-emerald-500 tracking-tight">
+              &
+            </span>
+            <span className="text-2xl font-semibold tracking-tight">U</span>
+          </div>
+
           <Separator orientation="vertical" className="h-5" />
           <span className="text-sm font-light text-muted-foreground">
-            CNU 페이지
+            서강대학교 컴퓨터 학회
           </span>
         </div>
       </Link>

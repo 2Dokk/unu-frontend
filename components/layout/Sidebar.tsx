@@ -14,8 +14,6 @@ export function Sidebar() {
   const { userRole } = useAuth();
   const menuItems = getMenuByRole(userRole);
 
-  console.log(menuItems);
-
   return (
     <aside className="sticky top-0 z-40 h-screen w-64 border-r bg-background shrink-0">
       <div className="flex h-full flex-col">

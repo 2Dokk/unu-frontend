@@ -378,7 +378,7 @@ export default function MembersManagementPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {member.joinedQuarter.name || "—"}
+                      {member.joinedQuarter?.name || "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {member.email}

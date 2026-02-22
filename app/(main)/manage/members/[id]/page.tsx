@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, User, Calendar } from "lucide-react";
+import { ArrowLeft, User, Calendar, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,11 +17,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { getUserById } from "@/lib/api/user";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { getUserById, changeUserRole } from "@/lib/api/user";
 import { getActivityParticipantsByUserId } from "@/lib/api/activity-participant";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
 import { getRoleBadgeVariant, getRoleLabel } from "@/lib/utils/role-utils";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 // ========================
 // HELPER FUNCTIONS
@@ -73,10 +76,14 @@ function getStatusBadgeVariant(
 // MAIN COMPONENT
 // ========================
 
+const ASSIGNABLE_ROLES = ["MEMBER", "MANAGER", "ADMIN"] as const;
+
 export default function MemberDetailPage() {
   const params = useParams();
   const router = useRouter();
   const memberId = params.id as string;
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole("ADMIN");
 
   const [member, setMember] = useState<UserResponseDto | null>(null);
   const [participants, setParticipants] = useState<
@@ -85,6 +92,12 @@ export default function MemberDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"all" | "completed">("all");
+
+  // Role management state
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [roleLoading, setRoleLoading] = useState(false);
+  const [roleError, setRoleError] = useState<string | null>(null);
+  const [roleSuccess, setRoleSuccess] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -98,7 +111,7 @@ export default function MemberDetailPage() {
         ]);
 
         setMember(memberData);
-        console.log("Fetched member data:", memberData);
+        setSelectedRoles(memberData.userRoles?.map((r) => r.role.name) ?? []);
         setParticipants(participantsData);
       } catch (err) {
         console.error("Failed to load member data:", err);
@@ -110,6 +123,32 @@ export default function MemberDetailPage() {
 
     loadData();
   }, [memberId]);
+
+  const handleRoleToggle = (role: string) => {
+    setSelectedRoles((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
+    );
+    setRoleSuccess(false);
+    setRoleError(null);
+  };
+
+  const handleRoleSave = async () => {
+    setRoleLoading(true);
+    setRoleError(null);
+    setRoleSuccess(false);
+    try {
+      const updated = await changeUserRole({
+        userId: memberId,
+        roles: selectedRoles,
+      });
+      setMember(updated);
+      setRoleSuccess(true);
+    } catch (err: any) {
+      setRoleError(err?.response?.data?.message ?? "권한 변경에 실패했습니다.");
+    } finally {
+      setRoleLoading(false);
+    }
+  };
 
   const handleActivityClick = (activityId?: string) => {
     if (activityId) {
@@ -294,6 +333,59 @@ export default function MemberDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Role Management Card — ADMIN only */}
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5" />
+                  권한 관리
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex flex-wrap gap-6">
+                    {ASSIGNABLE_ROLES.map((role) => (
+                      <div key={role} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`role-${role}`}
+                          checked={selectedRoles.includes(role)}
+                          onCheckedChange={() => handleRoleToggle(role)}
+                        />
+                        <Label
+                          htmlFor={`role-${role}`}
+                          className="cursor-pointer"
+                        >
+                          <Badge variant={getRoleBadgeVariant(role)}>
+                            {getRoleLabel(role)}
+                          </Badge>
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    size="sm"
+                    onClick={handleRoleSave}
+                    disabled={roleLoading}
+                    className="ml-auto"
+                  >
+                    {roleLoading ? "저장 중..." : "저장"}
+                  </Button>
+                </div>
+
+                {roleError && (
+                  <p className="text-sm text-destructive">{roleError}</p>
+                )}
+                {roleSuccess && (
+                  <p className="text-sm text-green-600">
+                    권한이 변경되었습니다.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Activity Applications Section */}
           <Card>

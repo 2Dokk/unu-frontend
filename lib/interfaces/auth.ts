@@ -22,7 +22,7 @@ export interface UserResponseDto {
   phoneNumber: string;
   githubId: string;
   isActive: boolean;
-  joinedQuarter: QuarterResponse;
+  joinedQuarter?: QuarterResponse;
   userRoles: UserRoleResponse[];
 }
 
@@ -34,7 +34,7 @@ export interface UserInfoResponseDto {
   phoneNumber: string;
   githubId: string;
   isActive: boolean;
-  joinedQuarter: QuarterResponse;
+  joinedQuarter?: QuarterResponse;
 }
 
 export interface UpdateProfileRequest {
@@ -49,4 +49,27 @@ export interface UpdateProfileRequest {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
+}
+
+export interface SignUpRequestDto {
+  name: string;
+  username: string;
+  password: string;
+  studentId: string;
+  githubId: string;
+  phoneNumber: string;
+  email: string;
+  joinedQuarterId: string;
+}
+
+export interface SignUpResponseDto {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+}
+
+export interface SignupTokenResponseDto {
+  token: string;
+  expiresAt: string;
 }

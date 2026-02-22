@@ -38,7 +38,7 @@ export default async function Home() {
         <div className="mx-auto w-full max-w-5xl text-center space-y-8">
           {/* Small heading */}
           <p className="text-sm text-muted-foreground font-medium tracking-wide">
-            Sogang University Computer Club
+            Sogang University
           </p>
 
           {/* Main title */}

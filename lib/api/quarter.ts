@@ -19,7 +19,8 @@ export async function updateCurrentQuarter(data: {
 }
 
 export async function getAllQuarters(): Promise<QuarterResponse[]> {
-  const response = await axiosInstance.get<QuarterResponse[]>("/quarters");
+  const response =
+    await axiosInstance.get<QuarterResponse[]>("/public/quarters");
   return response.data;
 }
 
@@ -27,7 +28,7 @@ export async function getQuarterById(
   quarterId: string,
 ): Promise<QuarterResponse> {
   const response = await axiosInstance.get<QuarterResponse>(
-    `/quarters/${quarterId}`,
+    `/public/quarters/${quarterId}`,
   );
   return response.data;
 }

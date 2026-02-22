@@ -46,13 +46,16 @@ const LoginPage = () => {
       // AuthContext를 통해 로그인 상태 업데이트
       login(response.token, response.refreshToken);
 
-      console.log("Login successful:", response);
-
       // Redirect to dashboard after successful login
-      router.push("/activities");
-    } catch (error) {
-      console.error("Login failed:", error);
-      setError("Login failed. Please check your credentials.");
+      router.push("/home");
+    } catch (error: any) {
+      const serverMessage = error?.response?.data;
+      setError(
+        serverMessage ??
+          (error instanceof Error
+            ? error.message
+            : "로그인 중 오류가 발생했습니다."),
+      );
     } finally {
       setLoading(false);
     }
@@ -62,7 +65,7 @@ const LoginPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2 text-center">
-          <CardTitle className="text-2xl font-bold">U-NU</CardTitle>
+          <CardTitle className="text-2xl font-bold">CNU&U</CardTitle>
           <CardDescription>
             학회 운영 및 활동 관리를 위한 내부 시스템입니다.
           </CardDescription>

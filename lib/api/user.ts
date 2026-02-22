@@ -1,4 +1,5 @@
 import { UserResponseDto } from "../interfaces/auth";
+import { UserRoleUpdateRequestDto } from "../interfaces/role";
 import axiosInstance from "./axiosInstance";
 import axios from "axios";
 
@@ -54,6 +55,16 @@ export async function getUserByStudentId(
 ): Promise<UserResponseDto> {
   const response = await axiosInstance.get<UserResponseDto>(
     `/users/studentId/${studentId}`,
+  );
+  return response.data;
+}
+
+export async function changeUserRole(
+  data: UserRoleUpdateRequestDto,
+): Promise<UserResponseDto> {
+  const response = await axiosInstance.put<UserResponseDto>(
+    "/admin/users/role",
+    data,
   );
   return response.data;
 }
