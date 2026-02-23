@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,17 +28,23 @@ export function FormBuilder({ initialSchema, onChange }: FormBuilderProps) {
     parseSchema(initialSchema),
   );
 
+  // Keep latest onChange in a ref so the sync effect doesn't need it as a dep
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+
   // Update schema when initialSchema changes (e.g., template selection)
   useEffect(() => {
     const parsed = parseSchema(initialSchema);
     setSchema(parsed);
   }, [initialSchema]);
 
-  // Sync schema changes to parent
+  // Sync schema changes to parent — only re-runs when schema changes
   useEffect(() => {
     const serialized = serializeSchema(schema);
-    onChange(serialized);
-  }, [schema, onChange]);
+    onChangeRef.current(serialized);
+  }, [schema]);
 
   function handleAddQuestion() {
     setSchema((prev) => ({

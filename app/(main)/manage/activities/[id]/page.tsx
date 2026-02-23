@@ -579,7 +579,7 @@ export default function ActivityDetailManagePage() {
 
   async function handleCreateSessionOnly() {
     if (!sessionForm.date) {
-      alert("날짜를 입력해주세요.");
+      toast.error("날짜를 입력해주세요.");
       return;
     }
 

@@ -196,12 +196,15 @@ export default function ApplicationFormPage() {
 
     return (
       <div key={question.id} className="space-y-3">
-        <Label htmlFor={question.id} className="text-base">
-          <span className="font-semibold">Q{index + 1}.</span> {question.title}
-          {question.required && (
-            <span className="text-destructive ml-1">*</span>
-          )}
-        </Label>
+        <div className="flex items-start gap-1">
+          <span className="font-semibold text-base shrink-0">{index + 1}.</span>
+          <span className="text-base whitespace-pre-wrap wrap-break-word flex-1">
+            {question.title}
+            {question.required && (
+              <span className="text-destructive ml-1">*</span>
+            )}
+          </span>
+        </div>
 
         {question.type === "SHORT_TEXT" && (
           <Input
@@ -210,7 +213,7 @@ export default function ApplicationFormPage() {
             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
             placeholder="답변을 입력하세요"
             disabled={!canSubmit()}
-            className={hasError ? "border-destructive" : ""}
+            className={`text-sm${hasError ? " border-destructive" : ""}`}
           />
         )}
 
@@ -222,7 +225,7 @@ export default function ApplicationFormPage() {
             placeholder="답변을 입력하세요"
             rows={4}
             disabled={!canSubmit()}
-            className={hasError ? "border-destructive" : ""}
+            className={`text-sm${hasError ? " border-destructive" : ""}`}
           />
         )}
 
@@ -240,7 +243,7 @@ export default function ApplicationFormPage() {
                 />
                 <Label
                   htmlFor={`${question.id}_${optIdx}`}
-                  className="font-normal cursor-pointer"
+                  className="text-sm font-normal cursor-pointer"
                 >
                   {option}
                 </Label>
@@ -283,7 +286,7 @@ export default function ApplicationFormPage() {
                   />
                   <Label
                     htmlFor={`${question.id}_${optIdx}`}
-                    className="font-normal cursor-pointer"
+                    className="text-sm font-normal cursor-pointer"
                   >
                     {option}
                   </Label>
@@ -410,7 +413,7 @@ export default function ApplicationFormPage() {
                   }}
                   placeholder="홍길동"
                   disabled={!canSubmitForm}
-                  className={errors.name ? "border-destructive" : ""}
+                  className={`text-sm${errors.name ? " border-destructive" : ""}`}
                 />
                 {errors.name && (
                   <p className="text-sm text-destructive">{errors.name}</p>
@@ -436,7 +439,7 @@ export default function ApplicationFormPage() {
                   }}
                   placeholder="2021000000"
                   disabled={!canSubmitForm}
-                  className={errors.studentId ? "border-destructive" : ""}
+                  className={`text-sm${errors.studentId ? " border-destructive" : ""}`}
                 />
                 {errors.studentId && (
                   <p className="text-sm text-destructive">{errors.studentId}</p>
@@ -464,7 +467,7 @@ export default function ApplicationFormPage() {
                   }}
                   placeholder="컴퓨터공학과"
                   disabled={!canSubmitForm}
-                  className={errors.major ? "border-destructive" : ""}
+                  className={`text-sm${errors.major ? " border-destructive" : ""}`}
                 />
                 {errors.major && (
                   <p className="text-sm text-destructive">{errors.major}</p>
@@ -479,6 +482,7 @@ export default function ApplicationFormPage() {
                   onChange={(e) => setSubMajor(e.target.value)}
                   placeholder="선택사항"
                   disabled={!canSubmitForm}
+                  className="text-sm"
                 />
               </div>
             </div>
@@ -503,7 +507,7 @@ export default function ApplicationFormPage() {
                 }}
                 placeholder="example@email.com"
                 disabled={!canSubmitForm}
-                className={errors.email ? "border-destructive" : ""}
+                className={`text-sm${errors.email ? " border-destructive" : ""}`}
               />
               {errors.email && (
                 <p className="text-sm text-destructive">{errors.email}</p>
@@ -531,7 +535,7 @@ export default function ApplicationFormPage() {
                   }}
                   placeholder="010-0000-0000"
                   disabled={!canSubmitForm}
-                  className={errors.phoneNumber ? "border-destructive" : ""}
+                  className={`text-sm${errors.phoneNumber ? " border-destructive" : ""}`}
                 />
                 {errors.phoneNumber && (
                   <p className="text-sm text-destructive">
@@ -548,6 +552,7 @@ export default function ApplicationFormPage() {
                   onChange={(e) => setGithubId(e.target.value)}
                   placeholder="선택사항"
                   disabled={!canSubmitForm}
+                  className="text-sm"
                 />
               </div>
             </div>
@@ -573,7 +578,7 @@ export default function ApplicationFormPage() {
                   }}
                   placeholder="6자 이상"
                   disabled={!canSubmitForm}
-                  className={errors.password ? "border-destructive" : ""}
+                  className={`text-sm${errors.password ? " border-destructive" : ""}`}
                 />
                 {errors.password && (
                   <p className="text-sm text-destructive">{errors.password}</p>
@@ -603,7 +608,7 @@ export default function ApplicationFormPage() {
                   }}
                   placeholder="비밀번호 재입력"
                   disabled={!canSubmitForm}
-                  className={errors.passwordConfirm ? "border-destructive" : ""}
+                  className={`text-sm${errors.passwordConfirm ? " border-destructive" : ""}`}
                 />
                 {errors.passwordConfirm && (
                   <p className="text-sm text-destructive">

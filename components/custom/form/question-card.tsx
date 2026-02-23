@@ -8,12 +8,10 @@ import {
   MoreVertical,
   ChevronDown,
   ChevronUp,
-  ArrowUp,
-  ArrowDown,
-  Triangle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -64,13 +62,6 @@ export function QuestionCard({
   const isChoiceType =
     question.type === "SINGLE_CHOICE" || question.type === "MULTIPLE_CHOICE";
 
-  const typeSummaries: Record<QuestionType, string> = {
-    SHORT_TEXT: "짧은 답변 (한 줄)",
-    LONG_TEXT: "여러 문장",
-    SINGLE_CHOICE: "하나 선택",
-    MULTIPLE_CHOICE: "여러 개 선택",
-  };
-
   function handleAddOption() {
     const newOptions = [...(question.options || []), ""];
     onUpdate({ options: newOptions });
@@ -106,7 +97,7 @@ export function QuestionCard({
             <Badge variant="secondary" className="shrink-0 text-xs py-0">
               {index + 1}
             </Badge>
-            <span className="font-semibold flex-1 truncate text-sm">
+            <span className="font-semibold flex-1 min-w-0 whitespace-pre-wrap wrap-break-word text-sm">
               {question.title || "(제목 없음)"}
             </span>
             <Badge
@@ -186,12 +177,19 @@ export function QuestionCard({
               >
                 질문 제목
               </Label>
-              <Input
+              <Textarea
                 id={`question-title-${question.id}`}
                 placeholder="질문을 입력하세요"
                 value={question.title}
                 onChange={(e) => onUpdate({ title: e.target.value })}
-                className="h-10 focus-visible:ring-2"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    setIsExpanded(false);
+                  }
+                }}
+                rows={2}
+                className="resize-none focus-visible:ring-2"
               />
             </div>
 
@@ -256,6 +254,12 @@ export function QuestionCard({
                           onChange={(e) =>
                             handleUpdateOption(idx, e.target.value)
                           }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddOption();
+                            }
+                          }}
                           className="h-9 text-sm"
                         />
                         <Button

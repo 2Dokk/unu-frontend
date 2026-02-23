@@ -28,12 +28,12 @@ export function FormPreview({ schema }: FormPreviewProps) {
         <Card key={question.id}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Label className="font-medium flex-1 truncate text-sm">
+              <div className="flex items-start gap-2">
+                <span className="font-medium flex-1 text-sm whitespace-pre-wrap wrap-break-word">
                   {index + 1}. {question.title || "(제목 없음)"}
-                </Label>
+                </span>
                 {question.required && (
-                  <Badge variant="destructive" className="text-xs">
+                  <Badge variant="destructive" className="text-xs shrink-0">
                     필수
                   </Badge>
                 )}
