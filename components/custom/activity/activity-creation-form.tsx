@@ -189,10 +189,8 @@ export function ActivityCreationForm({
                 활동 유형 <span className="text-destructive">*</span>
               </Label>
               <Select
-                value={formData.activityTypeId.toString()}
-                onValueChange={(value) =>
-                  handleChange("activityTypeId", Number(value))
-                }
+                value={formData.activityTypeId}
+                onValueChange={(value) => handleChange("activityTypeId", value)}
                 required
               >
                 <SelectTrigger id="activityType" className="h-10">
@@ -200,7 +198,7 @@ export function ActivityCreationForm({
                 </SelectTrigger>
                 <SelectContent>
                   {activityTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id.toString()}>
+                    <SelectItem key={type.id} value={type.id}>
                       {type.name}
                     </SelectItem>
                   ))}

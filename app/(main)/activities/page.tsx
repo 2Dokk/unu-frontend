@@ -176,7 +176,7 @@ function FilterToolbar({
                 onSearch();
               }
             }}
-            className="h-9 bg-white"
+            className="h-9 bg-white text-sm"
           />
         </div>
 
@@ -253,7 +253,7 @@ function ActivityCard({ activity, onClick }: ActivityCardProps) {
         <div className="border-t border-slate-100 my-3" />
 
         {/* Meta Row */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mb-3">
           <div className="flex items-center gap-1.5">
             <Calendar className="h-3.5 w-3.5" />
             <span>
@@ -414,57 +414,59 @@ const ActivityPage = () => {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Page Header */}
-      <div className="border-b pb-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
+      <div className="border-b pb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight">활동 목록</h1>
-            <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               프로젝트와 스터디를 확인하세요
             </p>
           </div>
 
-          {/* Semester Selector */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handlePrevQuarter}
-              disabled={!hasPrevQuarter}
-              aria-label="이전 분기"
-              className="h-9 w-9"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+          {/* Semester Selector + Admin Button */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handlePrevQuarter}
+                disabled={!hasPrevQuarter}
+                aria-label="이전 분기"
+                className="h-9 w-9"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
 
-            <Select
-              value={selectedQuarterId}
-              onValueChange={setSelectedQuarterId}
-            >
-              <SelectTrigger className="w-40 h-9">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <SelectValue placeholder="분기 선택" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {quarters.map((quarter) => (
-                  <SelectItem key={quarter.id} value={quarter.id.toString()}>
-                    {quarter.year} {quarter.season}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select
+                value={selectedQuarterId}
+                onValueChange={setSelectedQuarterId}
+              >
+                <SelectTrigger className="w-40 h-9">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <SelectValue placeholder="분기 선택" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {quarters.map((quarter) => (
+                    <SelectItem key={quarter.id} value={quarter.id.toString()}>
+                      {quarter.year} {quarter.season}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleNextQuarter}
-              disabled={!hasNextQuarter}
-              aria-label="다음 분기"
-              className="h-9 w-9"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleNextQuarter}
+                disabled={!hasNextQuarter}
+                aria-label="다음 분기"
+                className="h-9 w-9"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
 
             {viewer.isAdmin && (
               <Button

@@ -139,16 +139,16 @@ export default function MembersManagementPage() {
         </p>
       </div>
 
-      {/* Compact Filter Toolbar */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg">
-        <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
-          {/* Role Filter */}
+      {/* Filter Toolbar */}
+      <div className="border border-slate-200 rounded-lg bg-slate-50 p-4 space-y-3">
+        {/* Row 1: Dropdown Filters */}
+        <div className="flex flex-wrap gap-2">
           <Select
             value={roleFilter}
             onValueChange={(value) => setRoleFilter(value as RoleFilter)}
           >
-            <SelectTrigger className="w-32 h-9 bg-white">
-              <SelectValue placeholder="전체 역할" />
+            <SelectTrigger className="w-28 h-9 bg-white text-sm">
+              <SelectValue placeholder="역할" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">전체 역할</SelectItem>
@@ -158,13 +158,12 @@ export default function MembersManagementPage() {
             </SelectContent>
           </Select>
 
-          {/* Active Status Filter */}
           <Select
             value={activeFilter}
             onValueChange={(value) => setActiveFilter(value as ActiveFilter)}
           >
-            <SelectTrigger className="w-32 h-9 bg-white">
-              <SelectValue placeholder="전체 상태" />
+            <SelectTrigger className="w-28 h-9 bg-white text-sm">
+              <SelectValue placeholder="상태" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">전체 상태</SelectItem>
@@ -173,13 +172,12 @@ export default function MembersManagementPage() {
             </SelectContent>
           </Select>
 
-          {/* Joined Quarter Filter */}
           <Select
             value={joinedQuarterFilter}
             onValueChange={setJoinedQuarterFilter}
           >
-            <SelectTrigger className="w-40 h-9 bg-white">
-              <SelectValue placeholder="전체 분기" />
+            <SelectTrigger className="w-36 h-9 bg-white text-sm">
+              <SelectValue placeholder="가입 분기" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">전체 분기</SelectItem>
@@ -190,38 +188,27 @@ export default function MembersManagementPage() {
               ))}
             </SelectContent>
           </Select>
+        </div>
 
-          {/* Name Search */}
-          <div className="flex-1 min-w-40">
-            <Input
-              placeholder="이름 검색"
-              value={nameSearch}
-              onChange={(e) => setNameSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="h-9 bg-white"
-            />
-          </div>
-
-          {/* Student ID Search */}
-          <div className="flex-1 min-w-40">
-            <Input
-              placeholder="학번 검색"
-              value={studentIdSearch}
-              onChange={(e) => setStudentIdSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="h-9 bg-white"
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="ml-auto flex gap-2">
-            <Button
-              onClick={handleSearch}
-              variant="outline"
-              size="sm"
-              className="h-9 px-10"
-            >
-              <Search className="h-4 w-4 mr-2" />
+        {/* Row 2: Text Search + Buttons */}
+        <div className="flex gap-2 flex-wrap items-center">
+          <Input
+            placeholder="이름"
+            value={nameSearch}
+            onChange={(e) => setNameSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            className="h-9 bg-white text-sm flex-1 min-w-32"
+          />
+          <Input
+            placeholder="학번"
+            value={studentIdSearch}
+            onChange={(e) => setStudentIdSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            className="h-9 bg-white text-sm flex-1 min-w-32"
+          />
+          <div className="flex gap-1.5 shrink-0">
+            <Button onClick={handleSearch} size="sm" className="h-9 px-5">
+              <Search className="h-4 w-4 mr-1.5" />
               검색
             </Button>
             {hasFilters && (
@@ -229,9 +216,9 @@ export default function MembersManagementPage() {
                 onClick={handleReset}
                 variant="ghost"
                 size="sm"
-                className="h-9 px-4"
+                className="h-9 px-3"
               >
-                <X className="h-4 w-4 mr-2" />
+                <X className="h-4 w-4 mr-1" />
                 초기화
               </Button>
             )}

@@ -91,7 +91,7 @@ export default function ApplicationLookupPage() {
       sessionStorage.setItem("current_application_pwd", password);
 
       // Navigate to detail page (no ID in URL)
-      router.push("/apply/my/detail");
+      router.push("/apply/my/application");
     } catch (error: any) {
       console.error("Failed to verify application:", error);
       setError("비밀번호가 올바르지 않습니다.");
@@ -172,11 +172,53 @@ export default function ApplicationLookupPage() {
             </form>
           </CardContent>
         </Card>
+      ) : foundApplication.status === "CANCELED" ? (
+        // Canceled application
+        <div className="space-y-4">
+          <Card className="bg-muted/40 border-muted">
+            <CardContent>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-muted rounded-full">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold">취소된 지원서입니다</p>
+                  <p className="text-sm text-muted-foreground">
+                    제출일:{" "}
+                    {new Date(foundApplication.createdAt).toLocaleDateString(
+                      "ko-KR",
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">이름:</span>{" "}
+                  <span className="font-medium">{foundApplication.name}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">이메일:</span>{" "}
+                  <span className="font-medium">{foundApplication.email}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              setFoundApplication(null);
+              setError(null);
+            }}
+          >
+            다시 검색
+          </Button>
+        </div>
       ) : (
         // Step 2: Verify form
         <div className="space-y-4">
           <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
-            <CardContent className="pt-6">
+            <CardContent>
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2 bg-green-500 rounded-full">
                   <FileText className="h-5 w-5 text-white" />

@@ -9,18 +9,31 @@ import {
   XCircle,
   Clock,
   Edit,
+  Trash2,
+  Pencil,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getRecruitmentById } from "@/lib/api/recruitment";
+import { getRecruitmentById, deleteRecruitment } from "@/lib/api/recruitment";
 import { getApplicationsByRecruitmentId } from "@/lib/api/application";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import ApplicationsTable from "@/components/custom/application/application-table";
 import { formatDate, formatDateTime } from "@/lib/utils/date-utils";
+import { id } from "zod/v4/locales";
 
 type RecruitmentStatus = "모집중" | "모집 예정" | "모집 마감";
 
@@ -35,6 +48,8 @@ export default function RecruitmentDetailPage() {
   const [applications, setApplications] = useState<ApplicationResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadRecruitmentData();
@@ -55,6 +70,17 @@ export default function RecruitmentDetailPage() {
       setError("모집 공고를 불러오는데 실패했습니다.");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      setIsDeleting(true);
+      await deleteRecruitment(recruitmentId);
+      router.push("/manage/recruitments");
+    } catch {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
     }
   }
 
@@ -160,16 +186,24 @@ export default function RecruitmentDetailPage() {
               </span>
             </div>
           </div>
-          <Button
-            onClick={() =>
-              router.push(`/manage/recruitments/${recruitmentId}/edit`)
-            }
-            variant="outline"
-            size="sm"
-          >
-            <Edit className="mr-2 h-4 w-4" />
-            수정
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/manage/recruitments/${id}/edit`)}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              수정
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              삭제
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -332,6 +366,27 @@ export default function RecruitmentDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>정말 삭제하시겠어요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              모집 공고 "{recruitment.title}"을(를) 삭제하면 되돌릴 수 없어요.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -9,8 +9,8 @@ import {
   User as UserIcon,
   Plus,
   Calendar,
-  CheckCircle2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -234,10 +234,7 @@ export default function ActivityDetailManagePage() {
     open: boolean;
     participant: ActivityParticipantResponse | null;
   }>({ open: false, participant: null });
-  const [toast, setToast] = useState<{ message: string; visible: boolean }>({
-    message: "",
-    visible: false,
-  });
+  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("전체");
@@ -411,7 +408,7 @@ export default function ActivityDetailManagePage() {
       router.push("/manage/activities");
     } catch (error) {
       console.error("Failed to delete activity:", error);
-      alert("활동 삭제에 실패했습니다.");
+      toast.error("활동 삭제에 실패했습니다.");
       setDeleting(false);
       setShowDeleteDialog(false);
     }
@@ -465,10 +462,10 @@ export default function ActivityDetailManagePage() {
         ),
       );
 
-      alert("상태가 변경되었습니다.");
+      toast.success("상태가 변경되었습니다.");
     } catch (error) {
       console.error("Failed to update status:", error);
-      alert("상태 변경에 실패했습니다.");
+      toast.error("상태 변경에 실패했습니다.");
     } finally {
       setUpdatingIds((prev) => {
         const next = new Set(prev);
@@ -519,9 +516,9 @@ export default function ActivityDetailManagePage() {
 
     // Show result
     if (failureCount === 0) {
-      alert(`${successCount}건 변경 완료`);
+      toast.success(`${successCount}건 변경 완료`);
     } else {
-      alert(`${successCount}건 변경 완료, ${failureCount}건 실패`);
+      toast.error(`${successCount}건 변경 완료, ${failureCount}건 실패`);
     }
 
     // Reset states
@@ -569,11 +566,6 @@ export default function ActivityDetailManagePage() {
   // SESSION HANDLERS
   // ========================
 
-  function showToast(message: string) {
-    setToast({ message, visible: true });
-    setTimeout(() => setToast({ message: "", visible: false }), 3000);
-  }
-
   function handleOpenSessionDialog() {
     const nextSessionNumber = sessions.length + 1;
     setSessionForm({
@@ -616,16 +608,16 @@ export default function ActivityDetailManagePage() {
       });
 
       setShowSessionDialog(false);
-      showToast("진행 일정이 등록되었습니다.");
+      toast.success("진행 일정이 등록되었습니다.");
     } catch (error) {
       console.error("Failed to create session:", error);
-      alert("일정 등록에 실패했습니다.");
+      toast.error("일정 등록에 실패했습니다.");
     }
   }
 
   async function handleCreateSessionAndAttendance() {
     if (!sessionForm.date) {
-      alert("날짜를 입력해주세요.");
+      toast.error("날짜를 입력해주세요.");
       return;
     }
 
@@ -653,20 +645,21 @@ export default function ActivityDetailManagePage() {
       setSessionDialogStep(2);
     } catch (error) {
       console.error("Failed to create session:", error);
-      alert("일정 등록에 실패했습니다.");
+      toast.error("일정 등록에 실패했습니다.");
     }
   }
 
-  async function handleDeleteSession(sessionId: string) {
-    if (!confirm("이 회차를 삭제하시겠습니까?")) return;
-
+  async function handleDeleteSession() {
+    if (!deleteSessionId) return;
     try {
-      await deleteActivitySession(sessionId);
-      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      showToast("회차가 삭제되었습니다.");
+      await deleteActivitySession(deleteSessionId);
+      setSessions((prev) => prev.filter((s) => s.id !== deleteSessionId));
+      toast.success("회차가 삭제되었습니다.");
     } catch (error) {
       console.error("Failed to delete session:", error);
-      alert("회차 삭제에 실패했습니다.");
+      toast.error("회차 삭제에 실패했습니다.");
+    } finally {
+      setDeleteSessionId(null);
     }
   }
 
@@ -796,8 +789,6 @@ export default function ActivityDetailManagePage() {
 
     if (approvedParticipants.length === 0) return;
 
-    if (!confirm("모든 참여자를 출석으로 표시하시겠습니까?")) return;
-
     setAttendanceData({
       present: new Set(approvedParticipants.map((p) => p.id)),
       absent: new Set(),
@@ -820,14 +811,6 @@ export default function ActivityDetailManagePage() {
       attendanceData.present.size +
       attendanceData.absent.size +
       attendanceData.excused.size;
-
-    if (totalAssigned === 0) {
-      if (
-        !confirm("출석 정보가 입력되지 않았습니다. 그대로 저장하시겠습니까?")
-      ) {
-        return;
-      }
-    }
 
     try {
       if (isEditingAttendance) {
@@ -862,20 +845,20 @@ export default function ActivityDetailManagePage() {
       setShowAttendanceDialog(false);
       setShowSessionDialog(false);
       setSessionDialogStep(1);
-      showToast("출석이 저장되었습니다.");
+      toast.success("출석이 저장되었습니다.");
 
       // Reload attendance stats after saving
       await loadAttendanceStats();
     } catch (error) {
       console.error("Failed to save attendance:", error);
-      alert("출석 저장에 실패했습니다.");
+      toast.error("출석 저장에 실패했습니다.");
     }
   }
 
   function handleSkipAttendanceInput() {
     setShowSessionDialog(false);
     setSessionDialogStep(1);
-    showToast("진행 일정이 등록되었습니다.");
+    toast.success("진행 일정이 등록되었습니다.");
   }
 
   // ========================
@@ -904,10 +887,10 @@ export default function ActivityDetailManagePage() {
       );
 
       setCompletionDialog({ open: false, participant: null });
-      showToast("수료 처리되었습니다.");
+      toast.success("수료 처리되었습니다.");
     } catch (error) {
       console.error("Failed to mark as completed:", error);
-      alert("수료 처리에 실패했습니다.");
+      toast.error("수료 처리에 실패했습니다.");
     }
   }
 
@@ -1397,7 +1380,7 @@ export default function ActivityDetailManagePage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleDeleteSession(session.id)}
+                                onClick={() => setDeleteSessionId(session.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -1700,15 +1683,29 @@ export default function ActivityDetailManagePage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Toast Notification */}
-      {toast.visible && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <div className="bg-slate-900 text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            <span className="text-sm">{toast.message}</span>
-          </div>
-        </div>
-      )}
+      {/* Delete Session Confirmation Dialog */}
+      <AlertDialog
+        open={!!deleteSessionId}
+        onOpenChange={(open) => !open && setDeleteSessionId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>회차를 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSession}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Bulk Update Confirmation Dialog */}
       <AlertDialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>

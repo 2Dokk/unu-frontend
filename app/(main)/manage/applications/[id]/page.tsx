@@ -8,16 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { getApplicationById, reviewApplication } from "@/lib/api/application";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import { formatDateTime } from "@/lib/utils/date-utils";
 import ApplicationStatusDropdown from "@/components/custom/application/application-status-dropdown";
+import { toast } from "sonner";
 
 interface FormQuestion {
   id: string;
@@ -126,7 +121,7 @@ export default function ApplicationDetailPage() {
       setApplication(updated);
     } catch (error) {
       console.error("Failed to update status:", error);
-      alert("상태 변경에 실패했습니다.");
+      toast.error("상태 업데이트에 실패했습니다.");
     } finally {
       setIsUpdating(false);
     }

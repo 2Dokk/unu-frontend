@@ -13,7 +13,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { getActiveRecruitment, getRecruitmentById } from "@/lib/api/recruitment";
+import {
+  getActiveRecruitment,
+  getRecruitmentById,
+} from "@/lib/api/recruitment";
 import { getFormById } from "@/lib/api/form";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 import { FormResponse } from "@/lib/interfaces/form";
@@ -23,6 +26,7 @@ import {
   Question,
 } from "@/lib/interfaces/form-builder";
 import { createApplication } from "@/lib/api/application";
+import { toast } from "sonner";
 
 type RecruitmentStatus = "모집중" | "모집 예정" | "모집 마감";
 
@@ -137,12 +141,12 @@ export default function ApplicationFormPage() {
     e.preventDefault();
 
     if (!canSubmit()) {
-      alert("모집 기간에만 제출할 수 있습니다.");
+      toast.error("모집 기간에만 제출할 수 있습니다.");
       return;
     }
 
     if (!validateForm()) {
-      alert("필수 항목을 모두 입력해주세요.");
+      toast.error("필수 항목을 모두 입력해주세요.");
       return;
     }
 
@@ -166,7 +170,7 @@ export default function ApplicationFormPage() {
       router.push("/apply/complete");
     } catch (error) {
       console.error("Failed to submit application:", error);
-      alert("지원서 제출에 실패했습니다. 다시 시도해주세요.");
+      toast.error("지원서 제출에 실패했습니다. 다시 시도해주세요.");
       setIsSubmitting(false);
     }
   }
@@ -321,9 +325,7 @@ export default function ApplicationFormPage() {
                 <Button onClick={() => loadData()} variant="outline">
                   다시 시도
                 </Button>
-                <Button onClick={() => router.push("/apply")}>
-                  돌아가기
-                </Button>
+                <Button onClick={() => router.push("/apply")}>돌아가기</Button>
               </div>
             </div>
           </CardContent>

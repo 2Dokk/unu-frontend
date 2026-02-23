@@ -24,6 +24,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import { reviewApplication } from "@/lib/api/application";
 import ApplicationStatusDropdown from "./application-status-dropdown";
+import { toast } from "sonner";
 
 type StatusFilter = "all" | "PASSED" | "REJECTED" | "WAITING";
 
@@ -143,7 +144,7 @@ export default function ApplicationsTable({
       );
     } catch (error) {
       console.error("Failed to update application status:", error);
-      alert("상태 변경에 실패했습니다.");
+      toast.error("상태 변경에 실패했습니다.");
     } finally {
       setUpdatingIds((prev) => {
         const next = new Set(prev);

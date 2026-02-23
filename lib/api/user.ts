@@ -59,6 +59,16 @@ export async function getUserByStudentId(
   return response.data;
 }
 
+export async function updateUserActiveStatus(
+  userId: string,
+  active: boolean,
+): Promise<UserResponseDto> {
+  const response = await axiosInstance.patch<UserResponseDto>(
+    `/manager/users/${userId}/active?active=${active}`,
+  );
+  return response.data;
+}
+
 export async function changeUserRole(
   data: UserRoleUpdateRequestDto,
 ): Promise<UserResponseDto> {

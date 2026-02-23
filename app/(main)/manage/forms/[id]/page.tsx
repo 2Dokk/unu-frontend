@@ -61,16 +61,6 @@ export default function ViewFormPage() {
     }
   }
 
-  function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
   if (isLoading) {
     return (
       <div className="mx-auto w-full max-w-4xl px-6 py-8">

@@ -21,7 +21,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ChevronDown, LogOut, User, Home, Shield } from "lucide-react";
+import { ChevronDown, LogOut, User, Home, Shield, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -34,10 +34,12 @@ import { Badge } from "@/components/ui/badge";
 import { getCurrentQuarter } from "@/lib/api/quarter";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { useSidebar } from "@/lib/contexts/SidebarContext";
 
 export function NavigationBar() {
   const router = useRouter();
   const { userRole, logout: handleLogout, isLoading } = useAuth();
+  const { setIsOpen } = useSidebar();
   const [currentQuarter, setCurrentQuarter] =
     React.useState<QuarterResponse | null>(null);
 
@@ -107,14 +109,27 @@ export function NavigationBar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex w-full h-16 items-center justify-between border-b px-6 bg-background">
-      {/* Logo */}
-      <Link
-        href="/"
-        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-      >
-        <span className="text-xl font-bold tracking-tight">CNU&U</span>
-      </Link>
+    <header className="sticky top-0 z-50 flex w-full h-16 items-center justify-between border-b px-4 md:px-6 bg-background">
+      <div className="flex items-center gap-2">
+        {/* Mobile hamburger — only for logged-in users */}
+        {userRole !== "GUEST" && !isLoading && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setIsOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
+        {/* Logo */}
+        <Link
+          href="/"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        >
+          <span className="text-xl font-bold tracking-tight">CNU&U</span>
+        </Link>
+      </div>
 
       {/* Right Content */}
       {renderRightContent()}

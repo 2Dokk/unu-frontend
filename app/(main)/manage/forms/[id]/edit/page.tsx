@@ -211,7 +211,7 @@ export default function EditFormPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>정말 삭제하시겠어요?</AlertDialogTitle>
             <AlertDialogDescription>
-              폼 "{form.title}"을(를) 삭제하면 되돌릴 수 없어요.
+              신청서 "{form.title}"을(를) 삭제하면 되돌릴 수 없어요.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

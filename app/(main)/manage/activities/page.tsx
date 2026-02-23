@@ -256,15 +256,15 @@ export default function ActivitiesManagementPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg">
-        <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
-          {/* Activity Type Filter */}
+      <div className="border border-slate-200 rounded-lg bg-slate-50 p-4 space-y-3">
+        {/* Row 1: Dropdown Filters */}
+        <div className="flex flex-wrap gap-2">
           <Select
             value={activityTypeFilter}
             onValueChange={setActivityTypeFilter}
           >
-            <SelectTrigger className="w-32 h-9 bg-white">
-              <SelectValue placeholder="전체 유형" />
+            <SelectTrigger className="w-28 h-9 bg-white text-sm">
+              <SelectValue placeholder="유형" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">전체 유형</SelectItem>
@@ -276,10 +276,9 @@ export default function ActivitiesManagementPage() {
             </SelectContent>
           </Select>
 
-          {/* Quarter Filter */}
           <Select value={quarterFilter} onValueChange={setQuarterFilter}>
-            <SelectTrigger className="w-40 h-9 bg-white">
-              <SelectValue placeholder="전체 분기" />
+            <SelectTrigger className="w-36 h-9 bg-white text-sm">
+              <SelectValue placeholder="분기" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">전체 분기</SelectItem>
@@ -291,10 +290,9 @@ export default function ActivitiesManagementPage() {
             </SelectContent>
           </Select>
 
-          {/* Status Filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32 h-9 bg-white">
-              <SelectValue placeholder="전체 상태" />
+            <SelectTrigger className="w-28 h-9 bg-white text-sm">
+              <SelectValue placeholder="상태" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">전체 상태</SelectItem>
@@ -304,30 +302,34 @@ export default function ActivitiesManagementPage() {
               <SelectItem value="COMPLETED">종료</SelectItem>
             </SelectContent>
           </Select>
+        </div>
 
-          {/* Search Input */}
-          <div className="flex-1 min-w-40">
-            <Input
-              placeholder="활동명 검색"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="h-9 bg-white"
-            />
-          </div>
-
-          {/* Clear Button */}
-          {hasFilters && (
-            <Button
-              onClick={handleReset}
-              variant="ghost"
-              size="sm"
-              className="h-9"
-            >
-              <X className="h-4 w-4 mr-1" />
-              초기화
+        {/* Row 2: Text Search + Buttons */}
+        <div className="flex gap-2 flex-wrap items-center">
+          <Input
+            placeholder="활동명 검색"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            className="h-9 bg-white text-sm flex-1 min-w-40"
+          />
+          <div className="flex gap-1.5 shrink-0">
+            <Button onClick={handleSearch} size="sm" className="h-9 px-5">
+              <Search className="h-4 w-4 mr-1.5" />
+              검색
             </Button>
-          )}
+            {hasFilters && (
+              <Button
+                onClick={handleReset}
+                variant="ghost"
+                size="sm"
+                className="h-9 px-3"
+              >
+                <X className="h-4 w-4 mr-1" />
+                초기화
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

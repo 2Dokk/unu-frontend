@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, User, Calendar, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { getUserById, changeUserRole } from "@/lib/api/user";
+import { Switch } from "@/components/ui/switch";
+import {
+  getUserById,
+  changeUserRole,
+  updateUserActiveStatus,
+} from "@/lib/api/user";
 import { getActivityParticipantsByUserId } from "@/lib/api/activity-participant";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
@@ -84,6 +90,7 @@ export default function MemberDetailPage() {
   const memberId = params.id as string;
   const { hasRole } = useAuth();
   const isAdmin = hasRole("ADMIN");
+  const isManager = hasRole("MANAGER");
 
   const [member, setMember] = useState<UserResponseDto | null>(null);
   const [participants, setParticipants] = useState<
@@ -93,11 +100,12 @@ export default function MemberDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"all" | "completed">("all");
 
+  // Active status state
+  const [activeLoading, setActiveLoading] = useState(false);
+
   // Role management state
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [roleLoading, setRoleLoading] = useState(false);
-  const [roleError, setRoleError] = useState<string | null>(null);
-  const [roleSuccess, setRoleSuccess] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -124,27 +132,37 @@ export default function MemberDetailPage() {
     loadData();
   }, [memberId]);
 
+  const handleActiveToggle = async (value: boolean) => {
+    if (!member) return;
+    setActiveLoading(true);
+    try {
+      const updated = await updateUserActiveStatus(memberId, value);
+      setMember(updated);
+      toast.success("활동 여부가 변경되었습니다.");
+    } catch {
+      toast.error("활성 상태 변경에 실패했습니다.");
+    } finally {
+      setActiveLoading(false);
+    }
+  };
+
   const handleRoleToggle = (role: string) => {
     setSelectedRoles((prev) =>
       prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
     );
-    setRoleSuccess(false);
-    setRoleError(null);
   };
 
   const handleRoleSave = async () => {
     setRoleLoading(true);
-    setRoleError(null);
-    setRoleSuccess(false);
     try {
       const updated = await changeUserRole({
         userId: memberId,
         roles: selectedRoles,
       });
       setMember(updated);
-      setRoleSuccess(true);
+      toast.success("권한이 변경되었습니다.");
     } catch (err: any) {
-      setRoleError(err?.response?.data?.message ?? "권한 변경에 실패했습니다.");
+      toast.error(err?.response?.data?.message ?? "권한 변경에 실패했습니다.");
     } finally {
       setRoleLoading(false);
     }
@@ -334,6 +352,33 @@ export default function MemberDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Active Status Card — MANAGER only */}
+          {isManager && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5" />
+                  분기 활동 여부
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>이번 분기 활성 학회원</Label>
+                    <p className="text-sm text-muted-foreground">
+                      이번 분기에 활동 중인 학회원으로 표시합니다.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={member.isActive ?? false}
+                    onCheckedChange={handleActiveToggle}
+                    disabled={activeLoading}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Role Management Card — ADMIN only */}
           {isAdmin && (
             <Card>
@@ -375,14 +420,6 @@ export default function MemberDetailPage() {
                   </Button>
                 </div>
 
-                {roleError && (
-                  <p className="text-sm text-destructive">{roleError}</p>
-                )}
-                {roleSuccess && (
-                  <p className="text-sm text-green-600">
-                    권한이 변경되었습니다.
-                  </p>
-                )}
               </CardContent>
             </Card>
           )}

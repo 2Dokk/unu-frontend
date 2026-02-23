@@ -37,6 +37,7 @@ import {
   parseSchema,
   Question,
 } from "@/lib/interfaces/form-builder";
+import { toast } from "sonner";
 
 const STATUS_BADGE_MAP: Record<
   string,
@@ -166,10 +167,10 @@ export default function ApplicationDetailPage() {
       setIsEditing(false);
 
       // Show success message
-      alert("지원서가 성공적으로 수정되었습니다.");
+      toast.success("지원서가 성공적으로 수정되었습니다.");
     } catch (error: any) {
       console.error("Failed to update application:", error);
-      setError("지원서 수정에 실패했습니다. 다시 시도해주세요.");
+      toast.error("지원서 수정에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setIsSaving(false);
     }
@@ -192,11 +193,11 @@ export default function ApplicationDetailPage() {
       sessionStorage.removeItem("current_application_pwd");
 
       // Show success and navigate back
-      alert("지원이 취소되었습니다.");
+      toast.success("지원이 취소되었습니다.");
       router.push("/apply/my");
     } catch (error: any) {
       console.error("Failed to cancel application:", error);
-      setError("지원 취소에 실패했습니다. 다시 시도해주세요.");
+      toast.error("지원 취소에 실패했습니다. 다시 시도해주세요.");
       setIsCanceling(false);
     }
   };
