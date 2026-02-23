@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { FormBuilder } from "@/components/custom/form/form-builder";
 import { createForm } from "@/lib/api/form";
 import { getAllFormTemplates } from "@/lib/api/form-template";
 import { FormTemplateResponse } from "@/lib/interfaces/form";
-import { serializeSchema } from "@/lib/interfaces/form-builder";
+import { parseSchema, serializeSchema } from "@/lib/interfaces/form-builder";
 
 import { Suspense } from "react";
 
@@ -37,6 +37,8 @@ function NewFormPageInner() {
     serializeSchema({ version: 1, questions: [] }),
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{ title?: string; schema?: string }>({});
+  const schemaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadTemplates();
@@ -74,7 +76,17 @@ function NewFormPageInner() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedTemplateId || !title.trim() || !schema.trim()) return;
+    const newErrors: { title?: string; schema?: string } = {};
+    if (!title.trim()) newErrors.title = "제목을 입력해주세요.";
+    if (parseSchema(schema).questions.length === 0)
+      newErrors.schema = "질문을 1개 이상 추가해주세요.";
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      if (newErrors.schema) {
+        schemaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -113,7 +125,6 @@ function NewFormPageInner() {
                 <Select
                   value={selectedTemplateId}
                   onValueChange={handleTemplateChange}
-                  required
                 >
                   <SelectTrigger id="template">
                     <SelectValue placeholder="템플릿을 선택하세요" />
@@ -138,16 +149,38 @@ function NewFormPageInner() {
                 id="title"
                 placeholder="신청서 제목을 입력하세요"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  if (errors.title)
+                    setErrors((prev) => ({ ...prev, title: undefined }));
+                }}
+                aria-invalid={!!errors.title}
+                className={
+                  errors.title
+                    ? "border-destructive focus-visible:ring-destructive"
+                    : ""
+                }
               />
+              {errors.title && (
+                <p className="text-sm text-destructive">{errors.title}</p>
+              )}
             </div>
 
             <Separator />
 
-            <div className="space-y-2">
+            <div className="space-y-2" ref={schemaRef}>
               <Label>질문 구성</Label>
-              <FormBuilder initialSchema={schema} onChange={setSchema} />
+              <FormBuilder
+                initialSchema={schema}
+                onChange={(s) => {
+                  setSchema(s);
+                  if (errors.schema && parseSchema(s).questions.length > 0)
+                    setErrors((prev) => ({ ...prev, schema: undefined }));
+                }}
+              />
+              {errors.schema && (
+                <p className="text-sm text-destructive">{errors.schema}</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -172,7 +205,7 @@ function NewFormPageInner() {
 
 export default function NewFormPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense>
       <NewFormPageInner />
     </Suspense>
   );

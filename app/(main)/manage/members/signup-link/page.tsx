@@ -62,9 +62,25 @@ export default function SignupLinkPage() {
     ? `${window.location.origin}/signup?token=${tokenData.token}`
     : "";
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(signupUrl);
-    toast.success("링크가 클립보드에 복사되었습니다.");
+  const handleCopy = async () => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(signupUrl);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = signupUrl;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      toast.success("링크가 클립보드에 복사되었습니다.");
+    } catch {
+      toast.error("복사에 실패했습니다. 직접 복사해주세요.");
+    }
   };
 
   const formatExpiry = (expiresAt: string) => {

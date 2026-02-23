@@ -4,6 +4,7 @@ import {
   ApplicationSearchQuery,
 } from "../interfaces/application";
 import axiosInstance from "./axiosInstance";
+import publicClient from "./publicClient";
 
 // ===== Public Application Endpoints =====
 // 공개 API - 인증 없이 접근 가능
@@ -15,11 +16,7 @@ import axiosInstance from "./axiosInstance";
 export async function createApplication(
   data: ApplicationRequest,
 ): Promise<ApplicationResponse> {
-  const response = await axiosInstance.post<ApplicationResponse>(
-    "/public/applications",
-    data,
-  );
-  return response.data;
+  return publicClient.post<ApplicationResponse>("/public/applications", data);
 }
 
 /**
@@ -29,11 +26,10 @@ export async function createApplication(
 export async function lookupApplication(
   query: ApplicationSearchQuery,
 ): Promise<ApplicationResponse> {
-  const response = await axiosInstance.post<ApplicationResponse>(
+  return publicClient.post<ApplicationResponse>(
     "/public/applications/lookup",
     query,
   );
-  return response.data;
 }
 
 /**
@@ -44,11 +40,10 @@ export async function updateApplication(
   id: string,
   data: ApplicationRequest,
 ): Promise<ApplicationResponse> {
-  const response = await axiosInstance.put<ApplicationResponse>(
+  return publicClient.put<ApplicationResponse>(
     `/public/applications/${id}`,
     data,
   );
-  return response.data;
 }
 
 /**
@@ -59,9 +54,7 @@ export async function cancelApplicationWithPassword(
   id: string,
   password: string,
 ): Promise<void> {
-  await axiosInstance.patch(`/public/applications/${id}/cancel`, {
-    password,
-  });
+  await publicClient.patch(`/public/applications/${id}/cancel`, { password });
 }
 
 /**
@@ -72,11 +65,10 @@ export async function verifyApplication(
   id: string,
   password: string,
 ): Promise<ApplicationResponse> {
-  const response = await axiosInstance.post<ApplicationResponse>(
+  return publicClient.post<ApplicationResponse>(
     `/public/applications/${id}/verify`,
     { password },
   );
-  return response.data;
 }
 
 // ===== Admin/Manager Application Endpoints =====

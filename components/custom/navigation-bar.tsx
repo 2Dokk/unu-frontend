@@ -31,7 +31,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { getCurrentQuarter } from "@/lib/api/quarter";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -43,15 +42,12 @@ export function NavigationBar() {
     React.useState<QuarterResponse | null>(null);
 
   React.useEffect(() => {
-    // Fetch current quarter if user is logged in
-    if (userRole === "MEMBER" || userRole === "ADMIN") {
-      getCurrentQuarter()
-        .then(setCurrentQuarter)
-        .catch((error) => {
-          console.error("Failed to fetch current quarter:", error);
-        });
-    }
-  }, [userRole]);
+    getCurrentQuarter()
+      .then(setCurrentQuarter)
+      .catch((error) => {
+        console.error("Failed to fetch current quarter:", error);
+      });
+  }, []);
 
   const renderRightContent = () => {
     if (isLoading) {
@@ -75,36 +71,6 @@ export function NavigationBar() {
       );
     }
 
-    if (userRole === "MANAGER") {
-      return (
-        <div className="flex items-center gap-4">
-          <Badge variant="secondary" className="text-xs font-semibold">
-            MANAGER
-          </Badge>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <User className="h-4 w-4" />
-                관리자
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => router.push("/profile")}>
-                <Shield className="mr-2 h-4 w-4" />
-                프로필
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                로그아웃
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      );
-    }
-
     // MEMBER
     return (
       <div className="flex items-center gap-4">
@@ -122,8 +88,11 @@ export function NavigationBar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => router.push("/home")}>
+              <Home className="mr-2 h-4 w-4" />홈
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push("/profile")}>
-              <Home className="mr-2 h-4 w-4" />
+              <User className="mr-2 h-4 w-4" />
               프로필
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -144,20 +113,7 @@ export function NavigationBar() {
         href="/"
         className="flex items-center gap-2 hover:opacity-80 transition-opacity"
       >
-        <div className="flex items-center gap-2">
-          <div className="flex items-baseline">
-            <span className="text-2xl font-semibold tracking-tight">CNU</span>
-            <span className="text-xl font-extrabold text-emerald-500 tracking-tight">
-              &
-            </span>
-            <span className="text-2xl font-semibold tracking-tight">U</span>
-          </div>
-
-          <Separator orientation="vertical" className="h-5" />
-          <span className="text-sm font-light text-muted-foreground">
-            서강대학교 컴퓨터 학회
-          </span>
-        </div>
+        <span className="text-xl font-bold tracking-tight">CNU&U</span>
       </Link>
 
       {/* Right Content */}

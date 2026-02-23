@@ -2,15 +2,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getActiveRecruitment } from "@/lib/api/recruitment";
 import { formatDate } from "@/lib/utils/date-utils";
 import { CalendarDays, ArrowRight, Code2, Users, Rocket } from "lucide-react";
+import { getActiveRecruitment } from "@/lib/api/recruitment";
 
 async function getRecruitment() {
   try {
-    const recruitment = await getActiveRecruitment();
-    return recruitment;
-  } catch (error) {
+    return await getActiveRecruitment();
+  } catch {
     return null;
   }
 }

@@ -29,6 +29,7 @@ import {
   parseSchema,
   QUESTION_TYPE_LABELS,
 } from "@/lib/interfaces/form-builder";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 
 interface RecruitmentFormProps {
   mode: "create" | "edit";
@@ -47,14 +48,10 @@ export default function RecruitmentForm({
     initialData?.description || "",
   );
   const [startAt, setStartAt] = useState(
-    initialData?.startAt
-      ? new Date(initialData.startAt).toISOString().slice(0, 16)
-      : "",
+    initialData?.startAt ? initialData.startAt : "",
   );
   const [endAt, setEndAt] = useState(
-    initialData?.endAt
-      ? new Date(initialData.endAt).toISOString().slice(0, 16)
-      : "",
+    initialData?.endAt ? initialData.endAt : "",
   );
   const [quarterId, setQuarterId] = useState(
     initialData?.quarter.id.toString() || "",
@@ -77,6 +74,7 @@ export default function RecruitmentForm({
 
   // Submit state
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadForms();
@@ -141,22 +139,23 @@ export default function RecruitmentForm({
     e.preventDefault();
 
     if (!title.trim() || !formId || !quarterId || !startAt || !endAt) {
-      alert("필수 항목을 모두 입력해주세요.");
+      setError("필수 항목을 모두 입력해주세요.");
       return;
     }
 
     if (new Date(startAt) >= new Date(endAt)) {
-      alert("종료 일시는 시작 일시보다 이후여야 합니다.");
+      setError("종료 일시는 시작 일시보다 이후여야 합니다.");
       return;
     }
 
     try {
+      setError(null);
       setIsSubmitting(true);
       const payload = {
         title,
         description,
-        startAt: new Date(startAt).toISOString(),
-        endAt: new Date(endAt).toISOString(),
+        startAt: startAt,
+        endAt: endAt,
         quarterId: quarterId,
         formId: formId,
         active,
@@ -171,7 +170,7 @@ export default function RecruitmentForm({
       }
     } catch (error) {
       console.error(`Failed to ${mode} recruitment:`, error);
-      alert(`모집 ${mode === "create" ? "생성" : "수정"}에 실패했습니다.`);
+      setError(`모집 ${mode === "create" ? "생성" : "수정"}에 실패했습니다.`);
       setIsSubmitting(false);
     }
   }
@@ -251,29 +250,25 @@ export default function RecruitmentForm({
 
               {/* Start Date */}
               <div className="space-y-2">
-                <Label htmlFor="startAt">
+                <Label>
                   모집 시작 <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="startAt"
-                  type="datetime-local"
+                <DateTimePicker
                   value={startAt}
-                  onChange={(e) => setStartAt(e.target.value)}
-                  required
+                  onChange={setStartAt}
+                  placeholder="시작 일시를 선택하세요"
                 />
               </div>
 
               {/* End Date */}
               <div className="space-y-2">
-                <Label htmlFor="endAt">
+                <Label>
                   모집 종료 <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="endAt"
-                  type="datetime-local"
+                <DateTimePicker
                   value={endAt}
-                  onChange={(e) => setEndAt(e.target.value)}
-                  required
+                  onChange={setEndAt}
+                  placeholder="종료 일시를 선택하세요"
                 />
               </div>
 
@@ -414,8 +409,12 @@ export default function RecruitmentForm({
           </Card>
         </div>
       </div>
+      {/* Error Message */}
+      {error && (
+        <p className="text-sm text-destructive text-right mt-4">{error}</p>
+      )}
       {/* Action Buttons */}
-      <div className="flex items-center justify-end gap-4 mt-6">
+      <div className="flex items-center justify-end gap-4 mt-2">
         <Button
           type="button"
           variant="ghost"

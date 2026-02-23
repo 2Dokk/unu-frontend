@@ -158,7 +158,7 @@ export default function ViewFormPage() {
                 <div className="text-sm font-medium text-muted-foreground">
                   신청서 템플릿
                 </div>
-                <div className="text-sm">{form.template.title}</div>
+                <div className="text-sm">{form.template?.title || "-"}</div>
               </div>
             </CardContent>
           </Card>

@@ -10,6 +10,7 @@ import {
   Pencil,
   Clock,
   SquarePlus,
+  Trash2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getAllRecruitments } from "@/lib/api/recruitment";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { getAllRecruitments, deleteRecruitment } from "@/lib/api/recruitment";
 import { getAllForms } from "@/lib/api/form";
 import { getAllQuarters } from "@/lib/api/quarter";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
@@ -60,6 +71,13 @@ export default function AdminRecruitmentsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<RecruitmentStatus>("전체");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("전체");
+
+  // Delete state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -155,6 +173,23 @@ export default function AdminRecruitmentsPage() {
       return <Badge variant="secondary">예정</Badge>;
     }
     return <Badge variant="outline">마감</Badge>;
+  }
+  function confirmDelete(id: string, title: string) {
+    setItemToDelete({ id, title });
+    setDeleteDialogOpen(true);
+  }
+
+  async function handleDelete() {
+    if (!itemToDelete) return;
+    try {
+      await deleteRecruitment(itemToDelete.id);
+      setRecruitments((prev) => prev.filter((r) => r.id !== itemToDelete.id));
+    } catch (error) {
+      console.error("Failed to delete recruitment:", error);
+    } finally {
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+    }
   }
 
   return (
@@ -324,6 +359,19 @@ export default function AdminRecruitmentsPage() {
                               <Pencil className="mr-2 h-4 w-4" />
                               수정
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                confirmDelete(
+                                  recruitment.id,
+                                  recruitment.title,
+                                );
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              삭제
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -335,6 +383,25 @@ export default function AdminRecruitmentsPage() {
           )}
         </CardContent>
       </Card>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>정말 삭제하시겠어요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              모집 공고 "{itemToDelete?.title}"을(를) 삭제하면 되돌릴 수 없어요.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDelete}
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

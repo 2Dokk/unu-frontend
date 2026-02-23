@@ -1,12 +1,12 @@
 export interface FormRequest {
-  templateId: string;
+  templateId?: string;
   title: string;
   schema: string;
 }
 
 export interface FormResponse {
   id: string;
-  template: FormTemplateResponse;
+  template?: FormTemplateResponse;
   title: string;
   schema: string;
   createdAt: string;

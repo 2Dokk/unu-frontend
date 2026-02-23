@@ -313,7 +313,7 @@ export default function AdminFormsPage() {
                           {form.title}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {form.template.title}
+                          {form.template?.title || "-"}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatDate(form.modifiedAt)}
@@ -327,18 +327,20 @@ export default function AdminFormsPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() =>
-                                  router.push(`/manage/forms/${form.id}/edit`)
-                                }
+                                onClick={(e: React.MouseEvent) => {
+                                  e.stopPropagation();
+                                  router.push(`/manage/forms/${form.id}/edit`);
+                                }}
                               >
                                 <Pencil className="mr-2 h-4 w-4" />
                                 수정
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive"
-                                onClick={() =>
-                                  confirmDelete("form", form.id, form.title)
-                                }
+                                onClick={(e: React.MouseEvent) => {
+                                  e.stopPropagation();
+                                  confirmDelete("form", form.id, form.title);
+                                }}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 삭제

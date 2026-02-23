@@ -70,8 +70,8 @@ export function AdvancedJsonSection({
               variant="ghost"
               className="w-full justify-between p-0 h-auto font-semibold"
             >
-              <span>개발자 설정 (JSON)</span>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm">개발자 설정 (JSON)</span>
+              <span className="text-xs text-muted-foreground">
                 {isOpen ? "접기" : "펼치기"}
               </span>
             </Button>
@@ -97,7 +97,7 @@ export function AdvancedJsonSection({
                       }
                     }}
                   />
-                  <Label htmlFor="json-edit" className="cursor-pointer">
+                  <Label htmlFor="json-edit" className="cursor-pointer text-xs">
                     JSON 편집
                   </Label>
                 </div>
@@ -107,7 +107,7 @@ export function AdvancedJsonSection({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="xs"
                 onClick={handleCopy}
               >
                 {copied ? (
@@ -126,7 +126,7 @@ export function AdvancedJsonSection({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="xs"
                   onClick={handleFormat}
                 >
                   포맷 정리

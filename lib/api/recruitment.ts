@@ -3,6 +3,7 @@ import {
   RecruitmentResponse,
 } from "../interfaces/recruitment";
 import axiosInstance from "./axiosInstance";
+import publicClient from "./publicClient";
 
 export async function getAllRecruitments(): Promise<RecruitmentResponse[]> {
   const response =
@@ -45,8 +46,5 @@ export async function deleteRecruitment(id: string): Promise<void> {
 }
 
 export async function getActiveRecruitment(): Promise<RecruitmentResponse> {
-  const response = await axiosInstance.get<RecruitmentResponse>(
-    `/public/recruitments/active`,
-  );
-  return response.data;
+  return publicClient.get<RecruitmentResponse>(`/public/recruitments/active`);
 }

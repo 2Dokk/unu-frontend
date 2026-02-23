@@ -16,8 +16,8 @@ interface FormPreviewProps {
 export function FormPreview({ schema }: FormPreviewProps) {
   if (schema.questions.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <p>질문이 없어요. 질문을 추가해보세요.</p>
+      <div className="text-center py-12 text-muted-foreground text-sm">
+        <p>질문이 없어요.</p>
       </div>
     );
   }
@@ -29,7 +29,7 @@ export function FormPreview({ schema }: FormPreviewProps) {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Label className="text-base font-medium">
+                <Label className="font-medium flex-1 truncate text-sm">
                   {index + 1}. {question.title || "(제목 없음)"}
                 </Label>
                 {question.required && (

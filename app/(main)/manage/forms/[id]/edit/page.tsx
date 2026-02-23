@@ -61,7 +61,6 @@ export default function EditFormPage() {
     try {
       setIsSubmitting(true);
       await updateForm(id, {
-        templateId: form.template.id,
         title,
         schema,
       });
@@ -142,8 +141,18 @@ export default function EditFormPage() {
             <div className="space-y-2">
               <Label>템플릿</Label>
               <div className="flex items-center gap-2 p-3 rounded-md border bg-muted/50">
-                <span className="font-medium">{form.template.title}</span>
-                <Badge variant="secondary">ID: {form.template.id}</Badge>
+                {form.template ? (
+                  <div>
+                    <span className="text-sm">{form.template.title}</span>
+                    <Badge variant="secondary">
+                      ID: {form.template?.id || "-"}
+                    </Badge>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    템플릿 없음
+                  </span>
+                )}
               </div>
               <p className="text-sm text-muted-foreground">
                 템플릿은 수정할 수 없어요.

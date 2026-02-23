@@ -108,16 +108,14 @@ export function FormBuilder({ initialSchema, onChange }: FormBuilderProps) {
       {/* Left: Edit Section */}
       <Card>
         <CardHeader>
-          <CardTitle>질문 편집</CardTitle>
+          <CardTitle className="text-sm">질문 편집</CardTitle>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[600px]">
             <div className="space-y-4 pr-4">
               {schema.questions.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                  <p className="text-sm">
-                    아직 질문이 없어요. 아래 버튼으로 질문을 추가해보세요.
-                  </p>
+                  <p className="text-sm">아래 버튼으로 질문을 추가해보세요.</p>
                 </div>
               )}
 
@@ -160,7 +158,7 @@ export function FormBuilder({ initialSchema, onChange }: FormBuilderProps) {
       {/* Right: Preview Section */}
       <Card>
         <CardHeader>
-          <CardTitle>미리보기</CardTitle>
+          <CardTitle className="text-sm">미리보기</CardTitle>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-150">

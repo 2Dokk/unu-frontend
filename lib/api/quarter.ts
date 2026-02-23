@@ -1,11 +1,9 @@
 import { QuarterRequest, QuarterResponse } from "../interfaces/quarter";
 import axiosInstance from "./axiosInstance";
+import publicClient from "./publicClient";
 
 export async function getCurrentQuarter(): Promise<QuarterResponse> {
-  const response = await axiosInstance.get<QuarterResponse>(
-    "/public/current-quarter",
-  );
-  return response.data;
+  return publicClient.get<QuarterResponse>("/public/current-quarter");
 }
 
 export async function updateCurrentQuarter(data: {
@@ -19,18 +17,13 @@ export async function updateCurrentQuarter(data: {
 }
 
 export async function getAllQuarters(): Promise<QuarterResponse[]> {
-  const response =
-    await axiosInstance.get<QuarterResponse[]>("/public/quarters");
-  return response.data;
+  return publicClient.get<QuarterResponse[]>("/public/quarters");
 }
 
 export async function getQuarterById(
   quarterId: string,
 ): Promise<QuarterResponse> {
-  const response = await axiosInstance.get<QuarterResponse>(
-    `/public/quarters/${quarterId}`,
-  );
-  return response.data;
+  return publicClient.get<QuarterResponse>(`/public/quarters/${quarterId}`);
 }
 
 export async function createQuarter(

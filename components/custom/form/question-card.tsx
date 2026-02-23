@@ -239,9 +239,6 @@ export function QuestionCard({
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {typeSummaries[question.type]}
-                </p>
               </div>
 
               {/* Options for choice types */}

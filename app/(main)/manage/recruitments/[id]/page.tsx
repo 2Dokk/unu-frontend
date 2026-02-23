@@ -20,6 +20,7 @@ import { getApplicationsByRecruitmentId } from "@/lib/api/application";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import ApplicationsTable from "@/components/custom/application/application-table";
+import { formatDate, formatDateTime } from "@/lib/utils/date-utils";
 
 type RecruitmentStatus = "모집중" | "모집 예정" | "모집 마감";
 
@@ -67,24 +68,6 @@ export default function RecruitmentDetailPage() {
     if (now < start) return "모집 예정";
     if (now > end) return "모집 마감";
     return "모집중";
-  }
-
-  function formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}.${month}.${day}`;
-  }
-
-  function formatDateTime(dateString: string): string {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${year}.${month}.${day} ${hours}:${minutes}`;
   }
 
   function getStatusVariant(
