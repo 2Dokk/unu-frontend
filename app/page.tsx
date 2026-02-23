@@ -1,18 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/utils/date-utils";
 import { CalendarDays, ArrowRight, Code2, Users, Rocket } from "lucide-react";
 import { getActiveRecruitment } from "@/lib/api/recruitment";
-
-async function getRecruitment() {
-  try {
-    return await getActiveRecruitment();
-  } catch {
-    return null;
-  }
-}
 
 function calculateDDay(endDate: string): number {
   const end = new Date(endDate);
@@ -24,12 +18,66 @@ function calculateDDay(endDate: string): number {
   return diffDays;
 }
 
-export default async function Home() {
-  const activeRecruitment = await getRecruitment();
-  const dDay = activeRecruitment?.startAt
+async function RecruitmentBlock() {
+  let activeRecruitment = null;
+  try {
+    activeRecruitment = await getActiveRecruitment();
+  } catch {
+    // no active recruitment
+  }
+
+  const dDay = activeRecruitment
     ? calculateDDay(activeRecruitment.endAt)
     : null;
 
+  if (!activeRecruitment) {
+    return (
+      <p className="text-lg text-muted-foreground">
+        다음 모집을 준비 중입니다.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Badge variant="default" className="px-4 py-1.5 text-sm font-medium">
+        현재 모집 중
+      </Badge>
+
+      <div className="space-y-2">
+        <h2 className="text-2xl md:text-3xl font-semibold">
+          {activeRecruitment.title}
+        </h2>
+
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <CalendarDays className="h-4 w-4" />
+          <span className="text-sm">
+            {formatDate(activeRecruitment.startAt)} -{" "}
+            {formatDate(activeRecruitment.endAt)}
+          </span>
+          {dDay !== null && dDay >= 0 && (
+            <Badge variant="secondary" className="ml-2">
+              D-{dDay}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <Link href="/apply">
+        <Button size="lg" className="gap-2 text-base px-8">
+          지원하러 가기
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+function RecruitmentBlockSkeleton() {
+  return <Skeleton className="h-10 w-48 mx-auto rounded-md" />;
+}
+
+export default function Home() {
   return (
     <div className="flex flex-col">
       {/* Section 1: Hero */}
@@ -50,46 +98,9 @@ export default async function Home() {
 
           {/* Recruitment Block */}
           <div className="pt-8">
-            {activeRecruitment ? (
-              <div className="space-y-6">
-                <Badge
-                  variant="default"
-                  className="px-4 py-1.5 text-sm font-medium"
-                >
-                  현재 모집 중
-                </Badge>
-
-                <div className="space-y-2">
-                  <h2 className="text-2xl md:text-3xl font-semibold">
-                    {activeRecruitment.title}
-                  </h2>
-
-                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                    <CalendarDays className="h-4 w-4" />
-                    <span className="text-sm">
-                      {formatDate(activeRecruitment.startAt)} -{" "}
-                      {formatDate(activeRecruitment.endAt)}
-                    </span>
-                    {dDay !== null && dDay >= 0 && (
-                      <Badge variant="secondary" className="ml-2">
-                        D-{dDay}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                <Link href="/apply">
-                  <Button size="lg" className="gap-2 text-base px-8">
-                    지원하러 가기
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <p className="text-lg text-muted-foreground">
-                다음 모집을 준비 중입니다.
-              </p>
-            )}
+            <Suspense fallback={<RecruitmentBlockSkeleton />}>
+              <RecruitmentBlock />
+            </Suspense>
           </div>
         </div>
       </section>

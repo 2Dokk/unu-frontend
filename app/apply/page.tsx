@@ -177,7 +177,7 @@ export default function ApplyPage() {
               {quarter && (
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
-                    {quarter.year}년 {quarter.name}
+                    {quarter.name}
                   </Badge>
                 </div>
               )}

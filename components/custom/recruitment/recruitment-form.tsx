@@ -238,7 +238,7 @@ export default function RecruitmentForm({
                           key={quarter.id}
                           value={quarter.id.toString()}
                         >
-                          {quarter.year}년 {quarter.name}
+                          {quarter.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
