@@ -33,7 +33,6 @@ import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import ApplicationsTable from "@/components/custom/application/application-table";
 import { formatDate, formatDateTime } from "@/lib/utils/date-utils";
-import { id } from "zod/v4/locales";
 
 type RecruitmentStatus = "모집중" | "모집 예정" | "모집 마감";
 
@@ -190,7 +189,9 @@ export default function RecruitmentDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/manage/recruitments/${id}/edit`)}
+              onClick={() =>
+                router.push(`/manage/recruitments/${recruitmentId}/edit`)
+              }
             >
               <Pencil className="mr-2 h-4 w-4" />
               수정

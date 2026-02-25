@@ -368,7 +368,7 @@ export default function RecruitmentForm({
                               {index + 1}
                             </Badge>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm break-words">
+                              <p className="font-medium text-sm whitespace-pre-wrap wrap-break-word">
                                 {question.title || "(제목 없음)"}
                               </p>
                               <div className="flex flex-wrap gap-1.5 mt-2">

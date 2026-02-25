@@ -364,12 +364,15 @@ export default function ApplicationDetailPage() {
               return (
                 <div key={question.id} className="space-y-3">
                   <div className="space-y-1">
-                    <Label className="text-base font-semibold">
-                      Q{index + 1}. {question.title}
-                      {question.required && (
-                        <span className="text-destructive ml-1">*</span>
-                      )}
-                    </Label>
+                    <div className="flex items-start gap-1">
+                      <span className="text-base font-semibold shrink-0">{index + 1}.</span>
+                      <span className="text-base font-semibold whitespace-pre-wrap wrap-break-word flex-1">
+                        {question.title}
+                        {question.required && (
+                          <span className="text-destructive ml-1">*</span>
+                        )}
+                      </span>
+                    </div>
                   </div>
 
                   {isEditing ? (

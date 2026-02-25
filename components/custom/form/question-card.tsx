@@ -97,7 +97,7 @@ export function QuestionCard({
             <Badge variant="secondary" className="shrink-0 text-xs py-0">
               {index + 1}
             </Badge>
-            <span className="font-semibold flex-1 min-w-0 whitespace-pre-wrap wrap-break-word text-sm">
+            <span className="font-semibold flex-1 min-w-0 line-clamp-2 text-sm">
               {question.title || "(제목 없음)"}
             </span>
             <Badge
