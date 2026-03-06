@@ -64,9 +64,10 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { CourseTimeReservationCard } from "@/components/custom/activity/course-time-reservation";
 
 interface ActivityDetailsProps {
-  activityId: string
+  activityId: string;
 }
 
 // ========================
@@ -318,6 +319,7 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
           getMyParticipantByActivityId(activityId),
         ]);
         setActivity(activityData);
+        console.log("Fetched participant data:", activityData);
         setMyParticipant(participantData);
       } catch (error) {
         console.error("Failed to fetch activity details:", error);
@@ -571,7 +573,7 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
 
       {/* My Participant Status Card (Mobile Priority) */}
       <Card className="lg:hidden border-l-4 border-l-primary">
-        <CardContent className="pt-6">
+        <CardContent>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <participantMeta.icon className="h-5 w-5 text-muted-foreground" />
@@ -583,7 +585,7 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
                     variant={myParticipant.completed ? "default" : "outline"}
                     className="mt-1"
                   >
-                    {myParticipant.completed ? "완료" : "미완료"}
+                    {myParticipant.completed ? "수료" : "미수료"}
                   </Badge>
                 )}
               </div>
@@ -595,6 +597,9 @@ export function ActivityDetails({ activityId }: ActivityDetailsProps) {
       {/* Right Sidebar (Sticky) */}
       <div className="lg:col-span-1">
         <div className="sticky top-6 space-y-4">
+          {activity.activityType.code === "ONLINE_COURSE" && (
+            <CourseTimeReservationCard activityId={activityId} />
+          )}
           {/* Summary Card */}
           <Card>
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">

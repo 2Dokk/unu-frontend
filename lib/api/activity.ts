@@ -41,7 +41,7 @@ export async function updateActivity(
   data: ActivityRequest,
 ): Promise<ActivityResponse> {
   const response = await axiosInstance.put<ActivityResponse>(
-    `/activity-types/${activityId}`,
+    `/activities/${activityId}`,
     data,
   );
   return response.data;

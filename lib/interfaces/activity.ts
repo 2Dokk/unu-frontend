@@ -11,6 +11,7 @@ export const ACTIVITY_STATUS_MAP: Record<string, string> = {
 export interface ActivityTypeResponse {
   id: string;
   name: string;
+  code: string;
 }
 
 export interface ActivityResponse {

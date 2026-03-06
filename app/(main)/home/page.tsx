@@ -269,6 +269,11 @@ export default function HomePage() {
                   <Card
                     key={participant.id}
                     className="hover:shadow-md transition-shadow"
+                    onClick={() =>
+                      router.push(`/activities/${participant.activity.id}`)
+                    }
+                    onMouseOver={() => (document.body.style.cursor = "pointer")}
+                    onMouseOut={() => (document.body.style.cursor = "default")}
                   >
                     <CardHeader>
                       <div className="flex items-start justify-between">

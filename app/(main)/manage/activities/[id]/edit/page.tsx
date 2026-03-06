@@ -72,9 +72,7 @@ function toDateInputValue(dateString: string): string {
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "준비 중" },
   { value: "OPEN", label: "모집 중" },
-  { value: "RECRUITING", label: "모집 중" },
   { value: "ONGOING", label: "진행 중" },
-  { value: "IN_PROGRESS", label: "진행 중" },
   { value: "COMPLETED", label: "종료" },
 ];
 
