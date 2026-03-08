@@ -73,7 +73,7 @@ export default function ApplicationFormPage() {
 
       const parsedSchema = parseSchema(recruitmentData.form.schema);
       setSchema(parsedSchema);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load form:", error);
       setError("지원서를 불러오는데 실패했습니다.");
     } finally {
@@ -168,9 +168,9 @@ export default function ApplicationFormPage() {
 
       // Navigate to success page
       router.push("/apply/complete");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to submit application:", error);
-      toast.error("지원서 제출에 실패했습니다. 다시 시도해주세요.");
+      toast.error(error.response?.data || "지원서 제출에 실패했습니다. 다시 시도해주세요.");
       setIsSubmitting(false);
     }
   }
@@ -322,7 +322,7 @@ export default function ApplicationFormPage() {
           <CardContent className="pt-12 pb-12">
             <div className="text-center space-y-4">
               <p className="text-lg text-muted-foreground">
-                {error || "지원서를 불러올 수 없습니다."}
+                {error || "지원서를 불러올 수 없습니다"}
               </p>
               <div className="flex justify-center gap-3">
                 <Button onClick={() => loadData()} variant="outline">
@@ -628,7 +628,7 @@ export default function ApplicationFormPage() {
           <CardContent className="space-y-6">
             {schema.questions.length === 0 ? (
               <p className="text-center py-8 text-muted-foreground">
-                질문이 없습니다.
+                질문이 없습니다
               </p>
             ) : (
               schema.questions.map((question, index) =>

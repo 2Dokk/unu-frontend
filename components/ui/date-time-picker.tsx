@@ -35,11 +35,7 @@ export function DateTimePicker({
 
   const date = value ? new Date(value) : undefined;
   const hour = date ? date.getHours().toString().padStart(2, "0") : "00";
-  const minute = date
-    ? Math.floor(date.getMinutes() / 5) * 5 === date.getMinutes()
-      ? date.getMinutes().toString().padStart(2, "0")
-      : date.getMinutes().toString().padStart(2, "0")
-    : "00";
+  const minute = date ? date.getMinutes().toString().padStart(2, "0") : "00";
 
   function toInputString(d: Date): string {
     const y = d.getFullYear();
@@ -83,7 +79,7 @@ export function DateTimePicker({
           type="button"
           variant="outline"
           className={cn(
-            "w-full justify-start text-left font-normal",
+            "w-full justify-start text-left font-normal text-xs",
             !date && "text-muted-foreground",
           )}
         >
@@ -105,7 +101,7 @@ export function DateTimePicker({
         <div className="border-t p-3 flex flex-1 items-center gap-2">
           <CalendarIcon className="h-4 w-4 text-muted-foreground" />
           <Select value={hour} onValueChange={handleHourChange}>
-            <SelectTrigger className="w-21 h-8 text-sm">
+            <SelectTrigger className="w-21 h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -116,9 +112,9 @@ export function DateTimePicker({
               ))}
             </SelectContent>
           </Select>
-          <span className="text-muted-foreground text-sm">:</span>
+          <span className="text-muted-foreground text-xs">:</span>
           <Select value={minute} onValueChange={handleMinuteChange}>
-            <SelectTrigger className="w-21 h-8 text-sm">
+            <SelectTrigger className="w-21 h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

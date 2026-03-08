@@ -2,7 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, User, Calendar, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  User,
+  Calendar,
+  ShieldCheck,
+  BookOpen,
+  Mail,
+  Phone,
+  Github,
+  CalendarDays,
+  GraduationCap,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,6 +90,28 @@ function getStatusBadgeVariant(
 }
 
 // ========================
+// INFO ROW COMPONENT
+// ========================
+
+interface InfoRowProps {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}
+
+function InfoRow({ icon, label, value }: InfoRowProps) {
+  return (
+    <div className="flex items-start gap-3 py-3">
+      <div className="mt-0.5 text-muted-foreground">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+        <div className="text-sm font-medium">{value || "—"}</div>
+      </div>
+    </div>
+  );
+}
+
+// ========================
 // MAIN COMPONENT
 // ========================
 
@@ -139,8 +172,8 @@ export default function MemberDetailPage() {
       const updated = await updateUserActiveStatus(memberId, value);
       setMember(updated);
       toast.success("활동 여부가 변경되었습니다.");
-    } catch {
-      toast.error("활성 상태 변경에 실패했습니다.");
+    } catch (error: any) {
+      toast.error(error.response?.data || "활성 상태 변경에 실패했습니다.");
     } finally {
       setActiveLoading(false);
     }
@@ -200,19 +233,15 @@ export default function MemberDetailPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="border-b pb-6">
+      <div className="flex items-center mb-4">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => router.push("/manage/members")}
-          className="mb-2"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           돌아가기
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {member?.name || "학회원 상세"}
-        </h1>
       </div>
 
       {/* Error State */}
@@ -254,14 +283,22 @@ export default function MemberDetailPage() {
                 기본 정보
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-col md:flex-row gap-8">
-                {/* Left: Primary Identity */}
-                <div className="shrink-0 md:w-64">
-                  <h2 className="text-2xl font-semibold mb-2">
+            <CardContent className="pt-2">
+              {/* Avatar + Name + Roles */}
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <span className="text-xl font-semibold text-primary">
+                    {(member.name || member.username)?.charAt(0) || "?"}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold">
                     {member.name || member.username}
-                  </h2>
-                  <div className="flex flex-wrap gap-2">
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    @{member.username}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {member.userRoles?.length ? (
                       member.userRoles.map((role) => (
                         <Badge
@@ -274,80 +311,64 @@ export default function MemberDetailPage() {
                     ) : (
                       <Badge variant="outline">없음</Badge>
                     )}
-                    {member.isActive !== undefined && (
-                      <Badge
-                        variant={member.isActive ? "default" : "secondary"}
-                      >
-                        {member.isActive ? "활성" : "비활성"}
-                      </Badge>
-                    )}
                   </div>
                 </div>
+              </div>
 
-                {/* Divider */}
-                <Separator
-                  orientation="vertical"
-                  className="hidden md:block h-auto"
+              <Separator />
+
+              {/* Info Rows */}
+              <div className="divide-y">
+                <InfoRow
+                  icon={<BookOpen className="h-4 w-4" />}
+                  label="학번"
+                  value={member.studentId}
                 />
-
-                {/* Right: Attributes */}
-                <div className="flex-1">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-                    {/* Student ID */}
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">학번</p>
-                      <p className="font-medium">{member.studentId || "—"}</p>
-                    </div>
-
-                    {/* Username */}
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        아이디
-                      </p>
-                      <p className="font-medium">{member.username}</p>
-                    </div>
-
-                    {/* Email */}
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        이메일
-                      </p>
-                      <p className="font-medium">{member.email}</p>
-                    </div>
-
-                    {/* Joined Quarter */}
-                    {member.joinedQuarter && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">
-                          가입 분기
-                        </p>
-                        <p className="font-medium">
-                          {member.joinedQuarter?.name}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Phone Number */}
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        전화번호
-                      </p>
-                      <p className="font-medium">
-                        {(member as any).phoneNumber || "—"}
-                      </p>
-                    </div>
-
-                    {/* GitHub ID */}
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        GitHub ID
-                      </p>
-                      <p className="font-medium">
-                        {(member as any).githubId || "—"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <InfoRow
+                  icon={<Mail className="h-4 w-4" />}
+                  label="이메일"
+                  value={member.email}
+                />
+                <InfoRow
+                  icon={<Phone className="h-4 w-4" />}
+                  label="전화번호"
+                  value={member.phoneNumber}
+                />
+                <InfoRow
+                  icon={<GraduationCap className="h-4 w-4" />}
+                  label="전공"
+                  value={member.major}
+                />
+                {member.subMajor && (
+                  <InfoRow
+                    icon={<GraduationCap className="h-4 w-4" />}
+                    label="부전공"
+                    value={member.subMajor}
+                  />
+                )}
+                <InfoRow
+                  icon={<Github className="h-4 w-4" />}
+                  label="GitHub ID"
+                  value={member.githubId}
+                />
+                <InfoRow
+                  icon={<CalendarDays className="h-4 w-4" />}
+                  label="가입 분기"
+                  value={member.joinedQuarter?.name}
+                />
+                <InfoRow
+                  icon={<User className="h-4 w-4" />}
+                  label="이번 분기 활동 여부"
+                  value={
+                    <Badge
+                      variant={
+                        member.isCurrentQuarterActive ? "default" : "secondary"
+                      }
+                    >
+                      {member.isCurrentQuarterActive ? "활동 중" : "활동 안 함"}
+                    </Badge>
+                  }
+                />
               </div>
             </CardContent>
           </Card>
@@ -370,7 +391,7 @@ export default function MemberDetailPage() {
                     </p>
                   </div>
                   <Switch
-                    checked={member.isActive ?? false}
+                    checked={member.isCurrentQuarterActive ?? false}
                     onCheckedChange={handleActiveToggle}
                     disabled={activeLoading}
                   />
@@ -419,7 +440,6 @@ export default function MemberDetailPage() {
                     {roleLoading ? "저장 중..." : "저장"}
                   </Button>
                 </div>
-
               </CardContent>
             </Card>
           )}

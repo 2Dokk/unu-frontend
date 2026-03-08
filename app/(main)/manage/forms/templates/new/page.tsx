@@ -27,7 +27,7 @@ export default function NewFormTemplatePage() {
       setIsSubmitting(true);
       await createFormTemplate({ title, schema });
       router.push("/manage/forms");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create template:", error);
       setIsSubmitting(false);
     }
@@ -35,11 +35,11 @@ export default function NewFormTemplatePage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
-      <div className="space-y-2 border-b pb-6">
-        <h1 className="text-2xl font-bold tracking-tight">새 템플릿 만들기</h1>
+      <div className="space-y-2">
+        <h1 className="text-xl font-bold tracking-tight">템플릿 생성하기</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          다양한 학회 활동에서 사용할 신청서 구조를 구성합니다.
-          <br />이 템플릿은 여러 활동에서 재사용될 수 있습니다.
+          다양한 학회 활동에서 사용할 신청서 구조를 구성합니다
+          <br />이 템플릿은 여러 활동에서 재사용될 수 있습니다
         </p>
       </div>
 
@@ -69,16 +69,16 @@ export default function NewFormTemplatePage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="flex items-center justify-end gap-4 pt-4">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={() => router.push("/manage/forms")}
             disabled={isSubmitting}
           >
             취소
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting} size="lg">
             {isSubmitting ? "저장 중..." : "저장"}
           </Button>
         </div>

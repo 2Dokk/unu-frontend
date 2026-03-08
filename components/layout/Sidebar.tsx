@@ -25,16 +25,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               return <Separator key={`separator-${index}`} className="my-2" />;
             }
 
-            const isActive = pathname === item.href;
+            const isCurrentQuarterActive = pathname === item.href;
             const Icon = item.icon;
 
             return (
               <Button
                 key={item.href}
-                variant={isActive ? "secondary" : "ghost"}
+                variant={isCurrentQuarterActive ? "secondary" : "ghost"}
                 className={cn(
                   "w-full justify-start",
-                  isActive && "bg-secondary font-semibold",
+                  isCurrentQuarterActive && "bg-secondary font-semibold",
                 )}
                 asChild
                 onClick={onNavigate}
@@ -80,11 +80,7 @@ export function Sidebar() {
         )}
       >
         <div className="flex justify-end p-2 border-b">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsOpen(false)}
-          >
+          <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
             <X className="h-4 w-4" />
           </Button>
         </div>

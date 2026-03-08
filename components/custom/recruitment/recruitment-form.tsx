@@ -94,7 +94,7 @@ export default function RecruitmentForm({
       setFormsLoading(true);
       const data = await getAllForms();
       setForms(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load forms:", error);
     } finally {
       setFormsLoading(false);
@@ -106,7 +106,7 @@ export default function RecruitmentForm({
       setQuartersLoading(true);
       const data = await getAllQuarters();
       setQuarters(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load quarters:", error);
     } finally {
       setQuartersLoading(false);
@@ -127,7 +127,7 @@ export default function RecruitmentForm({
       setSelectedForm(form);
       const schema = parseSchema(form.schema);
       setFormSchema(schema);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load form:", error);
       setFormSchema(null);
     } finally {
@@ -168,7 +168,7 @@ export default function RecruitmentForm({
         const updated = await updateRecruitment(initialData!.id, payload);
         router.push(`/manage/recruitments/${updated.id}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Failed to ${mode} recruitment:`, error);
       setError(`모집 ${mode === "create" ? "생성" : "수정"}에 실패했습니다.`);
       setIsSubmitting(false);
@@ -330,11 +330,27 @@ export default function RecruitmentForm({
                   </p>
                 </div>
               ) : formLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
+                <div className="space-y-4">
+                  <div className="pb-3 border-b space-y-1.5">
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="border rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <Skeleton className="h-5 w-5 shrink-0 rounded-sm" />
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-4 w-full" />
+                            <div className="flex gap-1.5">
+                              <Skeleton className="h-4 w-16" />
+                              <Skeleton className="h-4 w-10" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : selectedForm && formSchema ? (
                 <div className="space-y-4">
@@ -351,7 +367,7 @@ export default function RecruitmentForm({
                   {/* Questions List */}
                   {formSchema.questions.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <p className="text-sm">질문이 없습니다.</p>
+                      <p className="text-sm">질문이 없습니다</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -414,23 +430,17 @@ export default function RecruitmentForm({
         <p className="text-sm text-destructive text-right mt-4">{error}</p>
       )}
       {/* Action Buttons */}
-      <div className="flex items-center justify-end gap-4 mt-2">
+      <div className="flex items-center justify-end gap-4 pt-4">
         <Button
           type="button"
           variant="ghost"
-          onClick={() =>
-            router.push(
-              mode === "edit"
-                ? `/manage/recruitments/${initialData?.id}`
-                : "/manage/recruitments",
-            )
-          }
+          onClick={() => router.push("/manage/recruitments")}
           disabled={isSubmitting}
         >
           취소
         </Button>
         <Button type="submit" disabled={isSubmitting} size="lg">
-          {submitButtonText}
+          {isSubmitting ? "저장 중..." : "저장"}
         </Button>
       </div>
     </form>

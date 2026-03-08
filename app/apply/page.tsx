@@ -39,9 +39,9 @@ export default function ApplyPage() {
 
       setForm(recruitmentData.form);
       setQuarter(recruitmentData.quarter);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load active recruitment:", error);
-      setError("현재 진행 중인 모집 공고가 없습니다.");
+      setError("현재 진행 중인 모집 공고가 없습니다");
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +119,7 @@ export default function ApplyPage() {
           <CardContent className="pt-12 pb-12">
             <div className="text-center space-y-4">
               <p className="text-lg text-muted-foreground">
-                {error || "현재 진행 중인 모집 공고가 없습니다."}
+                {error || "현재 진행 중인 모집 공고가 없습니다"}
               </p>
               <div className="flex justify-center gap-3">
                 <Button
@@ -220,7 +220,7 @@ export default function ApplyPage() {
                     ? "모집 시작 후 신청할 수 있습니다."
                     : status === "모집 마감"
                       ? "모집이 마감되었습니다."
-                      : "현재 신청할 수 없습니다."}
+                      : "현재 신청할 수 없습니다"}
               </p>
             </div>
 

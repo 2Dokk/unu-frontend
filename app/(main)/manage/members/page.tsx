@@ -2,16 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Search,
-  ChevronRight,
-  UserCheck,
-  UserX,
-  X,
-  Filter,
-} from "lucide-react";
+import { Search, ChevronRight, UserCheck, UserX } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getAllUsers, searchUsers } from "@/lib/api/user";
+import { searchUsers } from "@/lib/api/user";
 import { getAllQuarters } from "@/lib/api/quarter";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
@@ -42,86 +34,80 @@ type ActiveFilter = "ALL" | "ACTIVE" | "INACTIVE";
 export default function MembersManagementPage() {
   const router = useRouter();
 
-  // Data state
   const [members, setMembers] = useState<UserResponseDto[]>([]);
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Filter state
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("ALL");
-  const [joinedQuarterFilter, setJoinedQuarterFilter] = useState<string>("ALL");
+  const [joinedQuarterFilter, setJoinedQuarterFilter] = useState("ALL");
   const [nameSearch, setNameSearch] = useState("");
   const [studentIdSearch, setStudentIdSearch] = useState("");
 
+  const [debouncedName, setDebouncedName] = useState("");
+  const [debouncedStudentId, setDebouncedStudentId] = useState("");
+
+  // Load quarters on mount
   useEffect(() => {
-    loadInitialData();
+    async function loadQuarters() {
+      try {
+        const quartersData = await getAllQuarters();
+        setQuarters(quartersData);
+      } catch (err) {
+        console.error("Failed to load quarters:", err);
+      }
+    }
+    loadQuarters();
   }, []);
 
-  async function loadInitialData() {
-    try {
+  // Debounce text inputs (500ms)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedName(nameSearch), 500);
+    return () => clearTimeout(t);
+  }, [nameSearch]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedStudentId(studentIdSearch), 500);
+    return () => clearTimeout(t);
+  }, [studentIdSearch]);
+
+  // Auto-search when any filter changes
+  useEffect(() => {
+    async function search() {
       setLoading(true);
-      setError(null);
-      const [membersData, quartersData] = await Promise.all([
-        getAllUsers(),
-        getAllQuarters(),
-      ]);
-      setMembers(membersData);
-      setQuarters(quartersData);
-    } catch (err) {
-      console.error("Failed to load data:", err);
-      setError("학회원 정보를 불러오는데 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setLoading(false);
+      try {
+        const params: {
+          role?: string;
+          isCurrentQuarterActive?: boolean;
+          joinedQuarter?: string;
+          name?: string;
+          studentId?: string;
+        } = {};
+        if (roleFilter !== "ALL") params.role = roleFilter;
+        if (activeFilter === "ACTIVE") params.isCurrentQuarterActive = true;
+        if (activeFilter === "INACTIVE") params.isCurrentQuarterActive = false;
+        if (joinedQuarterFilter !== "ALL")
+          params.joinedQuarter = joinedQuarterFilter;
+        if (debouncedName.trim()) params.name = debouncedName.trim();
+        if (debouncedStudentId.trim())
+          params.studentId = debouncedStudentId.trim();
+        const results = await searchUsers(params);
+        setMembers(results);
+      } catch (err) {
+        console.error("Search failed:", err);
+      } finally {
+        setLoading(false);
+      }
     }
-  }
+    search();
+  }, [
+    roleFilter,
+    activeFilter,
+    joinedQuarterFilter,
+    debouncedName,
+    debouncedStudentId,
+  ]);
 
-  async function handleSearch() {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const params: {
-        role?: string;
-        isActive?: boolean;
-        joinedQuarter?: string;
-        name?: string;
-        studentId?: string;
-      } = {};
-
-      if (roleFilter !== "ALL") params.role = roleFilter;
-      if (activeFilter === "ACTIVE") params.isActive = true;
-      if (activeFilter === "INACTIVE") params.isActive = false;
-      if (joinedQuarterFilter !== "ALL")
-        params.joinedQuarter = joinedQuarterFilter;
-      if (nameSearch.trim()) params.name = nameSearch.trim();
-      if (studentIdSearch.trim()) params.studentId = studentIdSearch.trim();
-
-      const results = await searchUsers(params);
-      setMembers(results);
-    } catch (err) {
-      console.error("Search failed:", err);
-      setError("검색에 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleReset() {
-    setRoleFilter("ALL");
-    setActiveFilter("ALL");
-    setJoinedQuarterFilter("ALL");
-    setNameSearch("");
-    setStudentIdSearch("");
-    loadInitialData();
-  }
-
-  function handleRowClick(memberId: string) {
-    router.push(`/manage/members/${memberId}`);
-  }
-
-  const filteredMembers = members;
   const hasFilters =
     roleFilter !== "ALL" ||
     activeFilter !== "ALL" ||
@@ -131,213 +117,167 @@ export default function MembersManagementPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
-      {/* Header */}
-      <div className="space-y-2 border-b pb-6">
-        <h1 className="text-2xl font-bold tracking-tight">학회원</h1>
+      {/* Page Header */}
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">학회원 관리</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
           학회원 정보를 조회하고 관리합니다
         </p>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="border border-slate-200 rounded-lg bg-slate-50 p-4 space-y-3">
-        {/* Row 1: Dropdown Filters */}
-        <div className="flex flex-wrap gap-2">
-          <Select
-            value={roleFilter}
-            onValueChange={(value) => setRoleFilter(value as RoleFilter)}
-          >
-            <SelectTrigger className="w-28 h-9 bg-white text-sm">
-              <SelectValue placeholder="역할" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">전체 역할</SelectItem>
-              <SelectItem value="MEMBER">학회원</SelectItem>
-              <SelectItem value="MANAGER">운영자</SelectItem>
-              <SelectItem value="ADMIN">관리자</SelectItem>
-            </SelectContent>
-          </Select>
+      <Card>
+        <CardHeader>
+          <CardTitle>학회원 목록</CardTitle>
 
-          <Select
-            value={activeFilter}
-            onValueChange={(value) => setActiveFilter(value as ActiveFilter)}
-          >
-            <SelectTrigger className="w-28 h-9 bg-white text-sm">
-              <SelectValue placeholder="상태" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">전체 상태</SelectItem>
-              <SelectItem value="ACTIVE">활성</SelectItem>
-              <SelectItem value="INACTIVE">비활성</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Filters */}
+          <div className="flex flex-col gap-3 mt-4">
+            {/* Row 1: Search inputs */}
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="이름 검색..."
+                  value={nameSearch}
+                  onChange={(e) => setNameSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="학번 검색..."
+                  value={studentIdSearch}
+                  onChange={(e) => setStudentIdSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
 
-          <Select
-            value={joinedQuarterFilter}
-            onValueChange={setJoinedQuarterFilter}
-          >
-            <SelectTrigger className="w-36 h-9 bg-white text-sm">
-              <SelectValue placeholder="가입 분기" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">전체 분기</SelectItem>
-              {quarters.map((quarter) => (
-                <SelectItem key={quarter.id} value={quarter.name}>
-                  {quarter.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Row 2: Text Search + Buttons */}
-        <div className="flex gap-2 flex-wrap items-center">
-          <Input
-            placeholder="이름"
-            value={nameSearch}
-            onChange={(e) => setNameSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className="h-9 bg-white text-sm flex-1 min-w-32"
-          />
-          <Input
-            placeholder="학번"
-            value={studentIdSearch}
-            onChange={(e) => setStudentIdSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className="h-9 bg-white text-sm flex-1 min-w-32"
-          />
-          <div className="flex gap-1.5 shrink-0">
-            <Button onClick={handleSearch} size="sm" className="h-9 px-5">
-              <Search className="h-4 w-4 mr-1.5" />
-              검색
-            </Button>
-            {hasFilters && (
-              <Button
-                onClick={handleReset}
-                variant="ghost"
-                size="sm"
-                className="h-9 px-3"
+              <Select
+                value={roleFilter}
+                onValueChange={(value) => setRoleFilter(value as RoleFilter)}
               >
-                <X className="h-4 w-4 mr-1" />
-                초기화
-              </Button>
-            )}
+                <SelectTrigger className="w-full md:w-35 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL" className="text-xs">
+                    전체 역할
+                  </SelectItem>
+                  <SelectItem value="MEMBER" className="text-xs">
+                    학회원
+                  </SelectItem>
+                  <SelectItem value="MANAGER" className="text-xs">
+                    운영자
+                  </SelectItem>
+                  <SelectItem value="ADMIN" className="text-xs">
+                    관리자
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={activeFilter}
+                onValueChange={(value) =>
+                  setActiveFilter(value as ActiveFilter)
+                }
+              >
+                <SelectTrigger className="w-full md:w-35 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL" className="text-xs">
+                    전체 상태
+                  </SelectItem>
+                  <SelectItem value="ACTIVE" className="text-xs">
+                    활동 중
+                  </SelectItem>
+                  <SelectItem value="INACTIVE" className="text-xs">
+                    활동 안 함
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={joinedQuarterFilter}
+                onValueChange={setJoinedQuarterFilter}
+              >
+                <SelectTrigger className="w-full md:w-35 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL" className="text-xs">
+                    전체 가입 분기
+                  </SelectItem>
+                  {quarters.map((quarter) => (
+                    <SelectItem
+                      key={quarter.id}
+                      value={quarter.name}
+                      className="text-xs"
+                    >
+                      {quarter.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardHeader>
 
-      {/* Error State */}
-      {error && (
-        <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive mb-5">
-          {error}
-        </div>
-      )}
-
-      {/* Loading State */}
-      {loading && (
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-5">
-                <div className="space-y-3">
-                  <div className="flex gap-4">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-5 w-24" />
-                    <Skeleton className="h-5 w-20" />
-                  </div>
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Empty State - No members */}
-      {!loading && filteredMembers.length === 0 && !hasFilters && (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="rounded-full bg-muted p-4">
-                <Filter className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">
-                  등록된 학회원이 없어요
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  학회원 정보가 아직 등록되지 않았습니다
-                </p>
-              </div>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Empty State - No filtered results */}
-      {!loading && filteredMembers.length === 0 && hasFilters && (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="rounded-full bg-muted p-4">
-                <Search className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">
-                  조건에 맞는 학회원이 없어요
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  다른 필터를 시도해보세요
-                </p>
-              </div>
-              <Button variant="outline" onClick={handleReset}>
-                필터 초기화
-              </Button>
+          ) : members.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground text-sm">
+              {hasFilters
+                ? "검색 결과가 없습니다"
+                : "아직 등록된 학회원이 없습니다"}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Members Table */}
-      {!loading && filteredMembers.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">
-              학회원 목록
-              <span className="text-sm font-normal text-muted-foreground ml-2">
-                ({filteredMembers.length}명)
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>이름</TableHead>
-                  <TableHead>학번</TableHead>
-                  <TableHead>아이디</TableHead>
-                  <TableHead>역할</TableHead>
-                  <TableHead>상태</TableHead>
-                  <TableHead>가입 분기</TableHead>
-                  <TableHead>이메일</TableHead>
-                  <TableHead className="w-12"></TableHead>
+                  <TableHead className="hidden sm:table-cell text-center">
+                    학번
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell text-center">
+                    아이디
+                  </TableHead>
+                  <TableHead className="hidden sm:table-cell text-center">
+                    역할
+                  </TableHead>
+                  <TableHead className="hidden sm:table-cell text-center">
+                    상태
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell text-center">
+                    가입 분기
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell text-center">
+                    이메일
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredMembers.map((member) => (
+                {members.map((member) => (
                   <TableRow
                     key={member.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleRowClick(member.id)}
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/manage/members/${member.id}`)}
                   >
                     <TableCell className="font-medium">
                       {member.name || "—"}
                     </TableCell>
-                    <TableCell>{member.studentId || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="hidden sm:table-cell">
+                      {member.studentId || "—"}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">
                       {member.username}
                     </TableCell>
-                    <TableCell className="space-x-1">
+                    <TableCell className="hidden sm:table-cell space-x-0.5 pt-4 pb-4">
                       {member.userRoles?.length ? (
                         member.userRoles.map((role) => (
                           <Badge
@@ -351,35 +291,32 @@ export default function MembersManagementPage() {
                         <Badge variant="outline">없음</Badge>
                       )}
                     </TableCell>
-                    <TableCell>
-                      {member.isActive ? (
+                    <TableCell className="hidden sm:table-cell">
+                      {member.isCurrentQuarterActive ? (
                         <Badge variant="default" className="gap-1">
                           <UserCheck className="h-3 w-3" />
-                          활성
+                          활동 중
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="gap-1">
                           <UserX className="h-3 w-3" />
-                          비활성
+                          활동 안 함
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="hidden lg:table-cell text-muted-foreground">
                       {member.joinedQuarter?.name || "—"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
                       {member.email}
-                    </TableCell>
-                    <TableCell>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

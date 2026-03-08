@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Tag, CalendarDays, Users } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import {
   Card,
@@ -23,10 +23,28 @@ interface AdminMenuItem {
 
 const adminMenuItems: AdminMenuItem[] = [
   {
+    title: "활동 유형 관리",
+    description: "활동 유형을 생성, 수정, 삭제하고 조회합니다.",
+    icon: Tag,
+    href: "/admin/activity-types",
+  },
+  {
+    title: "분기 관리",
+    description: "분기를 생성, 수정, 삭제하고 현재 분기를 지정합니다.",
+    icon: CalendarDays,
+    href: "/admin/quarters",
+  },
+  {
     title: "회원가입 링크 생성",
     description: "새 학회원을 초대하기 위한 1회성 회원가입 링크를 생성합니다.",
     icon: UserPlus,
     href: "/manage/members/signup-link",
+  },
+  {
+    title: "회원 대량 생성",
+    description: "CSV 파일을 업로드하여 회원을 일괄 생성합니다.",
+    icon: Users,
+    href: "/admin/migrations",
   },
 ];
 
@@ -57,10 +75,10 @@ export default function AdminPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="space-y-2 border-b pb-6">
+      <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">시스템 관리</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          관리자 전용 기능입니다.
+          관리자 전용 기능입니다
         </p>
       </div>
 

@@ -8,6 +8,7 @@ export interface AttendanceRequestDto {
 }
 
 export interface AttendanceResponseDto {
+  id: string;
   session: ActivitySessionResponseDto;
   participant: ActivityParticipantResponse;
   status: string;

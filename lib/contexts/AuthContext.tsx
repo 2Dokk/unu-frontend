@@ -69,7 +69,7 @@ function extractRoleFromToken(token: string): UserRole {
     }
 
     return "GUEST";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to decode token:", error);
     return "GUEST";
   }
@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsAuthenticated(true);
           setUserRole(role);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Auth initialization error:", error);
         Cookies.remove("token");
         Cookies.remove("refreshToken");

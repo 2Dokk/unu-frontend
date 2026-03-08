@@ -104,7 +104,7 @@ export function FormBuilder({ initialSchema, onChange }: FormBuilderProps) {
     try {
       const parsed = parseSchema(newJson);
       setSchema(parsed);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to parse JSON:", error);
     }
   }

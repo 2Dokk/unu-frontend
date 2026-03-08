@@ -45,7 +45,7 @@ export function parseSchema(schemaString: string): FormSchema {
       throw new Error("Invalid schema structure");
     }
     return parsed;
-  } catch (error) {
+  } catch (error: any) {
     // Return empty schema if parsing fails
     return {
       version: 1,

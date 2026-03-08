@@ -29,16 +29,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import {} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/custom/common/delete-confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getAllFormTemplates,
@@ -46,6 +38,7 @@ import {
 } from "@/lib/api/form-template";
 import { getAllForms, deleteForm } from "@/lib/api/form";
 import { FormTemplateResponse, FormResponse } from "@/lib/interfaces/form";
+import { formatDate } from "@/lib/utils/date-utils";
 
 export default function AdminFormsPage() {
   const router = useRouter();
@@ -79,7 +72,7 @@ export default function AdminFormsPage() {
       setTemplatesLoading(true);
       const data = await getAllFormTemplates();
       setTemplates(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load templates:", error);
     } finally {
       setTemplatesLoading(false);
@@ -91,7 +84,7 @@ export default function AdminFormsPage() {
       setFormsLoading(true);
       const data = await getAllForms();
       setForms(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load forms:", error);
     } finally {
       setFormsLoading(false);
@@ -114,7 +107,7 @@ export default function AdminFormsPage() {
         await deleteForm(itemToDelete.id);
         await loadForms();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to delete:", error);
     } finally {
       setDeleteDialogOpen(false);
@@ -130,29 +123,23 @@ export default function AdminFormsPage() {
     f.title.toLowerCase().includes(formSearch.toLowerCase()),
   );
 
-  function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
-      <div className="space-y-2 border-b pb-6">
+      <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">신청서 관리</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          신청서를 생성하고 관리하세요
+          신청서와 템플릿을 관리합니다
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="forms">신청서</TabsTrigger>
-          <TabsTrigger value="templates">신청서 템플릿</TabsTrigger>
+          <TabsTrigger value="forms" className="px-4 py-2">
+            신청서
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="px-4 py-2">
+            신청서 템플릿
+          </TabsTrigger>
         </TabsList>
 
         {/* Templates Tab */}
@@ -166,7 +153,8 @@ export default function AdminFormsPage() {
                   size="sm"
                   onClick={() => router.push("/manage/forms/templates/new")}
                 >
-                  <SquarePlus className="mr-2 h-4 w-4" />새 템플릿
+                  <Plus className="h-3 w-3" />
+                  <span className="text-xs">템플릿 생성</span>
                 </Button>
               </div>
               <div className="relative mt-4">
@@ -187,18 +175,18 @@ export default function AdminFormsPage() {
                   ))}
                 </div>
               ) : filteredTemplates.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
+                <div className="text-center py-12 text-muted-foreground text-sm">
                   {templateSearch
-                    ? "검색 결과가 없어요."
-                    : "아직 템플릿이 없어요."}
+                    ? "검색 결과가 없습니다"
+                    : "아직 템플릿이 없습니다"}
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>제목</TableHead>
-                      <TableHead>수정일</TableHead>
-                      <TableHead className="w-25">작업</TableHead>
+                      <TableHead className="text-center">수정일</TableHead>
+                      <TableHead className="w-25 text-center">작업</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -212,10 +200,10 @@ export default function AdminFormsPage() {
                         <TableCell className="font-medium">
                           {template.title}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="text-muted-foreground text-sm text-center">
                           {formatDate(template.modifiedAt)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -224,11 +212,12 @@ export default function AdminFormsPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() =>
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   router.push(
                                     `/manage/forms/templates/${template.id}/edit`,
-                                  )
-                                }
+                                  );
+                                }}
                               >
                                 <Pencil className="mr-2 h-4 w-4" />
                                 수정
@@ -243,7 +232,7 @@ export default function AdminFormsPage() {
                                   )
                                 }
                               >
-                                <Trash2 className="mr-2 h-4 w-4" />
+                                <Trash2 className="mr-2 h-4 w-4 text-destructive" />
                                 삭제
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -269,7 +258,8 @@ export default function AdminFormsPage() {
                   size="sm"
                   onClick={() => router.push("/manage/forms/new")}
                 >
-                  <SquarePlus className="mr-2 h-4 w-4" />새 신청서
+                  <Plus className="h-3 w-3" />
+                  <span className="text-xs">신청서 생성</span>
                 </Button>
               </div>
               <div className="relative mt-4">
@@ -290,17 +280,19 @@ export default function AdminFormsPage() {
                   ))}
                 </div>
               ) : filteredForms.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  {formSearch ? "검색 결과가 없어요." : "아직 신청서가 없어요."}
+                <div className="text-center py-12 text-muted-foreground text-sm">
+                  {formSearch
+                    ? "검색 결과가 없습니다"
+                    : "아직 신청서가 없습니다"}
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>제목</TableHead>
-                      <TableHead>템플릿</TableHead>
-                      <TableHead>수정일</TableHead>
-                      <TableHead className="w-25">작업</TableHead>
+                      <TableHead className="text-center">템플릿</TableHead>
+                      <TableHead className="text-center">수정일</TableHead>
+                      <TableHead className="w-25 text-center">작업</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -315,10 +307,10 @@ export default function AdminFormsPage() {
                         <TableCell className="text-muted-foreground">
                           {form.template?.title || "-"}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="text-muted-foreground text-sm text-center">
                           {formatDate(form.modifiedAt)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -342,7 +334,7 @@ export default function AdminFormsPage() {
                                   confirmDelete("form", form.id, form.title);
                                 }}
                               >
-                                <Trash2 className="mr-2 h-4 w-4" />
+                                <Trash2 className="mr-2 h-4 w-4 text-destructive" />
                                 삭제
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -358,27 +350,12 @@ export default function AdminFormsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>정말 삭제하시겠어요?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {itemToDelete?.type === "template" ? "신청서 템플릿" : "신청서"} "
-              {itemToDelete?.title}"을(를) 삭제하면 되돌릴 수 없어요.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              삭제
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        itemValue={itemToDelete?.title || ""}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

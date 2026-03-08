@@ -4,11 +4,20 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Edit,
+  Pencil,
   Trash2,
   User as UserIcon,
   Plus,
   Calendar,
+  Info,
+  Tag,
+  CalendarDays,
+  UserRound,
+  MoreVertical,
+  PlusSquare,
+  SquarePlus,
+  X,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +53,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/custom/common/delete-confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -52,7 +62,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getActivityById, deleteActivity } from "@/lib/api/activity";
 import {
   getActivityParticipantsByActivityId,
@@ -76,14 +85,31 @@ import { ActivitySessionResponseDto } from "@/lib/interfaces/activity-session";
 import { AttendanceResponseDto } from "@/lib/interfaces/attendance";
 import { AttendanceInputContent } from "@/components/custom/attendance/attendance-input-content";
 import { formatDate, formatDateTime } from "@/lib/utils/date-utils";
+import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
+import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
+import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
+
+const PARTICIPANT_STATUS_OPTIONS = [
+  { value: "APPLIED", label: "신청" },
+  { value: "APPROVED", label: "참여 확정" },
+  { value: "REJECTED", label: "거절" },
+];
+import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ParticipantStatusSelector } from "@/components/custom/participant/participant-status-selector";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { DatePicker } from "@/components/ui/date-picker";
 
 function getActivityStatusLabel(status: string): string {
   const statusMap: Record<string, string> = {
     CREATED: "준비 중",
     OPEN: "모집 중",
-    RECRUITING: "모집 중",
     ONGOING: "진행 중",
-    IN_PROGRESS: "진행 중",
     COMPLETED: "종료",
   };
   return statusMap[status] || status;
@@ -109,8 +135,8 @@ function getActivityStatusVariant(
 function getParticipantStatusLabel(status: string): string {
   const statusMap: Record<string, string> = {
     APPLIED: "신청",
-    APPROVED: "승인",
-    REJECTED: "미승인",
+    APPROVED: "참여 확정",
+    REJECTED: "거절",
   };
   return statusMap[status] || status;
 }
@@ -133,40 +159,77 @@ function getParticipantStatusVariant(
 }
 
 // ========================
+// INFO ROW
+// ========================
+
+interface InfoRowProps {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}
+
+function InfoRow({ icon, label, value }: InfoRowProps) {
+  return (
+    <div className="flex items-start gap-3 py-3">
+      <div className="mt-0.5 text-muted-foreground">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+        <div className="text-sm font-medium">{value || "—"}</div>
+      </div>
+    </div>
+  );
+}
+
+// ========================
 // LOADING SKELETON
 // ========================
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-6">
-      {/* Header skeleton */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-3 flex-1">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-5 w-96" />
-        </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-10 w-20" />
-          <Skeleton className="h-10 w-20" />
-        </div>
-      </div>
+    <div className="space-y-4">
+      <Skeleton className="h-9 w-24" />
 
-      <Separator />
+      {/* 기본 정보 Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-5 w-20" />
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-8 w-16" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="flex items-center gap-4 mb-6">
+            <Skeleton className="h-14 w-14 rounded-full shrink-0" />
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-48" />
+              <div className="flex gap-2">
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+          </div>
+          <Skeleton className="h-px w-full" />
+          <div className="divide-y">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-start gap-3 py-3">
+                <Skeleton className="h-4 w-4 mt-0.5" />
+                <div className="flex-1 space-y-1">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Tabs skeleton */}
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-64" />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-3/4" />
-            <Skeleton className="h-5 w-2/3" />
-          </CardContent>
-        </Card>
-      </div>
+      <Skeleton className="h-48 w-full rounded-lg" />
+      <Skeleton className="h-32 w-full rounded-lg" />
+      <Skeleton className="h-48 w-full rounded-lg" />
+      <Skeleton className="h-32 w-full rounded-lg" />
     </div>
   );
 }
@@ -236,10 +299,17 @@ export default function ActivityDetailManagePage() {
   }>({ open: false, participant: null });
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
 
+  // Bulk completion states
+  const [selectedCompletionIds, setSelectedCompletionIds] = useState<
+    Set<string>
+  >(new Set());
+  const [showBulkCompletionDialog, setShowBulkCompletionDialog] =
+    useState(false);
+  const [bulkCompletionUpdating, setBulkCompletionUpdating] = useState(false);
+
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("전체");
   const [searchQuery, setSearchQuery] = useState<string>("");
-
   // Selection states
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
@@ -248,6 +318,14 @@ export default function ActivityDetailManagePage() {
   const [bulkStatus, setBulkStatus] = useState<string>("");
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [bulkUpdating, setBulkUpdating] = useState(false);
+
+  // Session selection states
+  const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [showBulkSessionDeleteDialog, setShowBulkSessionDeleteDialog] =
+    useState(false);
+  const [bulkSessionDeleting, setBulkSessionDeleting] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -261,7 +339,7 @@ export default function ActivityDetailManagePage() {
         setActivity(activityData);
         setParticipants(participantsData);
         setFilteredParticipants(participantsData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch activity data:", error);
       } finally {
         setLoading(false);
@@ -287,7 +365,7 @@ export default function ActivityDetailManagePage() {
 
       // Load attendance status for each session
       await loadSessionAttendanceStatus(sessionsData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load sessions:", error);
     } finally {
       setSessionsLoading(false);
@@ -329,7 +407,7 @@ export default function ActivityDetailManagePage() {
       });
 
       setSessionAttendanceStatus(statusMap);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load session attendance status:", error);
     }
   }
@@ -363,7 +441,7 @@ export default function ActivityDetailManagePage() {
       });
 
       setAttendanceStats(statsMap);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load attendance stats:", error);
     } finally {
       setStatsLoading(false);
@@ -395,6 +473,13 @@ export default function ActivityDetailManagePage() {
     setFilteredParticipants(filtered);
   }, [participants, statusFilter, searchQuery]);
 
+  // Auto-load sessions once main data is ready
+  useEffect(() => {
+    if (!loading) {
+      loadSessions();
+    }
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function handleEdit() {
     router.push(`/manage/activities/${activityId}/edit`);
   }
@@ -406,9 +491,9 @@ export default function ActivityDetailManagePage() {
     try {
       await deleteActivity(activityId);
       router.push("/manage/activities");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to delete activity:", error);
-      toast.error("활동 삭제에 실패했습니다.");
+      toast.error(error.response?.data || "활동 삭제에 실패했습니다.");
       setDeleting(false);
       setShowDeleteDialog(false);
     }
@@ -443,6 +528,26 @@ export default function ActivityDetailManagePage() {
     setSelectedIds(newSelected);
   }
 
+  // Session selection handlers
+  function handleSelectAllSessions(checked: boolean) {
+    if (checked) {
+      const allIds = new Set(sessions.map((s) => s.id));
+      setSelectedSessionIds(allIds);
+    } else {
+      setSelectedSessionIds(new Set());
+    }
+  }
+
+  function handleSelectOneSession(id: string, checked: boolean) {
+    const newSelected = new Set(selectedSessionIds);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedSessionIds(newSelected);
+  }
+
   // Per-row status update
   async function handleStatusChange(participantId: string, newStatus: string) {
     if (updatingIds.has(participantId)) return;
@@ -463,9 +568,9 @@ export default function ActivityDetailManagePage() {
       );
 
       toast.success("상태가 변경되었습니다.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update status:", error);
-      toast.error("상태 변경에 실패했습니다.");
+      toast.error(error.response?.data || "상태 변경에 실패했습니다.");
     } finally {
       setUpdatingIds((prev) => {
         const next = new Set(prev);
@@ -476,8 +581,9 @@ export default function ActivityDetailManagePage() {
   }
 
   // Bulk status update
-  function handleBulkUpdateClick() {
-    if (selectedIds.size === 0 || !bulkStatus) return;
+  function handleBulkStatusSelect(newStatus: string) {
+    if (selectedIds.size === 0 || !newStatus) return;
+    setBulkStatus(newStatus);
     setShowBulkDialog(true);
   }
 
@@ -510,7 +616,7 @@ export default function ActivityDetailManagePage() {
         activityId,
       });
       setParticipants(updatedParticipants);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to refresh participants:", error);
     }
 
@@ -609,9 +715,9 @@ export default function ActivityDetailManagePage() {
 
       setShowSessionDialog(false);
       toast.success("진행 일정이 등록되었습니다.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create session:", error);
-      toast.error("일정 등록에 실패했습니다.");
+      toast.error(error.response?.data || "일정 등록에 실패했습니다.");
     }
   }
 
@@ -643,9 +749,9 @@ export default function ActivityDetailManagePage() {
       setSelectedParticipants(new Set());
       setIsEditingAttendance(false);
       setSessionDialogStep(2);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create session:", error);
-      toast.error("일정 등록에 실패했습니다.");
+      toast.error(error.response?.data || "일정 등록에 실패했습니다.");
     }
   }
 
@@ -655,11 +761,34 @@ export default function ActivityDetailManagePage() {
       await deleteActivitySession(deleteSessionId);
       setSessions((prev) => prev.filter((s) => s.id !== deleteSessionId));
       toast.success("회차가 삭제되었습니다.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to delete session:", error);
-      toast.error("회차 삭제에 실패했습니다.");
+      toast.error(error.response?.data || "회차 삭제에 실패했습니다.");
     } finally {
       setDeleteSessionId(null);
+    }
+  }
+
+  async function handleBulkDeleteSessions() {
+    setBulkSessionDeleting(true);
+    const ids = Array.from(selectedSessionIds);
+    const results = await runWithConcurrency(ids, 5, (id) =>
+      deleteActivitySession(id),
+    );
+
+    const successCount = results.filter((r) => r.status === "fulfilled").length;
+    const failureCount = results.filter((r) => r.status === "rejected").length;
+
+    setSessions((prev) => prev.filter((s) => !selectedSessionIds.has(s.id)));
+
+    setSelectedSessionIds(new Set());
+    setShowBulkSessionDeleteDialog(false);
+    setBulkSessionDeleting(false);
+
+    if (failureCount === 0) {
+      toast.success(`${successCount}개 회차 삭제 완료`);
+    } else {
+      toast.error(`${successCount}개 완료, ${failureCount}개 실패`);
     }
   }
 
@@ -706,7 +835,7 @@ export default function ActivityDetailManagePage() {
         });
 
         setAttendanceData(newData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to load attendance:", error);
       }
     }
@@ -849,9 +978,9 @@ export default function ActivityDetailManagePage() {
 
       // Reload attendance stats after saving
       await loadAttendanceStats();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save attendance:", error);
-      toast.error("출석 저장에 실패했습니다.");
+      toast.error(error.response?.data || "출석 저장에 실패했습니다.");
     }
   }
 
@@ -888,9 +1017,60 @@ export default function ActivityDetailManagePage() {
 
       setCompletionDialog({ open: false, participant: null });
       toast.success("수료 처리되었습니다.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to mark as completed:", error);
-      toast.error("수료 처리에 실패했습니다.");
+      toast.error(error.response?.data || "수료 처리에 실패했습니다.");
+    }
+  }
+
+  // ========================
+  // BULK COMPLETION HANDLERS
+  // ========================
+
+  function handleSelectAllCompletion(checked: boolean) {
+    const completableParticipants = participants.filter(
+      (p) => p.status === "APPROVED" && !p.completed,
+    );
+    if (checked) {
+      setSelectedCompletionIds(
+        new Set(completableParticipants.map((p) => p.id)),
+      );
+    } else {
+      setSelectedCompletionIds(new Set());
+    }
+  }
+
+  function handleSelectOneCompletion(id: string, checked: boolean) {
+    const next = new Set(selectedCompletionIds);
+    if (checked) next.add(id);
+    else next.delete(id);
+    setSelectedCompletionIds(next);
+  }
+
+  async function handleBulkCompletionConfirm() {
+    setBulkCompletionUpdating(true);
+    const ids = Array.from(selectedCompletionIds);
+    const results = await runWithConcurrency(ids, 5, (id) =>
+      updateActivityParticipantCompleted(id),
+    );
+
+    const successCount = results.filter((r) => r.status === "fulfilled").length;
+    const failureCount = results.filter((r) => r.status === "rejected").length;
+
+    setParticipants((prev) =>
+      prev.map((p) =>
+        selectedCompletionIds.has(p.id) ? { ...p, completed: true } : p,
+      ),
+    );
+
+    setSelectedCompletionIds(new Set());
+    setShowBulkCompletionDialog(false);
+    setBulkCompletionUpdating(false);
+
+    if (failureCount === 0) {
+      toast.success(`${successCount}명 수료 처리 완료`);
+    } else {
+      toast.error(`${successCount}명 완료, ${failureCount}명 실패`);
     }
   }
 
@@ -899,29 +1079,41 @@ export default function ActivityDetailManagePage() {
   // ========================
 
   function getAttendanceStats() {
-    return participants
-      .filter((p) => p.status === "APPROVED")
-      .map((p) => {
-        const stats = attendanceStats.get(p.id) || {
-          presentCount: 0,
-          absentCount: 0,
-          excusedCount: 0,
-        };
+    let approvedParticipants = participants.filter(
+      (p) => p.status === "APPROVED",
+    );
 
-        const totalSessions = sessions.length;
-        const attendedCount = stats.presentCount + stats.excusedCount;
-        const attendanceRate =
-          totalSessions > 0 ? (attendedCount / totalSessions) * 100 : 0;
-
-        return {
-          participant: p,
-          totalSessions,
-          presentCount: stats.presentCount,
-          absentCount: stats.absentCount,
-          excusedCount: stats.excusedCount,
-          attendanceRate,
-        };
+    // Apply search filter
+    if (attendanceSearchQuery.trim()) {
+      const query = attendanceSearchQuery.trim().toLowerCase();
+      approvedParticipants = approvedParticipants.filter((p) => {
+        const name = p.user?.name?.toLowerCase() || "";
+        const studentId = p.user?.studentId?.toLowerCase() || "";
+        return name.includes(query) || studentId.includes(query);
       });
+    }
+
+    return approvedParticipants.map((p) => {
+      const stats = attendanceStats.get(p.id) || {
+        presentCount: 0,
+        absentCount: 0,
+        excusedCount: 0,
+      };
+
+      const totalSessions = sessions.length;
+      const attendedCount = stats.presentCount + stats.excusedCount;
+      const attendanceRate =
+        totalSessions > 0 ? (attendedCount / totalSessions) * 100 : 0;
+
+      return {
+        participant: p,
+        totalSessions,
+        presentCount: stats.presentCount,
+        absentCount: stats.absentCount,
+        excusedCount: stats.excusedCount,
+        attendanceRate,
+      };
+    });
   }
 
   if (loading) {
@@ -935,7 +1127,7 @@ export default function ActivityDetailManagePage() {
   if (!activity) {
     return (
       <div className="flex flex-col items-center justify-center min-h-100 space-y-4">
-        <p className="text-muted-foreground">활동을 찾을 수 없습니다.</p>
+        <p className="text-muted-foreground">활동을 찾을 수 없습니다</p>
         <Button onClick={handleBackToList} variant="outline">
           <ArrowLeft className="mr-2 h-4 w-4" />
           목록으로
@@ -947,9 +1139,9 @@ export default function ActivityDetailManagePage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="border-b pb-6">
+      <div className="space-y-3">
         <Button
-          onClick={handleBackToList}
+          onClick={() => router.push("/manage/activities")}
           variant="ghost"
           size="sm"
           className="mb-2"
@@ -957,112 +1149,90 @@ export default function ActivityDetailManagePage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           목록으로
         </Button>
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight">
-              {activity.title}
-            </h1>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <Badge variant={getActivityStatusVariant(activity.status)}>
-                {getActivityStatusLabel(activity.status)}
-              </Badge>
-              <span>•</span>
-              <span>{activity.activityType.name}</span>
-              <span>•</span>
-              <span>{activity.quarter.name}</span>
-              <span>•</span>
-              <span>
-                {formatDate(activity.startDate)} ~{" "}
-                {formatDate(activity.endDate)}
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={handleEdit} variant="outline" size="sm">
-              <Edit className="mr-2 h-4 w-4" />
-              수정
-            </Button>
-            <Button
-              onClick={() => setShowDeleteDialog(true)}
-              variant="destructive"
-              size="sm"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              삭제
-            </Button>
-          </div>
+
+        <h1 className="text-xl font-bold tracking-tight">{activity.title}</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <ActivityTypeBadge activityType={activity.activityType} />
+          <span className="text-sm text-muted-foreground">·</span>
+          <ActivityStatusBadge status={activity.status} />
+          <span className="text-sm text-muted-foreground">·</span>
+          {activity.quarter && (
+            <span className="text-xs text-muted-foreground">
+              {activity.quarter.name}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Tabs */}
       <Tabs defaultValue="info" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="info">기본 정보</TabsTrigger>
-          <TabsTrigger value="participants">신청 내역</TabsTrigger>
-          <TabsTrigger value="attendance" onClick={loadSessions}>
-            활동 진행 관리
+          <TabsTrigger value="info" className="px-4 py-2">
+            기본 정보
+          </TabsTrigger>
+          <TabsTrigger value="applications" className="px-4 py-2">
+            신청 관리
+          </TabsTrigger>
+          <TabsTrigger value="schedule" className="px-4 py-2">
+            일정 관리
+          </TabsTrigger>
+          <TabsTrigger value="attendance" className="px-4 py-2">
+            출석 관리
           </TabsTrigger>
         </TabsList>
 
         {/* Tab 1: 기본 정보 */}
         <TabsContent value="info" className="space-y-4">
-          {/* Activity Info Card */}
+          {/* 기본 정보 Card */}
           <Card>
             <CardHeader>
-              <CardTitle>활동 정보</CardTitle>
+              <div className="flex items-center justify-start">
+                <CardTitle className="flex items-center gap-2">
+                  기본 정보
+                </CardTitle>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-[120px_1fr] gap-y-3 gap-x-4">
-                <div className="text-sm font-medium text-muted-foreground">
-                  활동명
-                </div>
-                <div className="text-sm">{activity.title}</div>
-
-                <div className="text-sm font-medium text-muted-foreground">
-                  설명
-                </div>
-                <div className="text-sm">
-                  {activity.description || "설명 없음"}
-                </div>
-
-                <div className="text-sm font-medium text-muted-foreground">
-                  유형
-                </div>
-                <div className="text-sm">{activity.activityType.name}</div>
-
-                <div className="text-sm font-medium text-muted-foreground">
-                  상태
-                </div>
-                <div>
-                  <Badge variant={getActivityStatusVariant(activity.status)}>
-                    {getActivityStatusLabel(activity.status)}
-                  </Badge>
-                </div>
-
-                <div className="text-sm font-medium text-muted-foreground">
-                  분기
-                </div>
-                <div className="text-sm">{activity.quarter.name}</div>
-
-                <div className="text-sm font-medium text-muted-foreground">
-                  기간
-                </div>
-                <div className="text-sm">
-                  {formatDate(activity.startDate)} ~{" "}
-                  {formatDate(activity.endDate)}
-                </div>
-
-                <div className="text-sm font-medium text-muted-foreground">
-                  담당자
-                </div>
-                <div className="text-sm">
-                  {activity.assignee?.name || "미지정"}
-                </div>
+            <CardContent className="pt-0">
+              <div className="divide-y">
+                <InfoRow
+                  icon={<Info className="h-4 w-4" />}
+                  label="제목"
+                  value={activity.title}
+                />
+                <InfoRow
+                  icon={<Info className="h-4 w-4" />}
+                  label="설명"
+                  value={
+                    <div className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                      {activity.description || "—"}
+                    </div>
+                  }
+                />
+                <InfoRow
+                  icon={<Tag className="h-4 w-4" />}
+                  label="유형"
+                  value={activity.activityType.name}
+                />
+                <InfoRow
+                  icon={<CalendarDays className="h-4 w-4" />}
+                  label="분기"
+                  value={activity.quarter.name}
+                />
+                <InfoRow
+                  icon={<Calendar className="h-4 w-4" />}
+                  label="기간"
+                  value={`${formatDate(activity.startDate)} ~ ${formatDate(activity.endDate)}`}
+                />
+                <InfoRow
+                  icon={<UserRound className="h-4 w-4" />}
+                  label="담당자"
+                  value={activity.assignee?.name || "미지정"}
+                />
               </div>
             </CardContent>
           </Card>
 
-          {/* Meta Info Card */}
+          {/* 메타 정보 Card */}
           <Card>
             <CardHeader>
               <CardTitle>메타 정보</CardTitle>
@@ -1100,217 +1270,195 @@ export default function ActivityDetailManagePage() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Tab 2: 신청 내역 */}
-        <TabsContent value="participants" className="space-y-4">
+        <TabsContent value="applications" className="space-y-4">
+          {/* 신청 내역 Card */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>신청 내역</CardTitle>
+              <CardTitle className="flex justify-between">
+                신청 내역
                 <span className="text-sm text-muted-foreground">
                   총 {filteredParticipants.length}건
                 </span>
-              </div>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Filters */}
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-md">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-35 bg-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="전체">전체</SelectItem>
-                    <SelectItem value="신청">신청</SelectItem>
-                    <SelectItem value="승인">승인</SelectItem>
-                    <SelectItem value="미승인">미승인</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Input
-                  placeholder="이름 또는 학번 검색"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-xs bg-white"
-                />
-
-                {(statusFilter !== "전체" || searchQuery) && (
+              {/* Filters / Bulk Toolbar Toggle */}
+              {selectedIds.size > 0 ? (
+                <div className="flex items-center gap-3 h-9">
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {selectedIds.size}개 선택됨
+                  </span>
+                  <ParticipantStatusSelector
+                    value={bulkStatus}
+                    onChange={handleBulkStatusSelect}
+                  />
                   <Button
-                    variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      setStatusFilter("전체");
-                      setSearchQuery("");
-                    }}
+                    variant="ghost"
+                    className="text-xs h-7 ml-auto"
+                    onClick={() => setSelectedIds(new Set())}
                   >
-                    필터 초기화
+                    선택 해제
                   </Button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="flex flex-col md:flex-row gap-3">
+                  <div className="relative w-60">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+                    <Input
+                      placeholder="이름 또는 학번 검색..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-35 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="전체">전체</SelectItem>
+                      <SelectItem value="신청">신청</SelectItem>
+                      <SelectItem value="참여 확정">참여 확정</SelectItem>
+                      <SelectItem value="거절">거절</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {(statusFilter !== "전체" || searchQuery) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setStatusFilter("전체");
+                        setSearchQuery("");
+                      }}
+                      className="h-9 text-xs"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      초기화
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {/* Table */}
               {filteredParticipants.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <UserIcon className="h-12 w-12 text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">신청 내역이 없습니다.</p>
+                  <p className="text-muted-foreground">신청 내역이 없습니다</p>
                 </div>
               ) : (
-                <div className="border rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">
-                          <Checkbox
-                            checked={
-                              filteredParticipants.length > 0 &&
-                              selectedIds.size === filteredParticipants.length
-                            }
-                            onCheckedChange={handleSelectAll}
-                          />
-                        </TableHead>
-                        <TableHead className="w-30">이름</TableHead>
-                        <TableHead className="w-30">학번</TableHead>
-                        <TableHead className="w-60">이메일</TableHead>
-                        <TableHead className="w-25 text-center">
-                          신청 상태
-                        </TableHead>
-                        <TableHead className="w-30 text-right">
-                          신청일
-                        </TableHead>
-                        <TableHead className="w-40 text-center">관리</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredParticipants.map((participant) => {
-                        const isUpdating = updatingIds.has(participant.id);
-                        return (
-                          <TableRow key={participant.id}>
-                            <TableCell>
-                              <Checkbox
-                                checked={selectedIds.has(participant.id)}
-                                onCheckedChange={(checked) =>
-                                  handleSelectOne(
-                                    participant.id,
-                                    checked as boolean,
-                                  )
-                                }
-                                disabled={isUpdating}
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {participant.user?.name || "-"}
-                            </TableCell>
-                            <TableCell>
-                              {participant.user?.studentId || "-"}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {participant.user?.email || "-"}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge
-                                variant={getParticipantStatusVariant(
-                                  participant.status,
-                                )}
-                              >
-                                {getParticipantStatusLabel(participant.status)}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground text-sm">
-                              {formatDate(participant.createdAt)}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <Select
-                                  value={participant.status}
-                                  onValueChange={(value) =>
-                                    handleStatusChange(participant.id, value)
-                                  }
-                                  disabled={isUpdating}
-                                >
-                                  <SelectTrigger className="h-8 w-24 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="APPLIED">
-                                      신청
-                                    </SelectItem>
-                                    <SelectItem value="APPROVED">
-                                      승인
-                                    </SelectItem>
-                                    <SelectItem value="REJECTED">
-                                      미승인
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                {participant.user && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) =>
-                                      handleMemberClick(participant.user!.id, e)
-                                    }
-                                    className="h-8 px-2 text-xs"
-                                  >
-                                    상세
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-
-              {/* Bulk update toolbar */}
-              {selectedIds.size > 0 && (
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md border border-gray-200">
-                  <div className="px-3 py-2 border border-dashed border-gray-300 rounded-md">
-                    <span className="text-sm font-medium">
-                      선택 {selectedIds.size}건
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Select value={bulkStatus} onValueChange={setBulkStatus}>
-                      <SelectTrigger className="w-32 bg-white">
-                        <SelectValue placeholder="상태 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="APPROVED">승인</SelectItem>
-                        <SelectItem value="REJECTED">미승인</SelectItem>
-                        <SelectItem value="APPLIED">신청</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      onClick={handleBulkUpdateClick}
-                      disabled={!bulkStatus || bulkUpdating}
-                    >
-                      일괄 적용
-                    </Button>
-                  </div>
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={
+                            filteredParticipants.length > 0 &&
+                            selectedIds.size === filteredParticipants.length
+                          }
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </TableHead>
+                      <TableHead className="w-30">이름</TableHead>
+                      <TableHead className="w-30">학번</TableHead>
+                      <TableHead className="w-60">이메일</TableHead>
+                      <TableHead className="w-25 text-center">상태</TableHead>
+                      <TableHead className="w-30 text-center">신청일</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredParticipants.map((participant) => {
+                      const isUpdating = updatingIds.has(participant.id);
+                      return (
+                        <TableRow
+                          key={participant.id}
+                          onClick={(e) =>
+                            handleMemberClick(participant.user!.id, e)
+                          }
+                        >
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedIds.has(participant.id)}
+                              onCheckedChange={(checked) =>
+                                handleSelectOne(
+                                  participant.id,
+                                  checked as boolean,
+                                )
+                              }
+                              disabled={isUpdating}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {participant.user?.name || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {participant.user?.studentId || "-"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {participant.user?.email || "-"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <ParticipantStatusBadge
+                              status={participant.status}
+                            />
+                          </TableCell>
+                          <TableCell className="text-center text-muted-foreground text-sm">
+                            {formatDate(participant.createdAt)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Tab 3: 활동 진행 관리 */}
-        <TabsContent value="attendance" className="space-y-4">
-          {/* Section A: 진행 일정 */}
+        <TabsContent value="schedule" className="space-y-4">
+          {/* 진행 일정 Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>진행 일정</CardTitle>
-                <Button size="sm" onClick={handleOpenSessionDialog}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  일정 추가
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleOpenSessionDialog}
+                >
+                  <Plus className="h-3 w-3" />
+                  <span className="text-xs">일정 생성</span>
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* Bulk Toolbar for Sessions */}
+              <div className="min-h-9">
+                {selectedSessionIds.size > 0 && (
+                  <div className="flex items-center gap-3 h-9">
+                    <span className="text-xs text-muted-foreground font-medium">
+                      {selectedSessionIds.size}개 선택됨
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="text-xs h-7"
+                      onClick={() => setShowBulkSessionDeleteDialog(true)}
+                    >
+                      선택 삭제
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs h-7 ml-auto"
+                      onClick={() => setSelectedSessionIds(new Set())}
+                    >
+                      선택 해제
+                    </Button>
+                  </div>
+                )}
+              </div>
               {sessionsLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
@@ -1321,18 +1469,27 @@ export default function ActivityDetailManagePage() {
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Calendar className="h-12 w-12 text-muted-foreground mb-3" />
                   <p className="text-muted-foreground">
-                    아직 등록된 진행 일정이 없습니다.
+                    아직 등록된 진행 일정이 없습니다
                   </p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={
+                            sessions.length > 0 &&
+                            selectedSessionIds.size === sessions.length
+                          }
+                          onCheckedChange={handleSelectAllSessions}
+                        />
+                      </TableHead>
                       <TableHead className="w-20">회차</TableHead>
                       <TableHead className="w-32">날짜</TableHead>
                       <TableHead>설명</TableHead>
                       <TableHead className="w-48">출석 현황</TableHead>
-                      <TableHead className="text-center w-40">관리</TableHead>
+                      <TableHead className="w-25">작업</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1341,7 +1498,22 @@ export default function ActivityDetailManagePage() {
                       const hasAttendance = status && status.total > 0;
 
                       return (
-                        <TableRow key={session.id}>
+                        <TableRow
+                          key={session.id}
+                          className="cursor-pointer"
+                          onClick={() => handleOpenAttendanceDialog(session)}
+                        >
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedSessionIds.has(session.id)}
+                              onCheckedChange={(checked) =>
+                                handleSelectOneSession(
+                                  session.id,
+                                  checked as boolean,
+                                )
+                              }
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">
                             {session.sessionNumber}회차
                           </TableCell>
@@ -1357,7 +1529,7 @@ export default function ActivityDetailManagePage() {
                                 </Badge>
                                 <span className="text-xs text-muted-foreground">
                                   출석 {status!.present} / 결석 {status!.absent}{" "}
-                                  / 사유 {status!.excused}
+                                  / 공결 {status!.excused}
                                 </span>
                               </div>
                             ) : (
@@ -1366,25 +1538,26 @@ export default function ActivityDetailManagePage() {
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  handleOpenAttendanceDialog(session)
-                                }
-                              >
-                                {hasAttendance ? "출석 수정" : "출석 입력"}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setDeleteSessionId(session.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteSessionId(session.id);
+                                  }}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                  삭제
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
@@ -1394,19 +1567,69 @@ export default function ActivityDetailManagePage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
 
+        <TabsContent value="attendance" className="space-y-4">
           {/* Section B: 출석 현황 */}
           <Card>
             <CardHeader>
               <CardTitle>출석 현황</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {selectedCompletionIds.size > 0 ? (
+                <div className="flex items-center gap-3 h-9">
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {selectedCompletionIds.size}명 선택됨
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs h-7"
+                    onClick={() => setShowBulkCompletionDialog(true)}
+                    disabled={bulkCompletionUpdating}
+                  >
+                    수료 처리
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-xs h-7 ml-auto"
+                    onClick={() => setSelectedCompletionIds(new Set())}
+                  >
+                    선택 해제
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col md:flex-row gap-3">
+                  <div className="relative w-60">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="이름 또는 학번 검색..."
+                      value={attendanceSearchQuery}
+                      onChange={(e) => setAttendanceSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  {attendanceSearchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAttendanceSearchQuery("")}
+                      className="h-9 text-xs"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      초기화
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {participants.filter((p) => p.status === "APPROVED").length ===
               0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <UserIcon className="h-12 w-12 text-muted-foreground mb-3" />
                   <p className="text-muted-foreground">
-                    승인된 참여자가 없습니다.
+                    승인된 참여자가 없습니다
                   </p>
                 </div>
               ) : (
@@ -1414,6 +1637,21 @@ export default function ActivityDetailManagePage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={
+                              participants.filter(
+                                (p) => p.status === "APPROVED" && !p.completed,
+                              ).length > 0 &&
+                              selectedCompletionIds.size ===
+                                participants.filter(
+                                  (p) =>
+                                    p.status === "APPROVED" && !p.completed,
+                                ).length
+                            }
+                            onCheckedChange={handleSelectAllCompletion}
+                          />
+                        </TableHead>
                         <TableHead className="w-32">이름</TableHead>
                         <TableHead className="w-32">학번</TableHead>
                         <TableHead className="text-center w-24">
@@ -1422,7 +1660,6 @@ export default function ActivityDetailManagePage() {
                         <TableHead className="text-center w-32">
                           출석/전체
                         </TableHead>
-                        <TableHead className="text-center w-32">수료</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1434,6 +1671,21 @@ export default function ActivityDetailManagePage() {
                           );
                           return (
                             <TableRow key={participant.id}>
+                              <TableCell>
+                                {!participant.completed && (
+                                  <Checkbox
+                                    checked={selectedCompletionIds.has(
+                                      participant.id,
+                                    )}
+                                    onCheckedChange={(checked) =>
+                                      handleSelectOneCompletion(
+                                        participant.id,
+                                        checked as boolean,
+                                      )
+                                    }
+                                  />
+                                )}
+                              </TableCell>
                               <TableCell className="font-medium">
                                 {participant.user?.name || "-"}
                               </TableCell>
@@ -1450,28 +1702,14 @@ export default function ActivityDetailManagePage() {
                                   ? `${stats.presentCount}/${stats.totalSessions}`
                                   : `0/${sessions.length}`}
                               </TableCell>
-                              <TableCell className="text-center">
-                                {participant.completed ? (
-                                  <Badge variant="default">수료</Badge>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      handleOpenCompletionDialog(participant)
-                                    }
-                                  >
-                                    수료 처리
-                                  </Button>
-                                )}
-                              </TableCell>
                             </TableRow>
                           );
                         })}
                     </TableBody>
                   </Table>
+
                   <p className="text-xs text-muted-foreground mt-2">
-                    출석률은 (출석+사유) / 전체 회차 기준입니다.
+                    출석률은 (출석+공결) / 전체 회차 기준입니다.
                   </p>
                 </>
               )}
@@ -1479,6 +1717,16 @@ export default function ActivityDetailManagePage() {
           </Card>
         </TabsContent>
       </Tabs>
+      <div className="flex gap-2 justify-end">
+        <Button variant="outline" onClick={handleEdit}>
+          <Pencil className="h-3 w-3" />
+          <span className="text-xs">수정</span>
+        </Button>
+        <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+          <Trash2 className="h-3 w-3" />
+          <span className="text-xs">삭제</span>
+        </Button>
+      </div>
 
       {/* Session Create Dialog - 2 Step Flow */}
       <Dialog
@@ -1490,54 +1738,57 @@ export default function ActivityDetailManagePage() {
           }
         }}
       >
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl h-[70vh] flex flex-col">
           {sessionDialogStep === 1 ? (
             <>
               <DialogHeader>
                 <DialogTitle>진행 일정 등록</DialogTitle>
                 <DialogDescription>
-                  새로운 활동 진행 일정을 등록합니다.
+                  새로운 활동 진행 일정을 등록합니다
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">회차</label>
-                  <Input
-                    type="number"
-                    value={sessionForm.sessionNumber}
-                    onChange={(e) =>
-                      setSessionForm((prev) => ({
-                        ...prev,
-                        sessionNumber: parseInt(e.target.value) || 1,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">날짜</label>
-                  <Input
-                    type="date"
-                    value={sessionForm.date}
-                    onChange={(e) =>
-                      setSessionForm((prev) => ({
-                        ...prev,
-                        date: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">설명 (선택)</label>
-                  <Textarea
-                    value={sessionForm.description}
-                    onChange={(e) =>
-                      setSessionForm((prev) => ({
-                        ...prev,
-                        description: e.target.value,
-                      }))
-                    }
-                    placeholder="진행 일정에 대한 설명을 입력하세요"
-                  />
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium">회차</label>
+                    <Input
+                      type="number"
+                      value={sessionForm.sessionNumber}
+                      onChange={(e) =>
+                        setSessionForm((prev) => ({
+                          ...prev,
+                          sessionNumber: parseInt(e.target.value) || 1,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium">날짜</label>
+                    <DatePicker
+                      value={sessionForm.date}
+                      onChange={(value) =>
+                        setSessionForm((prev) => ({
+                          ...prev,
+                          date: value,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium">설명</label>
+                    <Textarea
+                      value={sessionForm.description}
+                      onChange={(e) =>
+                        setSessionForm((prev) => ({
+                          ...prev,
+                          description: e.target.value,
+                        }))
+                      }
+                      placeholder="진행 일정에 대한 설명을 입력하세요"
+                    />
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -1558,35 +1809,37 @@ export default function ActivityDetailManagePage() {
           ) : (
             <>
               <DialogHeader>
-                <DialogTitle>출석 입력 (선택)</DialogTitle>
+                <DialogTitle>출석 입력</DialogTitle>
                 <DialogDescription>
-                  {selectedSession?.sessionNumber}회차의 출석을 입력하거나
-                  나중에 입력할 수 있습니다.
+                  {sessionForm.sessionNumber}회차 (
+                  {formatDate(sessionForm.date)})
                 </DialogDescription>
               </DialogHeader>
-              <AttendanceInputContent
-                participants={participants}
-                attendanceData={attendanceData}
-                selectedParticipants={selectedParticipants}
-                attendanceSearchQuery={attendanceSearchQuery}
-                attendanceStatusTab={attendanceStatusTab}
-                isEditingAttendance={isEditingAttendance}
-                onToggleSelection={handleToggleParticipantSelection}
-                onBulkAssignStatus={handleBulkAssignStatus}
-                onMoveParticipant={handleMoveParticipant}
-                onRemoveParticipant={handleRemoveParticipantFromStatus}
-                onSearchChange={setAttendanceSearchQuery}
-                onTabChange={setAttendanceStatusTab}
-                onSelectAll={handleSelectAllPresent}
-                onClear={handleClearAttendanceSelection}
-              />
-              <DialogFooter className="border-t pt-4">
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <AttendanceInputContent
+                  participants={participants}
+                  attendanceData={attendanceData}
+                  selectedParticipants={selectedParticipants}
+                  attendanceSearchQuery={attendanceSearchQuery}
+                  attendanceStatusTab={attendanceStatusTab}
+                  isEditingAttendance={isEditingAttendance}
+                  onToggleSelection={handleToggleParticipantSelection}
+                  onBulkAssignStatus={handleBulkAssignStatus}
+                  onMoveParticipant={handleMoveParticipant}
+                  onRemoveParticipant={handleRemoveParticipantFromStatus}
+                  onSearchChange={setAttendanceSearchQuery}
+                  onTabChange={setAttendanceStatusTab}
+                  onSelectAll={handleSelectAllPresent}
+                  onClear={handleClearAttendanceSelection}
+                />
+              </div>
+              <DialogFooter className="pt-4">
                 <div className="flex items-center justify-between w-full">
                   <div className="text-sm text-muted-foreground">
                     총{" "}
                     {participants.filter((p) => p.status === "APPROVED").length}
                     명 · 출석 {attendanceData.present.size} / 결석{" "}
-                    {attendanceData.absent.size} / 사유{" "}
+                    {attendanceData.absent.size} / 공결{" "}
                     {attendanceData.excused.size}
                   </div>
                   <div className="flex gap-2">
@@ -1610,7 +1863,7 @@ export default function ActivityDetailManagePage() {
         open={showAttendanceDialog}
         onOpenChange={setShowAttendanceDialog}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-4xl h-[70vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {isEditingAttendance ? "출석 수정" : "출석 입력"}
@@ -1620,7 +1873,7 @@ export default function ActivityDetailManagePage() {
               {selectedSession && formatDate(selectedSession.date)})
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <AttendanceInputContent
               participants={participants}
               attendanceData={attendanceData}
@@ -1638,12 +1891,12 @@ export default function ActivityDetailManagePage() {
               onClear={handleClearAttendanceSelection}
             />
           </div>
-          <DialogFooter className="border-t pt-4 mt-4">
+          <DialogFooter className="pt-4 mt-4">
             <div className="flex items-center justify-between w-full">
               <div className="text-sm text-muted-foreground">
                 총 {participants.filter((p) => p.status === "APPROVED").length}
                 명 · 출석 {attendanceData.present.size} / 결석{" "}
-                {attendanceData.absent.size} / 사유{" "}
+                {attendanceData.absent.size} / 공결{" "}
                 {attendanceData.excused.size}
               </div>
               <div className="flex gap-2">
@@ -1683,25 +1936,36 @@ export default function ActivityDetailManagePage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Session Confirmation Dialog */}
-      <AlertDialog
+      <DeleteConfirmDialog
         open={!!deleteSessionId}
         onOpenChange={(open) => !open && setDeleteSessionId(null)}
+        itemValue="회차"
+        onConfirm={handleDeleteSession}
+      />
+
+      {/* Bulk Session Delete Dialog */}
+      <AlertDialog
+        open={showBulkSessionDeleteDialog}
+        onOpenChange={setShowBulkSessionDeleteDialog}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>회차를 삭제할까요?</AlertDialogTitle>
+            <AlertDialogTitle>회차 일괄 삭제</AlertDialogTitle>
             <AlertDialogDescription>
-              이 작업은 되돌릴 수 없습니다.
+              선택한 <strong>{selectedSessionIds.size}개</strong> 회차를
+              삭제하시겠습니까? 해당 회차의 출석 기록도 함께 삭제됩니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogCancel disabled={bulkSessionDeleting}>
+              취소
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteSession}
+              onClick={handleBulkDeleteSessions}
+              disabled={bulkSessionDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              삭제
+              {bulkSessionDeleting ? "삭제 중..." : "삭제"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1711,7 +1975,7 @@ export default function ActivityDetailManagePage() {
       <AlertDialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>상태를 일괄 변경할까요?</AlertDialogTitle>
+            <AlertDialogTitle>선택한 신청 상태를 변경할까요?</AlertDialogTitle>
             <AlertDialogDescription>
               선택한 {selectedIds.size}건의 신청 상태가 변경됩니다.
             </AlertDialogDescription>
@@ -1728,28 +1992,40 @@ export default function ActivityDetailManagePage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      {/* Bulk Completion Confirmation Dialog */}
+      <AlertDialog
+        open={showBulkCompletionDialog}
+        onOpenChange={setShowBulkCompletionDialog}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>활동 삭제</AlertDialogTitle>
+            <AlertDialogTitle>일괄 수료 처리할까요?</AlertDialogTitle>
             <AlertDialogDescription>
-              정말로 이 활동을 삭제하시겠습니까?
-              <br />이 작업은 되돌릴 수 없습니다.
+              선택한 {selectedCompletionIds.size}명을 수료 처리합니다. 이 작업은
+              되돌릴 수 없습니다
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>취소</AlertDialogCancel>
+            <AlertDialogCancel disabled={bulkCompletionUpdating}>
+              취소
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleBulkCompletionConfirm}
+              disabled={bulkCompletionUpdating}
             >
-              {deleting ? "삭제 중..." : "삭제"}
+              {bulkCompletionUpdating ? "처리 중..." : "수료 처리"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        itemValue={activity.title}
+        onConfirm={handleDelete}
+        loading={deleting}
+      />
     </div>
   );
 }

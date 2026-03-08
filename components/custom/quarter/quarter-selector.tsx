@@ -36,7 +36,7 @@ export function QuarterSelector({ value, onChange }: QuarterSelectorProps) {
         );
         setQuarters(sortedQuarters);
         onChange(currentQuarter.id.toString());
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch quarters:", error);
       }
     };

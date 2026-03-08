@@ -8,31 +8,46 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Edit,
   Trash2,
   Pencil,
+  CalendarDays,
+  Calendar,
+  ClipboardList,
+  Info,
+  UserRound,
+  UsersRound,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { getRecruitmentById, deleteRecruitment } from "@/lib/api/recruitment";
 import { getApplicationsByRecruitmentId } from "@/lib/api/application";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import {} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/custom/common/delete-confirm-dialog";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import ApplicationsTable from "@/components/custom/application/application-table";
 import { formatDate, formatDateTime } from "@/lib/utils/date-utils";
+
+interface InfoRowProps {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}
+
+function InfoRow({ icon, label, value }: InfoRowProps) {
+  return (
+    <div className="flex items-start gap-3 py-3">
+      <div className="mt-0.5 text-muted-foreground">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+        <div className="text-sm font-medium">{value || "—"}</div>
+      </div>
+    </div>
+  );
+}
 
 type RecruitmentStatus = "모집중" | "모집 예정" | "모집 마감";
 
@@ -64,7 +79,7 @@ export default function RecruitmentDetailPage() {
       ]);
       setRecruitment(recruitmentData);
       setApplications(applicationsData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load recruitment:", error);
       setError("모집 공고를 불러오는데 실패했습니다.");
     } finally {
@@ -120,13 +135,42 @@ export default function RecruitmentDetailPage() {
   if (isLoading) {
     return (
       <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
-        <Skeleton className="h-10 w-24" />
-        <Skeleton className="h-10 w-3/4" />
-        <Skeleton className="h-6 w-1/2" />
-        <Separator />
+        <Skeleton className="h-9 w-24" />
         <div className="space-y-4">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-40 w-full" />
+          {/* 기본 정보 Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-24" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-8 w-16" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-2">
+              {/* Title + Description */}
+              <div className="mb-6 space-y-2">
+                <Skeleton className="h-5 w-56" />
+                <Skeleton className="h-4 w-80" />
+              </div>
+              <Skeleton className="h-px w-full mb-0" />
+              {/* Info Rows */}
+              <div className="divide-y">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-start gap-3 py-3">
+                    <Skeleton className="h-4 w-4 mt-0.5" />
+                    <div className="flex-1 space-y-1">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-4 w-40" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Skeleton className="h-40 w-full rounded-lg" />
+          <Skeleton className="h-64 w-full rounded-lg" />
         </div>
       </div>
     );
@@ -137,7 +181,7 @@ export default function RecruitmentDetailPage() {
       <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
         <div className="flex flex-col items-center justify-center min-h-100 space-y-4">
           <p className="text-muted-foreground">
-            {error || "모집 공고를 찾을 수 없습니다."}
+            {error || "모집 공고를 찾을 수 없습니다"}
           </p>
           <div className="flex gap-3">
             <Button onClick={() => loadRecruitmentData()} variant="outline">
@@ -158,110 +202,78 @@ export default function RecruitmentDetailPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="space-y-3 border-b pb-6">
+      <div className="space-y-3">
         <Button
           onClick={() => router.push("/manage/recruitments")}
           variant="ghost"
           size="sm"
-          className="mb-2"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           목록으로
         </Button>
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">
-                {recruitment.title}
-              </h1>
-              <Badge variant={getStatusVariant(status)}>{status}</Badge>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span>{recruitment.quarter.name}</span>
-              <span>•</span>
-              <span>
-                {formatDate(recruitment.startAt)} ~{" "}
-                {formatDate(recruitment.endAt)}
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                router.push(`/manage/recruitments/${recruitmentId}/edit`)
-              }
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              수정
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              삭제
-            </Button>
-          </div>
+        <h1 className="text-xl font-bold tracking-tight">
+          {recruitment.title}
+        </h1>
+        <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
+          <Badge variant={getStatusVariant(status)}>{status}</Badge>
+          <span>·</span>
+          <span>{recruitment.quarter.name}</span>
+          <span>·</span>
+          <span>
+            {formatDate(recruitment.startAt)} ~ {formatDate(recruitment.endAt)}
+          </span>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="space-y-4">
-        {/* Recruitment Info Card */}
+        {/* 기본 정보 Card */}
         <Card>
           <CardHeader>
-            <CardTitle>모집 정보</CardTitle>
+            <CardTitle className="flex items-center gap-2">기본 정보</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-[120px_1fr] gap-y-3 gap-x-4">
-              <div className="text-sm font-medium text-muted-foreground">
-                모집 제목
-              </div>
-              <div className="text-sm">{recruitment.title}</div>
+          <CardContent className="pt-2">
+            {/* Title + Description */}
+            <div className="mb-6">
+              <p className="text-lg font-semibold">{recruitment.title}</p>
+              {recruitment.description && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {recruitment.description}
+                </p>
+              )}
+            </div>
 
-              <div className="text-sm font-medium text-muted-foreground">
-                설명
-              </div>
-              <div className="text-sm">
-                {recruitment.description || "설명 없음"}
-              </div>
+            <Separator />
 
-              <div className="text-sm font-medium text-muted-foreground">
-                상태
-              </div>
-              <div>
-                <Badge variant={getStatusVariant(status)}>{status}</Badge>
-              </div>
+            <div className="divide-y">
+              <InfoRow
+                icon={<Info className="h-4 w-4" />}
+                label="상태"
+                value={
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getStatusVariant(status)}>{status}</Badge>
 
-              <div className="text-sm font-medium text-muted-foreground">
-                활성 여부
-              </div>
-              <div>
-                <Badge variant={recruitment.active ? "default" : "outline"}>
-                  {recruitment.active ? "활성" : "비활성"}
-                </Badge>
-              </div>
-
-              <div className="text-sm font-medium text-muted-foreground">
-                분기
-              </div>
-              <div className="text-sm">{recruitment.quarter.name}</div>
-
-              <div className="text-sm font-medium text-muted-foreground">
-                기간
-              </div>
-              <div className="text-sm">
-                {formatDate(recruitment.startAt)} ~{" "}
-                {formatDate(recruitment.endAt)}
-              </div>
-
-              <div className="text-sm font-medium text-muted-foreground">
-                지원서 양식
-              </div>
-              <div className="text-sm">{recruitment.form.title}</div>
+                    <Badge variant={recruitment.active ? "default" : "outline"}>
+                      {recruitment.active ? "활성" : "비활성"}
+                    </Badge>
+                  </div>
+                }
+              />
+              <InfoRow
+                icon={<CalendarDays className="h-4 w-4" />}
+                label="분기"
+                value={recruitment.quarter.name}
+              />
+              <InfoRow
+                icon={<Calendar className="h-4 w-4" />}
+                label="기간"
+                value={`${formatDate(recruitment.startAt)} ~ ${formatDate(recruitment.endAt)}`}
+              />
+              <InfoRow
+                icon={<ClipboardList className="h-4 w-4" />}
+                label="지원서 양식"
+                value={recruitment.form.title}
+              />
             </div>
           </CardContent>
         </Card>
@@ -269,13 +281,16 @@ export default function RecruitmentDetailPage() {
         {/* Statistics Card */}
         <Card>
           <CardHeader>
-            <CardTitle>지원 현황</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <UserRound className="h-5 w-5" />
+              지원 현황
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="h-4 w-4" />
+                  <UsersRound className="h-4 w-4" />
                   <span>총 지원자</span>
                 </div>
                 <p className="text-3xl font-bold">{totalApplicants}</p>
@@ -366,28 +381,33 @@ export default function RecruitmentDetailPage() {
             </div>
           </CardContent>
         </Card>
+        <div className="flex gap-2 justify-end">
+          <Button
+            variant="outline"
+            onClick={() =>
+              router.push(`/manage/recruitments/${recruitmentId}/edit`)
+            }
+          >
+            <Pencil className="h-3 w-3" />
+            <span className="text-xs">수정</span>
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-3 w-3" />
+            <span className="text-xs">삭제</span>
+          </Button>
+        </div>
       </div>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>정말 삭제하시겠어요?</AlertDialogTitle>
-            <AlertDialogDescription>
-              모집 공고 "{recruitment.title}"을(를) 삭제하면 되돌릴 수 없어요.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? "삭제 중..." : "삭제"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        itemValue={recruitment.title}
+        onConfirm={handleDelete}
+        loading={isDeleting}
+      />
     </div>
   );
 }

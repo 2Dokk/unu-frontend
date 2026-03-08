@@ -24,6 +24,7 @@ export interface ActivityResponse {
   quarter: QuarterResponse;
   startDate: string;
   endDate: string;
+  parentActivityId?: string;
   createdAt: string;
   modifiedAt: string;
   createdBy: string;
@@ -36,9 +37,10 @@ export interface ActivityRequest {
   status?: string;
   activityTypeId: string;
   assigneeId?: string;
-  quarterId: string;
+  quarterId?: string;
   startDate: string;
   endDate: string;
+  parentActivityId?: string;
 }
 
 export interface ActivityTypeReponse {

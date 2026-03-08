@@ -101,9 +101,7 @@ export default function ProfilePage() {
           githubId: userData.githubId || "",
         });
       } catch (error: any) {
-        toast.error(
-          error.response?.data?.message || "프로필을 불러오는데 실패했습니다",
-        );
+        toast.error(error.response?.data || "프로필을 불러오는데 실패했습니다");
       } finally {
         setIsLoading(false);
       }
@@ -120,9 +118,7 @@ export default function ProfilePage() {
       toast.success("프로필이 성공적으로 업데이트되었습니다");
       setMode("view");
     } catch (error: any) {
-      toast.error(
-        error.response?.data?.message || "프로필 업데이트에 실패했습니다",
-      );
+      toast.error(error.response?.data || "프로필 업데이트에 실패했습니다");
     } finally {
       setIsSaving(false);
     }
@@ -136,9 +132,7 @@ export default function ProfilePage() {
       resetPassword();
       setMode("view");
     } catch (error: any) {
-      toast.error(
-        error.response?.data?.message || "비밀번호 변경에 실패했습니다",
-      );
+      toast.error(error.response?.data || "비밀번호 변경에 실패했습니다");
     } finally {
       setIsSaving(false);
     }

@@ -86,11 +86,9 @@ function groupAndMerge(
 
       return {
         dateKey,
-        dateLabel: format(
-          new Date(`${dateKey}T12:00:00`),
-          "yyyy.MM.dd (eee)",
-          { locale: ko },
-        ),
+        dateLabel: format(new Date(`${dateKey}T12:00:00`), "yyyy.MM.dd (eee)", {
+          locale: ko,
+        }),
         timeRanges,
         reservationIds: sorted.map((r) => r.id),
       };
@@ -229,7 +227,9 @@ export function CourseTimeReservationCard({
   const handleDelete = async () => {
     if (!deleteTargetIds) return;
     try {
-      await Promise.all(deleteTargetIds.map((id) => deleteCourseReservation(id)));
+      await Promise.all(
+        deleteTargetIds.map((id) => deleteCourseReservation(id)),
+      );
       await loadMyReservations();
     } catch {
       // ignore
@@ -281,9 +281,7 @@ export function CourseTimeReservationCard({
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                        onClick={() =>
-                          setDeleteTargetIds(group.reservationIds)
-                        }
+                        onClick={() => setDeleteTargetIds(group.reservationIds)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -294,7 +292,7 @@ export function CourseTimeReservationCard({
 
               {dateGroups.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  아직 예약된 수강 일정이 없습니다.
+                  아직 예약된 수강 일정이 없습니다
                 </p>
               )}
 
@@ -353,14 +351,14 @@ export function CourseTimeReservationCard({
                     </p>
                     <p className="text-xs text-muted-foreground">
                       하루 최대 {MAX_DAILY_BLOCKS}블록 · 이미{" "}
-                      {existingBlocksCount()}블록 예약됨 ·{" "}
-                      {remainingBlocks()}블록 추가 가능
+                      {existingBlocksCount()}블록 예약됨 · {remainingBlocks()}
+                      블록 추가 가능
                     </p>
                   </div>
 
                   {remainingBlocks() === 0 ? (
                     <p className="rounded-md bg-muted px-3 py-2.5 text-xs text-muted-foreground">
-                      이 날짜에는 더 이상 예약할 수 없습니다.
+                      이 날짜에는 더 이상 예약할 수 없습니다
                     </p>
                   ) : (
                     <div className="grid grid-cols-4 gap-1.5">
@@ -394,9 +392,7 @@ export function CourseTimeReservationCard({
                     </p>
                   )}
 
-                  {error && (
-                    <p className="text-xs text-destructive">{error}</p>
-                  )}
+                  {error && <p className="text-xs text-destructive">{error}</p>}
                 </>
               )}
             </div>

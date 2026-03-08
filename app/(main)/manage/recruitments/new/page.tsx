@@ -10,20 +10,10 @@ export default function NewRecruitmentPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="space-y-3 border-b pb-6">
-        <Button
-          onClick={() => router.push("/manage/recruitments")}
-          variant="ghost"
-          size="sm"
-          className="mb-2"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          목록으로
-        </Button>
-
-        <h1 className="text-2xl font-bold tracking-tight">모집 공고 생성</h1>
+      <div className="space-y-2">
+        <h1 className="text-xl font-bold tracking-tight">모집 공고 생성하기</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          모집 기간과 사용할 지원서 양식을 선택하세요.
+          모집 기간과 지원서 양식을 선택하여 모집 공고를 생성합니다
         </p>
       </div>
 

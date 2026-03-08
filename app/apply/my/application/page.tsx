@@ -108,7 +108,7 @@ export default function ApplicationDetailPage() {
       }
 
       setIsLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load from session:", error);
       router.push("/apply/my");
     }
@@ -170,7 +170,7 @@ export default function ApplicationDetailPage() {
       toast.success("지원서가 성공적으로 수정되었습니다.");
     } catch (error: any) {
       console.error("Failed to update application:", error);
-      toast.error("지원서 수정에 실패했습니다. 다시 시도해주세요.");
+      toast.error(error.response?.data || "지원서 수정에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setIsSaving(false);
     }
@@ -197,7 +197,7 @@ export default function ApplicationDetailPage() {
       router.push("/apply/my");
     } catch (error: any) {
       console.error("Failed to cancel application:", error);
-      toast.error("지원 취소에 실패했습니다. 다시 시도해주세요.");
+      toast.error(error.response?.data || "지원 취소에 실패했습니다. 다시 시도해주세요.");
       setIsCanceling(false);
     }
   };
@@ -237,7 +237,7 @@ export default function ApplicationDetailPage() {
           <CardContent className="pt-12 pb-12">
             <div className="text-center space-y-4">
               <p className="text-lg text-muted-foreground">
-                지원서를 불러올 수 없습니다.
+                지원서를 불러올 수 없습니다
               </p>
               <Button onClick={() => router.push("/apply/my")}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -277,7 +277,7 @@ export default function ApplicationDetailPage() {
         {!canEdit && (
           <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              검토가 시작된 지원서는 수정할 수 없습니다.
+              검토가 시작된 지원서는 수정할 수 없습니다
             </p>
           </div>
         )}
@@ -354,7 +354,7 @@ export default function ApplicationDetailPage() {
         <CardContent className="space-y-6">
           {!schema || !answers || Object.entries(answers).length === 0 ? (
             <p className="text-center py-8 text-muted-foreground">
-              답변이 없습니다.
+              답변이 없습니다
             </p>
           ) : (
             schema.questions.map((question: Question, index: number) => {
@@ -365,7 +365,9 @@ export default function ApplicationDetailPage() {
                 <div key={question.id} className="space-y-3">
                   <div className="space-y-1">
                     <div className="flex items-start gap-1">
-                      <span className="text-base font-semibold shrink-0">{index + 1}.</span>
+                      <span className="text-base font-semibold shrink-0">
+                        {index + 1}.
+                      </span>
                       <span className="text-base font-semibold whitespace-pre-wrap wrap-break-word flex-1">
                         {question.title}
                         {question.required && (
@@ -519,8 +521,8 @@ export default function ApplicationDetailPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>지원을 취소하시겠습니까?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    이 작업은 되돌릴 수 없습니다. 지원을 취소하면 다시
-                    지원하셔야 합니다.
+                    이 작업은 되돌릴 수 없습니다 지원을 취소하면 다시 지원하셔야
+                    합니다.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

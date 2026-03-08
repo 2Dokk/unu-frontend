@@ -17,7 +17,7 @@ export function FormPreview({ schema }: FormPreviewProps) {
   if (schema.questions.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground text-sm">
-        <p>질문이 없어요.</p>
+        <p>질문이 없습니다</p>
       </div>
     );
   }

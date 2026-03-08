@@ -73,7 +73,7 @@ export function ActivityTable({
           }),
         );
         setParticipantMap(participantData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch activities:", error);
       } finally {
         setLoading(false);
@@ -91,7 +91,7 @@ export function ActivityTable({
         ...prev,
         [activityId]: participant,
       }));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to apply for activity:", error);
     } finally {
       setApplyingId(null);
@@ -106,7 +106,7 @@ export function ActivityTable({
         ...prev,
         [activityId]: null,
       }));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to cancel activity:", error);
     } finally {
       setCancelingId(null);
@@ -192,7 +192,7 @@ export function ActivityTable({
         <TableBody>
           <TableRow>
             <TableCell colSpan={7} className="text-center">
-              활동이 없습니다.
+              활동이 없습니다
             </TableCell>
           </TableRow>
         </TableBody>

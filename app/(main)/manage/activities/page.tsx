@@ -4,19 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
-  Plus,
   Pencil,
   Trash2,
-  X,
-  Filter,
   MoreVertical,
   Eye,
   SquarePlus,
+  Plus,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -32,7 +29,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +46,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { searchActivities, deleteActivity } from "@/lib/api/activity";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DeleteConfirmDialog } from "@/components/custom/common/delete-confirm-dialog";
+import {
+  searchActivities,
+  deleteActivity,
+  updateActivityStatus,
+} from "@/lib/api/activity";
 import { getAllActivityTypes } from "@/lib/api/activity-type";
 import { getAllQuarters } from "@/lib/api/quarter";
 import {
@@ -52,93 +60,54 @@ import {
   ActivityTypeResponse,
 } from "@/lib/interfaces/activity";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
+import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
+import { formatDate } from "@/lib/utils/date-utils";
 
-// ========================
-// HELPER FUNCTIONS
-// ========================
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}.${month}.${day}`;
-}
-
-function getStatusLabel(status: string): string {
-  const statusMap: Record<string, string> = {
-    CREATED: "준비 중",
-    RECRUITING: "모집 중",
-    OPEN: "모집 중",
-    IN_PROGRESS: "진행 중",
-    ONGOING: "진행 중",
-    COMPLETED: "종료",
-  };
-  return statusMap[status] || status;
-}
-
-function getStatusBadgeVariant(
-  status: string,
-): "default" | "secondary" | "outline" | "destructive" {
-  switch (status) {
-    case "RECRUITING":
-    case "OPEN":
-      return "default";
-    case "IN_PROGRESS":
-    case "ONGOING":
-      return "outline";
-    case "COMPLETED":
-      return "secondary";
-    case "CREATED":
-      return "outline";
-    default:
-      return "outline";
-  }
-}
-
-// ========================
-// MAIN COMPONENT
-// ========================
+const STATUS_OPTIONS = [
+  { value: "CREATED", label: "준비 중" },
+  { value: "OPEN", label: "모집 중" },
+  { value: "ONGOING", label: "진행 중" },
+  { value: "COMPLETED", label: "종료" },
+];
 
 export default function ActivitiesManagementPage() {
   const router = useRouter();
 
-  // Data state
   const [activities, setActivities] = useState<ActivityResponse[]>([]);
   const [activityTypes, setActivityTypes] = useState<ActivityTypeResponse[]>(
     [],
   );
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Filter state
-  const [activityTypeFilter, setActivityTypeFilter] = useState<string>("ALL");
-  const [quarterFilter, setQuarterFilter] = useState<string>("ALL");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [activityTypeFilter, setActivityTypeFilter] = useState("ALL");
+  const [quarterFilter, setQuarterFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
-  // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [activityToDelete, setActivityToDelete] = useState<{
+  const [itemToDelete, setItemToDelete] = useState<{
     id: string;
     title: string;
   } | null>(null);
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
+  const [bulkTargetStatus, setBulkTargetStatus] = useState<string>("");
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+
   useEffect(() => {
-    loadInitialData();
+    loadData();
   }, []);
 
-  async function loadInitialData() {
+  useEffect(() => {
+    handleSearch();
+  }, [activityTypeFilter, quarterFilter, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadData() {
     try {
       setLoading(true);
-      setError(null);
       const [activitiesData, typesData, quartersData] = await Promise.all([
         searchActivities({}),
         getAllActivityTypes(),
@@ -147,9 +116,8 @@ export default function ActivitiesManagementPage() {
       setActivities(activitiesData);
       setActivityTypes(typesData);
       setQuarters(quartersData);
-    } catch (err) {
-      console.error("Failed to load data:", err);
-      setError("데이터를 불러오는데 실패했습니다.");
+    } catch (error: any) {
+      console.error("Failed to load data:", error);
     } finally {
       setLoading(false);
     }
@@ -158,65 +126,85 @@ export default function ActivitiesManagementPage() {
   async function handleSearch() {
     try {
       setLoading(true);
-      setError(null);
-
       const params: {
         title?: string;
         status?: string;
         activityTypeId?: string;
         quarterId?: string;
       } = {};
-
-      if (searchInput.trim()) params.title = searchInput.trim();
+      if (search.trim()) params.title = search.trim();
       if (statusFilter !== "ALL") params.status = statusFilter;
       if (activityTypeFilter !== "ALL")
         params.activityTypeId = activityTypeFilter;
       if (quarterFilter !== "ALL") params.quarterId = quarterFilter;
-
       const results = await searchActivities(params);
       setActivities(results);
-    } catch (err) {
-      console.error("Search failed:", err);
-      setError("검색에 실패했습니다.");
+    } catch (error: any) {
+      console.error("Search failed:", error);
     } finally {
       setLoading(false);
     }
   }
 
-  function handleReset() {
-    setActivityTypeFilter("ALL");
-    setQuarterFilter("ALL");
-    setStatusFilter("ALL");
-    setSearchInput("");
-    loadInitialData();
+  // Bulk selection helpers
+  const selectedActivities = activities.filter((a) => selectedIds.has(a.id));
+  const allSelected =
+    activities.length > 0 && activities.every((a) => selectedIds.has(a.id));
+
+  function handleSelectAll(checked: boolean) {
+    setSelectedIds(checked ? new Set(activities.map((a) => a.id)) : new Set());
   }
 
-  function handleActivityClick(activityId: string) {
-    router.push(`/manage/activities/${activityId}`);
+  function handleSelectOne(id: string, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      checked ? next.add(id) : next.delete(id);
+      return next;
+    });
   }
 
-  function handleEditClick(activityId: string, e: React.MouseEvent) {
-    e.stopPropagation();
-    router.push(`/manage/activities/${activityId}/edit`);
+  function openBulkStatusDialog(targetStatus: string) {
+    setBulkTargetStatus(targetStatus);
+    setBulkStatusDialogOpen(true);
   }
 
-  function handleDeleteClick(activity: ActivityResponse, e: React.MouseEvent) {
-    e.stopPropagation();
-    setActivityToDelete({ id: activity.id, title: activity.title });
+  async function handleBulkStatusChange() {
+    setBulkUpdating(true);
+    try {
+      await Promise.all(
+        selectedActivities.map((a) =>
+          updateActivityStatus(a.id, bulkTargetStatus),
+        ),
+      );
+      setActivities((prev) =>
+        prev.map((a) =>
+          selectedIds.has(a.id) ? { ...a, status: bulkTargetStatus } : a,
+        ),
+      );
+      setSelectedIds(new Set());
+    } catch (error: any) {
+      console.error("Bulk status update failed:", error);
+    } finally {
+      setBulkUpdating(false);
+      setBulkStatusDialogOpen(false);
+    }
+  }
+
+  function confirmDelete(id: string, title: string) {
+    setItemToDelete({ id, title });
     setDeleteDialogOpen(true);
   }
 
-  async function confirmDelete() {
-    if (!activityToDelete) return;
-
+  async function handleDelete() {
+    if (!itemToDelete) return;
     try {
-      await deleteActivity(activityToDelete.id);
-      setActivities(activities.filter((a) => a.id !== activityToDelete.id));
+      await deleteActivity(itemToDelete.id);
+      setActivities((prev) => prev.filter((a) => a.id !== itemToDelete.id));
+    } catch (error: any) {
+      console.error("Delete failed:", error);
+    } finally {
       setDeleteDialogOpen(false);
-      setActivityToDelete(null);
-    } catch (err) {
-      console.error("Delete failed:", err);
-      setError("삭제에 실패했습니다.");
+      setItemToDelete(null);
     }
   }
 
@@ -224,296 +212,313 @@ export default function ActivitiesManagementPage() {
     activityTypeFilter !== "ALL" ||
     quarterFilter !== "ALL" ||
     statusFilter !== "ALL" ||
-    searchInput.trim() !== "";
+    search.trim() !== "";
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
-      {/* Header */}
-      <div className="border-b pb-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight">활동 관리</h1>
-            <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-              학회 활동을 조회하고 관리합니다
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push("/activities/new")}
-          >
-            <SquarePlus className="h-4 w-4 mr-1" />
-            활동 생성
-          </Button>
-        </div>
+      {/* Page Header */}
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">활동 관리</h1>
+        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+          학회 활동을 관리합니다
+        </p>
       </div>
 
-      {/* Error State */}
-      {error && (
-        <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive mb-5">
-          {error}
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="border border-slate-200 rounded-lg bg-slate-50 p-4 space-y-3">
-        {/* Row 1: Dropdown Filters */}
-        <div className="flex flex-wrap gap-2">
-          <Select
-            value={activityTypeFilter}
-            onValueChange={setActivityTypeFilter}
-          >
-            <SelectTrigger className="w-28 h-9 bg-white text-sm">
-              <SelectValue placeholder="유형" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">전체 유형</SelectItem>
-              {activityTypes.map((type) => (
-                <SelectItem key={type.id} value={type.id.toString()}>
-                  {type.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={quarterFilter} onValueChange={setQuarterFilter}>
-            <SelectTrigger className="w-36 h-9 bg-white text-sm">
-              <SelectValue placeholder="분기" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">전체 분기</SelectItem>
-              {quarters.map((quarter) => (
-                <SelectItem key={quarter.id} value={quarter.id.toString()}>
-                  {quarter.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-28 h-9 bg-white text-sm">
-              <SelectValue placeholder="상태" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">전체 상태</SelectItem>
-              <SelectItem value="CREATED">준비 중</SelectItem>
-              <SelectItem value="OPEN">모집 중</SelectItem>
-              <SelectItem value="ONGOING">진행 중</SelectItem>
-              <SelectItem value="COMPLETED">종료</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Row 2: Text Search + Buttons */}
-        <div className="flex gap-2 flex-wrap items-center">
-          <Input
-            placeholder="활동명 검색"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className="h-9 bg-white text-sm flex-1 min-w-40"
-          />
-          <div className="flex gap-1.5 shrink-0">
-            <Button onClick={handleSearch} size="sm" className="h-9 px-5">
-              <Search className="h-4 w-4 mr-1.5" />
-              검색
+      <Card>
+        <CardHeader>
+          {/* Title + New Button */}
+          <div className="flex items-center justify-between">
+            <CardTitle>활동 목록</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/manage/activities/new")}
+            >
+              <Plus className="h-3 w-3" />
+              <span className="text-xs">활동 생성</span>
             </Button>
-            {hasFilters && (
-              <Button
-                onClick={handleReset}
-                variant="ghost"
-                size="sm"
-                className="h-9 px-3"
-              >
-                <X className="h-4 w-4 mr-1" />
-                초기화
-              </Button>
+          </div>
+
+          {/* Filters / Bulk toolbar toggle */}
+          <div className="mt-4">
+            {selectedIds.size > 0 ? (
+              <div className="flex items-center gap-3 h-9">
+                <span className="text-xs text-muted-foreground font-medium">
+                  {selectedIds.size}개 선택됨
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="text-xs h-7">
+                      상태 변경
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {STATUS_OPTIONS.map((opt) => (
+                      <DropdownMenuItem
+                        key={opt.value}
+                        className="text-xs"
+                        onClick={() => openBulkStatusDialog(opt.value)}
+                      >
+                        {opt.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs h-7 ml-auto"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  선택 해제
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="활동명 검색..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    className="pl-9"
+                  />
+                </div>
+
+                <Select
+                  value={activityTypeFilter}
+                  onValueChange={setActivityTypeFilter}
+                >
+                  <SelectTrigger className="w-full md:w-35 text-xs">
+                    <SelectValue placeholder="전체 유형" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL" className="text-xs">
+                      전체 유형
+                    </SelectItem>
+                    {activityTypes.map((type) => (
+                      <SelectItem
+                        key={type.id}
+                        value={type.id.toString()}
+                        className="text-xs"
+                      >
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={quarterFilter} onValueChange={setQuarterFilter}>
+                  <SelectTrigger className="w-full md:w-35 text-xs">
+                    <SelectValue placeholder="전체 분기" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL" className="text-xs">
+                      전체 분기
+                    </SelectItem>
+                    {quarters.map((quarter) => (
+                      <SelectItem
+                        key={quarter.id}
+                        value={quarter.id.toString()}
+                        className="text-xs"
+                      >
+                        {quarter.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full md:w-35 text-xs">
+                    <SelectValue placeholder="전체 상태" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL" className="text-xs">
+                      전체 상태
+                    </SelectItem>
+                    <SelectItem value="CREATED" className="text-xs">
+                      준비 중
+                    </SelectItem>
+                    <SelectItem value="OPEN" className="text-xs">
+                      모집 중
+                    </SelectItem>
+                    <SelectItem value="ONGOING" className="text-xs">
+                      진행 중
+                    </SelectItem>
+                    <SelectItem value="COMPLETED" className="text-xs">
+                      종료
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
-        </div>
-      </div>
+        </CardHeader>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-5">
-                <div className="space-y-3">
-                  <div className="flex gap-4">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-5 w-24" />
-                    <Skeleton className="h-5 w-20" />
-                  </div>
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Empty State - No activities */}
-      {!loading && activities.length === 0 && !hasFilters && (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="rounded-full bg-muted p-4">
-                <Filter className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">
-                  등록된 활동이 없습니다
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  활동을 생성하면 이곳에 표시됩니다
-                </p>
-              </div>
-              <Button onClick={() => router.push("/activities/new")}>
-                <Plus className="h-4 w-4 mr-2" />첫 활동 만들기
-              </Button>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Empty State - No filtered results */}
-      {!loading && activities.length === 0 && hasFilters && (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="rounded-full bg-muted p-4">
-                <Search className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">
-                  조건에 맞는 활동이 없습니다
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  다른 필터를 시도해보세요
-                </p>
-              </div>
-              <Button variant="outline" onClick={handleReset}>
-                필터 초기화
-              </Button>
+          ) : activities.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground text-sm">
+              {hasFilters
+                ? "검색 결과가 없습니다"
+                : "아직 등록된 활동이 없습니다"}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Activities Table */}
-      {!loading && activities.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>활동 목록</span>
-              <span className="text-sm font-normal text-muted-foreground">
-                총 {activities.length}개
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[30%]">활동명</TableHead>
-                  <TableHead className="text-center w-[12%]">유형</TableHead>
-                  <TableHead className="w-[12%]">분기</TableHead>
-                  <TableHead className="w-[20%]">활동 기간</TableHead>
-                  <TableHead className="text-center w-[12%]">상태</TableHead>
-                  <TableHead className="w-[10%]">담당자</TableHead>
-                  <TableHead className="text-center w-[10%]">작업</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activities.map((activity) => (
-                  <TableRow
-                    key={activity.id}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleActivityClick(activity.id)}
-                  >
-                    <TableCell className="font-semibold">
-                      {activity.title}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className="text-xs">
-                        {activity.activityType.name}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {activity.quarter.name}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(activity.startDate)} ~{" "}
-                      {formatDate(activity.endDate)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={getStatusBadgeVariant(activity.status)}>
-                        {getStatusLabel(activity.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {activity.assignee.name || activity.assignee.username}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              router.push(`/manage/activities/${activity.id}`)
-                            }
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            상세
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              router.push(
-                                `/manage/activities/${activity.id}/edit`,
-                              )
-                            }
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            수정
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={(checked) =>
+                          handleSelectAll(!!checked)
+                        }
+                      />
+                    </TableHead>
+                    <TableHead>활동명</TableHead>
+                    <TableHead className="hidden sm:table-cell text-center">
+                      유형
+                    </TableHead>
+                    <TableHead className="hidden md:table-cell text-center">
+                      분기
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell text-center">
+                      기간
+                    </TableHead>
+                    <TableHead className="text-center">상태</TableHead>
+                    <TableHead className="hidden md:table-cell text-center">
+                      담당자
+                    </TableHead>
+                    <TableHead className="w-16">작업</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                </TableHeader>
+                <TableBody>
+                  {activities.map((activity) => (
+                    <TableRow
+                      key={activity.id}
+                      className="cursor-pointer"
+                      onClick={() =>
+                        router.push(`/manage/activities/${activity.id}`)
+                      }
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(activity.id)}
+                          onCheckedChange={(checked) =>
+                            handleSelectOne(activity.id, !!checked)
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {activity.title}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-center">
+                        <ActivityTypeBadge
+                          activityType={activity.activityType}
+                        />
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-center text-muted-foreground text-sm">
+                        {activity.quarter?.name ?? "—"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-center text-muted-foreground text-sm">
+                        {formatDate(activity.startDate)} -{" "}
+                        {formatDate(activity.endDate)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <ActivityStatusBadge status={activity.status} />
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-center text-muted-foreground text-sm">
+                        {activity.assignee.name || activity.assignee.username}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(
+                                  `/manage/activities/${activity.id}/edit`,
+                                );
+                              }}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              수정
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmDelete(activity.id, activity.title);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                              삭제
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* Bulk Status Change Dialog */}
+      <AlertDialog
+        open={bulkStatusDialogOpen}
+        onOpenChange={setBulkStatusDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>활동 삭제</AlertDialogTitle>
+            <AlertDialogTitle>상태 일괄 변경</AlertDialogTitle>
             <AlertDialogDescription>
-              정말로 <strong>{activityToDelete?.title}</strong> 활동을
-              삭제하시겠습니까?
-              <br />이 작업은 되돌릴 수 없습니다.
+              선택한 활동 <strong>{selectedIds.size}개</strong>를{" "}
+              <strong>
+                {
+                  STATUS_OPTIONS.find((o) => o.value === bulkTargetStatus)
+                    ?.label
+                }
+              </strong>
+              (으)로 변경합니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogCancel disabled={bulkUpdating}>취소</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleBulkStatusChange}
+              disabled={bulkUpdating}
             >
-              삭제
+              {bulkUpdating ? "변경 중..." : "변경"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        itemValue={itemToDelete?.title || ""}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

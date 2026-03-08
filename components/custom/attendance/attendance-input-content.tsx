@@ -2,9 +2,9 @@
 // ATTENDANCE INPUT CONTENT COMPONENT
 // ========================
 
-import { Button } from "@/components/ui/button copy";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input copy";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
 import {
@@ -58,7 +58,7 @@ export function AttendanceInputContent({
   onSelectAll,
   onClear,
 }: AttendanceInputContentProps) {
-  console.log(attendanceData);
+  console.log(participants);
   const approvedParticipants = participants.filter(
     (p) => p.status === "APPROVED",
   );
@@ -101,7 +101,7 @@ export function AttendanceInputContent({
       iconClass: "text-rose-600",
     },
     excused: {
-      label: "사유",
+      label: "공결",
       count: attendanceData.excused.size,
       icon: AlertCircle,
       stripClass: "border-l-4 border-l-amber-500",
@@ -110,19 +110,14 @@ export function AttendanceInputContent({
   };
 
   return (
-    <div className="grid grid-cols-[2fr_3fr] gap-4 h-125">
+    <div className="grid grid-cols-[2fr_3fr] gap-4 h-full">
       {/* Left Panel: Participant List */}
       <div className="border rounded-lg p-4 flex flex-col">
         <div className="space-y-3 shrink-0">
           <h3 className="font-medium text-sm">참여자 목록</h3>
-          <Input
-            placeholder="이름 또는 학번 검색"
-            value={attendanceSearchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="h-9"
-          />
-          {selectedParticipants.size > 0 && (
-            <div className="flex items-center gap-2">
+
+          {selectedParticipants.size > 0 ? (
+            <div className="flex items-center gap-2 h-9">
               <span className="text-xs text-muted-foreground">
                 {selectedParticipants.size}명 선택
               </span>
@@ -148,9 +143,16 @@ export function AttendanceInputContent({
                 className="h-7 text-xs text-yellow-600"
                 onClick={() => onBulkAssignStatus("excused")}
               >
-                → 사유
+                → 공결
               </Button>
             </div>
+          ) : (
+            <Input
+              placeholder="이름 또는 학번 검색"
+              value={attendanceSearchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="h-9 text-xs"
+            />
           )}
         </div>
 
@@ -159,7 +161,7 @@ export function AttendanceInputContent({
             <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
               {attendanceSearchQuery
                 ? "검색 결과가 없습니다"
-                : "모든 참여자가 분류되었습니다"}
+                : "출석 입력이 완료되었습니다"}
             </div>
           ) : (
             filteredUnassigned.map((p) => (
@@ -168,10 +170,7 @@ export function AttendanceInputContent({
                 className="flex items-center gap-2 p-2 rounded hover:bg-slate-50 cursor-pointer"
                 onClick={() => onToggleSelection(p.id)}
               >
-                <Checkbox
-                  checked={selectedParticipants.has(p.id)}
-                  onCheckedChange={() => onToggleSelection(p.id)}
-                />
+                <Checkbox checked={selectedParticipants.has(p.id)} />
                 <div className="flex-1 text-sm">
                   <div className="font-medium">{p.user?.name}</div>
                   <div className="text-xs text-muted-foreground">
@@ -189,8 +188,9 @@ export function AttendanceInputContent({
         <Tabs
           value={attendanceStatusTab}
           onValueChange={(v) => onTabChange(v as any)}
+          className="flex flex-col flex-1"
         >
-          <div className="border-b px-4 pt-3">
+          <div className="px-4 pt-3">
             <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="present">
                 출석 {statusConfig.present.count}명
@@ -199,7 +199,7 @@ export function AttendanceInputContent({
                 결석 {statusConfig.absent.count}명
               </TabsTrigger>
               <TabsTrigger value="excused">
-                사유 {statusConfig.excused.count}명
+                공결 {statusConfig.excused.count}명
               </TabsTrigger>
             </TabsList>
           </div>
@@ -252,7 +252,7 @@ export function AttendanceInputContent({
           ))}
         </Tabs>
 
-        <div className="border-t p-3 flex gap-2 shrink-0">
+        <div className="p-3 flex gap-2 shrink-0 border-t mt-auto">
           <Button
             size="sm"
             variant="outline"

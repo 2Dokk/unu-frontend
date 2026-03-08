@@ -14,6 +14,7 @@ export interface ActivityParticipantResponse {
 
 export interface ActivityParticipantRequest {
   activityId: string;
+  userId?: string;
   status?: "APPLIED" | "APPROVED" | "REJECTED";
 }
 

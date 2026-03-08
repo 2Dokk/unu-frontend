@@ -53,7 +53,7 @@ export default function ApplicationLookupPage() {
       setError(null);
     } catch (error: any) {
       console.error("Failed to search application:", error);
-      setError("입력하신 정보와 일치하는 지원서를 찾을 수 없습니다.");
+      setError("입력하신 정보와 일치하는 지원서를 찾을 수 없습니다");
       setFoundApplication(null);
     } finally {
       setIsLoading(false);
@@ -311,7 +311,7 @@ export default function ApplicationLookupPage() {
         <ul className="text-xs text-muted-foreground space-y-1">
           <li>• 지원서 제출 시 입력한 정보와 동일하게 입력해주세요.</li>
           <li>• 비밀번호를 잊으신 경우 관리자에게 문의해주세요.</li>
-          <li>• 검토가 시작된 지원서는 수정할 수 없습니다.</li>
+          <li>• 검토가 시작된 지원서는 수정할 수 없습니다</li>
         </ul>
       </div>
     </div>

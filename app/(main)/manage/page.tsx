@@ -128,7 +128,7 @@ export default function ManagePage() {
 
             try {
               attendances = await getAttendancesBySessionId(session.id);
-            } catch (error) {
+            } catch (error: any) {
               console.error(
                 `Failed to fetch attendances for session ${session.id}`,
               );
@@ -144,7 +144,7 @@ export default function ManagePage() {
 
         setSessions(enrichedSessions);
         setActivityTypes(activityTypesData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
         setLoading(false);
@@ -584,7 +584,7 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
               <div className="text-2xl font-bold text-yellow-700">
                 {attendanceStats.excused}
               </div>
-              <div className="text-xs text-yellow-600">사유</div>
+              <div className="text-xs text-yellow-600">공결</div>
             </div>
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-red-700">
@@ -604,7 +604,7 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
             <div className="space-y-2">
               {attendances.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  참가자 정보가 없습니다.
+                  참가자 정보가 없습니다
                 </p>
               ) : (
                 attendances.map((attendance) => {
@@ -640,7 +640,7 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
                             className="bg-yellow-50 text-yellow-700 border-yellow-200"
                           >
                             <Clock className="h-3 w-3 mr-1" />
-                            사유
+                            공결
                           </Badge>
                         )}
                         {isAbsent && (

@@ -2,7 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Copy, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  Mail,
+  Copy,
+  Check,
+  BookOpen,
+  GraduationCap,
+  Phone,
+  CalendarDays,
+  Info,
+  Code2,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +24,24 @@ import { ApplicationResponse } from "@/lib/interfaces/application";
 import { formatDateTime } from "@/lib/utils/date-utils";
 import ApplicationStatusDropdown from "@/components/custom/application/application-status-dropdown";
 import { toast } from "sonner";
+
+interface InfoRowProps {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}
+
+function InfoRow({ icon, label, value }: InfoRowProps) {
+  return (
+    <div className="flex items-start gap-3 py-3">
+      <div className="mt-0.5 text-muted-foreground">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+        <div className="text-sm font-medium">{value || "—"}</div>
+      </div>
+    </div>
+  );
+}
 
 interface FormQuestion {
   id: string;
@@ -104,7 +133,7 @@ export default function ApplicationDetailPage() {
         console.error("Failed to parse answers:", e);
         setAnswers({});
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load application:", error);
       setError("지원서를 불러오는데 실패했습니다.");
     } finally {
@@ -119,9 +148,9 @@ export default function ApplicationDetailPage() {
     try {
       const updated = await reviewApplication(id, newStatus);
       setApplication(updated);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update status:", error);
-      toast.error("상태 업데이트에 실패했습니다.");
+      toast.error(error.response?.data || "상태 업데이트에 실패했습니다.");
     } finally {
       setIsUpdating(false);
     }
@@ -134,7 +163,7 @@ export default function ApplicationDetailPage() {
       await navigator.clipboard.writeText(application.email);
       setCopiedEmail(true);
       setTimeout(() => setCopiedEmail(false), 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to copy email:", error);
     }
   }
@@ -150,13 +179,47 @@ export default function ApplicationDetailPage() {
   if (isLoading) {
     return (
       <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
-        <Skeleton className="h-10 w-24" />
-        <Skeleton className="h-10 w-3/4" />
-        <Skeleton className="h-6 w-1/2" />
-        <Separator />
+        <Skeleton className="h-9 w-24" />
+
         <div className="space-y-4">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-40 w-full" />
+          {/* 기본 정보 Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-8 w-24" />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {/* Profile section */}
+              <div className="flex items-center gap-4 mb-6">
+                <Skeleton className="h-14 w-14 rounded-full shrink-0" />
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-36" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-5 w-14" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                </div>
+              </div>
+              <Skeleton className="h-px w-full mb-0" />
+              {/* InfoRows */}
+              <div className="divide-y">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-start gap-3 py-3">
+                    <Skeleton className="h-4 w-4 mt-0.5" />
+                    <div className="flex-1 space-y-1">
+                      <Skeleton className="h-3 w-16" />
+                      <Skeleton className="h-4 w-40" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Skeleton className="h-64 w-full rounded-lg" />
+          <Skeleton className="h-40 w-full rounded-lg" />
         </div>
       </div>
     );
@@ -167,7 +230,7 @@ export default function ApplicationDetailPage() {
       <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
         <div className="flex flex-col items-center justify-center min-h-100 space-y-4">
           <p className="text-muted-foreground">
-            {error || "지원서를 찾을 수 없습니다."}
+            {error || "지원서를 찾을 수 없습니다"}
           </p>
           <div className="flex gap-3">
             <Button onClick={() => loadApplicationData()} variant="outline">
@@ -184,204 +247,211 @@ export default function ApplicationDetailPage() {
   }
 
   return (
-    <div className="space-y-6 p-8">
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="border-b pb-6">
-        <Button
-          onClick={handleBackToRecruitment}
-          variant="ghost"
-          size="sm"
-          className="mb-2"
-        >
+      <div className="flex items-center">
+        <Button onClick={handleBackToRecruitment} variant="ghost" size="sm">
           <ArrowLeft className="mr-2 h-4 w-4" />
           돌아가기
         </Button>
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight">
-              {application.name}의 지원서
-            </h1>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              {getStatusBadge(application.status)}
-              <span>•</span>
-              <span>{formatDateTime(application.createdAt)} 제출</span>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <ApplicationStatusDropdown
-              applicationId={applicationId}
-              currentStatus={application.status}
-              onStatusChange={handleStatusChange}
-              isUpdating={isUpdating}
-            />
-          </div>
-        </div>
       </div>
 
-      {/* Applicant Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>지원자 정보</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-[120px_1fr] gap-y-3 gap-x-4">
-            <div className="text-sm font-medium text-muted-foreground">
-              이름
+      <div className="space-y-4">
+        {/* 기본 정보 Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5" />
+                기본 정보
+              </CardTitle>
+              <ApplicationStatusDropdown
+                applicationId={applicationId}
+                currentStatus={application.status}
+                onStatusChange={handleStatusChange}
+                isUpdating={isUpdating}
+              />
             </div>
-            <div className="text-sm font-medium">{application.name}</div>
-
-            <div className="text-sm font-medium text-muted-foreground">
-              학번
-            </div>
-            <div className="text-sm">{application.studentId}</div>
-
-            <div className="text-sm font-medium text-muted-foreground">
-              전공
-            </div>
-            <div className="text-sm">
-              {application.major}
-              {application.subMajor && ` / ${application.subMajor}`}
-            </div>
-
-            <div className="text-sm font-medium text-muted-foreground">
-              이메일
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm">{application.email}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2"
-                onClick={handleCopyEmail}
-              >
-                {copiedEmail ? (
-                  <Check className="h-3 w-3 text-green-600" />
-                ) : (
-                  <Copy className="h-3 w-3" />
-                )}
-              </Button>
-            </div>
-
-            <div className="text-sm font-medium text-muted-foreground">
-              전화번호
-            </div>
-            <div className="text-sm">{application.phoneNumber}</div>
-
-            {application.githubId && (
-              <>
-                <div className="text-sm font-medium text-muted-foreground">
-                  GitHub ID
+          </CardHeader>
+          <CardContent className="pt-0">
+            {/* Profile-style header */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <span className="text-xl font-semibold text-primary">
+                  {application.name?.charAt(0) || "?"}
+                </span>
+              </div>
+              <div>
+                <p className="text-lg font-semibold">
+                  {application.name}의 지원서
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  {getStatusBadge(application.status)}
+                  <span className="text-xs text-muted-foreground">
+                    {formatDateTime(application.createdAt)} 제출
+                  </span>
                 </div>
-                <div className="text-sm">{application.githubId}</div>
-              </>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="divide-y">
+              <InfoRow
+                icon={<BookOpen className="h-4 w-4" />}
+                label="학번"
+                value={application.studentId}
+              />
+              <InfoRow
+                icon={<GraduationCap className="h-4 w-4" />}
+                label="전공"
+                value={
+                  application.subMajor
+                    ? `${application.major} / ${application.subMajor}`
+                    : application.major
+                }
+              />
+              <InfoRow
+                icon={<Mail className="h-4 w-4" />}
+                label="이메일"
+                value={
+                  <div className="flex items-center gap-2">
+                    <span>{application.email}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2"
+                      onClick={handleCopyEmail}
+                    >
+                      {copiedEmail ? (
+                        <Check className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
+                }
+              />
+              <InfoRow
+                icon={<Phone className="h-4 w-4" />}
+                label="전화번호"
+                value={application.phoneNumber}
+              />
+              {application.githubId && (
+                <InfoRow
+                  icon={<Code2 className="h-4 w-4" />}
+                  label="GitHub ID"
+                  value={application.githubId}
+                />
+              )}
+              <InfoRow
+                icon={<CalendarDays className="h-4 w-4" />}
+                label="제출일시"
+                value={formatDateTime(application.createdAt)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Application Answers */}
+        <Card>
+          <CardHeader>
+            <CardTitle>지원서 답변</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {formSnapshot?.questions && formSnapshot.questions.length > 0 ? (
+              formSnapshot.questions.map((question, index) => {
+                const answer = answers[question.id];
+                const questionTitle = question.title || question.label || "";
+
+                console.log(
+                  `Question ${question.id}:`,
+                  questionTitle,
+                  "Answer:",
+                  answer,
+                );
+
+                return (
+                  <div key={question.id} className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Badge variant="secondary" className="shrink-0 text-xs">
+                        {index + 1}
+                      </Badge>
+                      <div className="flex-1 space-y-2">
+                        <p className="font-medium text-sm">
+                          {question.required && <span className="mr-1">*</span>}
+                          {questionTitle}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="pl-8">
+                      <div className="text-sm p-3 rounded-md bg-muted/50 whitespace-pre-wrap wrap-break-word">
+                        {answer !== undefined &&
+                        answer !== null &&
+                        answer !== ""
+                          ? String(answer)
+                          : "-"}
+                      </div>
+                    </div>
+                    {index < (formSnapshot.questions?.length ?? 0) - 1 && (
+                      <Separator className="mt-4" />
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm">질문 정보를 불러올 수 없습니다</p>
+              </div>
             )}
+          </CardContent>
+        </Card>
 
-            <div className="text-sm font-medium text-muted-foreground">
-              제출일시
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {formatDateTime(application.createdAt)}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Meta Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle>메타 정보</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-[120px_1fr] gap-y-3 gap-x-4">
+              <div className="text-sm font-medium text-muted-foreground">
+                지원서 ID
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {application.id}
+              </div>
 
-      {/* Application Answers */}
-      <Card>
-        <CardHeader>
-          <CardTitle>지원서 답변</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {formSnapshot?.questions && formSnapshot.questions.length > 0 ? (
-            formSnapshot.questions.map((question, index) => {
-              const answer = answers[question.id];
-              const questionTitle = question.title || question.label || "";
+              <div className="text-sm font-medium text-muted-foreground">
+                모집 공고 ID
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {application.recruitmentId}
+              </div>
 
-              console.log(
-                `Question ${question.id}:`,
-                questionTitle,
-                "Answer:",
-                answer,
-              );
+              <div className="text-sm font-medium text-muted-foreground">
+                폼 ID
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {application.formId}
+              </div>
 
-              return (
-                <div key={question.id} className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <Badge variant="secondary" className="shrink-0 text-xs">
-                      {index + 1}
-                    </Badge>
-                    <div className="flex-1 space-y-2">
-                      <p className="font-medium text-sm">
-                        {question.required && <span className="mr-1">*</span>}
-                        {questionTitle}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="pl-8">
-                    <div className="text-sm p-3 rounded-md bg-muted/50 whitespace-pre-wrap wrap-break-word">
-                      {answer !== undefined && answer !== null && answer !== ""
-                        ? String(answer)
-                        : "-"}
-                    </div>
-                  </div>
-                  {index < (formSnapshot.questions?.length ?? 0) - 1 && (
-                    <Separator className="mt-4" />
-                  )}
-                </div>
-              );
-            })
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <p className="text-sm">질문 정보를 불러올 수 없습니다.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              <div className="text-sm font-medium text-muted-foreground">
+                제출일시
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {formatDateTime(application.createdAt)}
+              </div>
 
-      {/* Meta Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>메타 정보</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-[120px_1fr] gap-y-3 gap-x-4">
-            <div className="text-sm font-medium text-muted-foreground">
-              지원서 ID
+              <div className="text-sm font-medium text-muted-foreground">
+                최종 수정일시
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {formatDateTime(application.modifiedAt)}
+              </div>
             </div>
-            <div className="text-sm text-muted-foreground">
-              {application.id}
-            </div>
-
-            <div className="text-sm font-medium text-muted-foreground">
-              모집 공고 ID
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {application.recruitmentId}
-            </div>
-
-            <div className="text-sm font-medium text-muted-foreground">
-              폼 ID
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {application.formId}
-            </div>
-
-            <div className="text-sm font-medium text-muted-foreground">
-              제출일시
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {formatDateTime(application.createdAt)}
-            </div>
-
-            <div className="text-sm font-medium text-muted-foreground">
-              최종 수정일시
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {formatDateTime(application.modifiedAt)}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

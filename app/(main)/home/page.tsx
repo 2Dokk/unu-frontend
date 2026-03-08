@@ -92,7 +92,7 @@ export default function HomePage() {
                 totalSessions,
                 attendanceRate,
               };
-            } catch (error) {
+            } catch (error: any) {
               console.error(
                 `Failed to fetch stats for participant ${participant.id}:`,
                 error,
@@ -112,7 +112,7 @@ export default function HomePage() {
         );
 
         setParticipations(enrichedData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch data:", error);
       } finally {
         setLoading(false);
@@ -248,7 +248,7 @@ export default function HomePage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Activity className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                이번 분기에 참여한 활동이 없습니다.
+                이번 분기에 참여한 활동이 없습니다
               </p>
             </CardContent>
           </Card>
@@ -338,7 +338,7 @@ export default function HomePage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                아직 참여한 활동이 없습니다.
+                아직 참여한 활동이 없습니다
               </p>
             </CardContent>
           </Card>

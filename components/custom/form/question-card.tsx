@@ -210,29 +210,31 @@ export function QuestionCard({
                 >
                   <SelectTrigger
                     id={`question-type-${question.id}`}
-                    className="focus:ring-2"
+                    className="focus:ring-2 text-xs"
                   >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="SHORT_TEXT">
                       <div className="flex flex-col items-start">
-                        <span className="font-medium">짧은 답변</span>
+                        <span className="font-medium text-xs">짧은 답변</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="LONG_TEXT">
                       <div className="flex flex-col items-start">
-                        <span className="font-medium">긴 답변</span>
+                        <span className="font-medium text-xs">긴 답변</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="SINGLE_CHOICE">
                       <div className="flex flex-col items-start">
-                        <span className="font-medium">하나 선택</span>
+                        <span className="font-medium text-xs">하나 선택</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="MULTIPLE_CHOICE">
                       <div className="flex flex-col items-start">
-                        <span className="font-medium">여러 개 선택</span>
+                        <span className="font-medium text-xs">
+                          여러 개 선택
+                        </span>
                       </div>
                     </SelectItem>
                   </SelectContent>

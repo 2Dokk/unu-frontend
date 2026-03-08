@@ -56,7 +56,7 @@ export function AdvancedJsonSection({
       setError(null);
       setIsEditing(false);
     } catch (err) {
-      setError("JSON 형식이 올바르지 않아요. 저장할 수 없어요.");
+      setError("JSON 형식이 올바르지 않아요. 저장할 수 없습니다");
     }
   }
 
@@ -77,7 +77,7 @@ export function AdvancedJsonSection({
             </Button>
           </CollapsibleTrigger>
           <p className="text-xs text-muted-foreground">
-            대부분의 사용자는 이 섹션을 편집할 필요가 없습니다. 위의 시각적
+            대부분의 사용자는 이 섹션을 편집할 필요가 없습니다 위의 시각적
             편집기를 사용하세요.
           </p>
         </div>

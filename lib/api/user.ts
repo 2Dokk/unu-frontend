@@ -81,15 +81,15 @@ export async function changeUserRole(
 
 export async function searchUsers(params: {
   role?: string;
-  isActive?: boolean;
+  isCurrentQuarterActive?: boolean;
   joinedQuarter?: string;
   name?: string;
   studentId?: string;
 }): Promise<UserResponseDto[]> {
   const queryParams = new URLSearchParams();
   if (params.role) queryParams.append("role", params.role);
-  if (params.isActive !== undefined)
-    queryParams.append("is-active", params.isActive.toString());
+  if (params.isCurrentQuarterActive !== undefined)
+    queryParams.append("is-active", params.isCurrentQuarterActive.toString());
   if (params.joinedQuarter)
     queryParams.append("joined-quarter", params.joinedQuarter);
   if (params.name) queryParams.append("name", params.name);

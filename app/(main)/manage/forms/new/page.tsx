@@ -59,7 +59,7 @@ function NewFormPageInner() {
       setTemplatesLoading(true);
       const data = await getAllFormTemplates();
       setTemplates(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load templates:", error);
     } finally {
       setTemplatesLoading(false);
@@ -83,7 +83,10 @@ function NewFormPageInner() {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       if (newErrors.schema) {
-        schemaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        schemaRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
       }
       return;
     }
@@ -96,7 +99,7 @@ function NewFormPageInner() {
         schema,
       });
       router.push("/manage/forms");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create form:", error);
       setIsSubmitting(false);
     }
@@ -104,10 +107,10 @@ function NewFormPageInner() {
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
-      <div className="space-y-2 border-b pb-6">
-        <h1 className="text-xl font-bold tracking-tight">새 신청서 만들기</h1>
+      <div className="space-y-2">
+        <h1 className="text-xl font-bold tracking-tight">신청서 생성하기</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          템플릿을 선택하여 새로운 신청서를 생성하세요
+          템플릿을 선택해 새 신청서를 생성합니다
         </p>
       </div>
 
@@ -126,20 +129,24 @@ function NewFormPageInner() {
                   value={selectedTemplateId}
                   onValueChange={handleTemplateChange}
                 >
-                  <SelectTrigger id="template">
+                  <SelectTrigger id="template" className="text-xs">
                     <SelectValue placeholder="템플릿을 선택하세요" />
                   </SelectTrigger>
                   <SelectContent>
                     {templates.map((template) => (
-                      <SelectItem key={template.id} value={String(template.id)}>
+                      <SelectItem
+                        key={template.id}
+                        value={String(template.id)}
+                        className="text-xs"
+                      >
                         {template.title}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
-              <p className="text-sm text-muted-foreground">
-                템플릿을 선택하면 질문이 자동으로 채워져요.
+              <p className="text-xs text-muted-foreground">
+                템플릿을 선택하면 질문이 자동으로 채워집니다
               </p>
             </div>
 
@@ -185,17 +192,17 @@ function NewFormPageInner() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="flex items-center justify-end gap-4 pt-4">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={() => router.push("/manage/forms")}
             disabled={isSubmitting}
           >
             취소
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "생성 중..." : "신청서 생성"}
+          <Button type="submit" disabled={isSubmitting} size="lg">
+            {isSubmitting ? "저장 중..." : "저장"}
           </Button>
         </div>
       </form>

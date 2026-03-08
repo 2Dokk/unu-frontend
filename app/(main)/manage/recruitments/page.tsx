@@ -38,22 +38,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import {} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/custom/common/delete-confirm-dialog";
 import { getAllRecruitments, deleteRecruitment } from "@/lib/api/recruitment";
 import { getAllForms } from "@/lib/api/form";
 import { getAllQuarters } from "@/lib/api/quarter";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 import { FormResponse } from "@/lib/interfaces/form";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
+import { formatDate } from "@/lib/utils/date-utils";
 
 type RecruitmentStatus = "전체" | "모집중" | "예정" | "마감";
 type ActiveFilter = "전체" | "활성" | "비활성";
@@ -94,7 +87,7 @@ export default function AdminRecruitmentsPage() {
       setRecruitments(recruitmentsData);
       setForms(formsData);
       setQuarters(quartersData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load data:", error);
     } finally {
       setLoading(false);
@@ -111,34 +104,6 @@ export default function AdminRecruitmentsPage() {
     if (now < start) return "예정";
     if (now > end) return "마감";
     return "모집중";
-  }
-
-  function getFormTitle(formId: string): string {
-    const form = forms.find((f) => f.id === formId);
-    return form?.title || `Form #${formId}`;
-  }
-
-  function getQuarterLabel(quarterId: string): string {
-    const quarter = quarters.find((q) => q.id === quarterId);
-    return quarter ? `${quarter.year}년 ${quarter.name}분기` : `Q${quarterId}`;
-  }
-
-  function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  }
-
-  function formatDateTime(dateString: string): string {
-    return new Date(dateString).toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   }
 
   const filteredRecruitments = recruitments.filter((recruitment) => {
@@ -184,7 +149,7 @@ export default function AdminRecruitmentsPage() {
     try {
       await deleteRecruitment(itemToDelete.id);
       setRecruitments((prev) => prev.filter((r) => r.id !== itemToDelete.id));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to delete recruitment:", error);
     } finally {
       setDeleteDialogOpen(false);
@@ -195,10 +160,10 @@ export default function AdminRecruitmentsPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Page Header */}
-      <div className="space-y-2 border-b pb-6">
+      <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">모집 관리</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          모든 모집 공고를 조회하고 상태를 관리합니다
+          모집 공고를 조회하고 상태를 관리합니다
         </p>
       </div>
 
@@ -211,7 +176,8 @@ export default function AdminRecruitmentsPage() {
               size="sm"
               onClick={() => router.push("/manage/recruitments/new")}
             >
-              <SquarePlus className="mr-1 h-4 w-4" />새 모집 생성
+              <Plus className="h-3 w-3" />
+              <span className="text-xs">모집 생성</span>
             </Button>
           </div>
 
@@ -224,7 +190,7 @@ export default function AdminRecruitmentsPage() {
                 placeholder="모집 제목 검색..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 text-sm"
+                className="pl-9"
               />
             </div>
 
@@ -235,14 +201,22 @@ export default function AdminRecruitmentsPage() {
                 setStatusFilter(value as RecruitmentStatus)
               }
             >
-              <SelectTrigger className="w-full md:w-35">
+              <SelectTrigger className="w-full md:w-35 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="전체">전체 상태</SelectItem>
-                <SelectItem value="모집중">모집중</SelectItem>
-                <SelectItem value="예정">예정</SelectItem>
-                <SelectItem value="마감">마감</SelectItem>
+                <SelectItem value="전체" className="text-xs">
+                  전체 상태
+                </SelectItem>
+                <SelectItem value="모집중" className="text-xs">
+                  모집중
+                </SelectItem>
+                <SelectItem value="예정" className="text-xs">
+                  예정
+                </SelectItem>
+                <SelectItem value="마감" className="text-xs">
+                  마감
+                </SelectItem>
               </SelectContent>
             </Select>
 
@@ -251,13 +225,19 @@ export default function AdminRecruitmentsPage() {
               value={activeFilter}
               onValueChange={(value) => setActiveFilter(value as ActiveFilter)}
             >
-              <SelectTrigger className="w-full md:w-35">
+              <SelectTrigger className="w-full md:w-35 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="전체">전체</SelectItem>
-                <SelectItem value="활성">활성</SelectItem>
-                <SelectItem value="비활성">비활성</SelectItem>
+                <SelectItem value="전체" className="text-xs">
+                  전체
+                </SelectItem>
+                <SelectItem value="활성" className="text-xs">
+                  활성
+                </SelectItem>
+                <SelectItem value="비활성" className="text-xs">
+                  비활성
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -271,27 +251,31 @@ export default function AdminRecruitmentsPage() {
               ))}
             </div>
           ) : filteredRecruitments.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-12 text-muted-foreground text-sm">
               {search || statusFilter !== "전체" || activeFilter !== "전체"
-                ? "검색 결과가 없어요."
-                : "아직 모집이 없어요."}
+                ? "검색 결과가 없습니다"
+                : "아직 모집이 없습니다"}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-25">상태</TableHead>
                     <TableHead>제목</TableHead>
-                    <TableHead className="hidden md:table-cell">기간</TableHead>
-                    <TableHead className="hidden lg:table-cell">
-                      연결된 폼
+                    <TableHead className="hidden md:table-cell text-center">
+                      기간
                     </TableHead>
-                    <TableHead className="hidden lg:table-cell">분기</TableHead>
-                    <TableHead className="hidden xl:table-cell">
+                    <TableHead className="hidden lg:table-cell text-center">
+                      지원서
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell text-center">
+                      분기
+                    </TableHead>
+                    <TableHead className="w-25 text-center">상태</TableHead>
+                    <TableHead className="hidden xl:table-cell text-center">
                       생성일
                     </TableHead>
-                    <TableHead className="w-20">작업</TableHead>
+                    <TableHead className="w-20 text-center">작업</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -303,7 +287,25 @@ export default function AdminRecruitmentsPage() {
                       }
                     >
                       <TableCell>
-                        <div className="flex flex-col gap-1">
+                        <div className="font-medium">{recruitment.title}</div>
+                        {recruitment.description && (
+                          <div className="text-xs text-muted-foreground truncate max-w-75">
+                            {recruitment.description}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-center text-muted-foreground text-sm">
+                        {formatDate(recruitment.startAt)} -{" "}
+                        {formatDate(recruitment.endAt)}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-muted-foreground">
+                        {recruitment.form.title}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-muted-foreground text-center">
+                        {recruitment.quarter.name}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 items-center">
                           {getStatusBadge(recruitment)}
                           {!recruitment.active && (
                             <Badge variant="secondary" className="text-xs">
@@ -312,35 +314,10 @@ export default function AdminRecruitmentsPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{recruitment.title}</div>
-                        {recruitment.description && (
-                          <div className="text-xs text-muted-foreground truncate max-w-75">
-                            {recruitment.description}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <div className="text-sm">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
-                            {formatDate(recruitment.startAt)}
-                          </div>
-                          <div className="text-muted-foreground text-xs">
-                            ~ {formatDate(recruitment.endAt)}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-muted-foreground">
-                        {recruitment.form.title}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-muted-foreground">
-                        {recruitment.quarter.name}
-                      </TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground text-sm">
+                      <TableCell className="hidden xl:table-cell text-muted-foreground text-sm text-center">
                         {formatDate(recruitment.createdAt)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -369,7 +346,7 @@ export default function AdminRecruitmentsPage() {
                                 );
                               }}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <Trash2 className="mr-2 h-4 w-4 text-destructive" />
                               삭제
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -383,25 +360,12 @@ export default function AdminRecruitmentsPage() {
           )}
         </CardContent>
       </Card>
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>정말 삭제하시겠어요?</AlertDialogTitle>
-            <AlertDialogDescription>
-              모집 공고 "{itemToDelete?.title}"을(를) 삭제하면 되돌릴 수 없어요.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDelete}
-            >
-              삭제
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        itemValue={itemToDelete?.title || ""}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

@@ -30,7 +30,7 @@ export function ActivityTypeSelector({
       try {
         const data = await getAllActivityTypes();
         setActivityTypes(data);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch activity types:", error);
       }
     };

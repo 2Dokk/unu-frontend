@@ -9,16 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import {} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/custom/common/delete-confirm-dialog";
 import { FormBuilder } from "@/components/custom/form/form-builder";
 import {
   getFormTemplateById,
@@ -58,7 +50,7 @@ export default function EditFormTemplatePage() {
       setInitialTitle(data.title);
       setInitialSchema(data.schema);
       setLastSaved(new Date(data.modifiedAt));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load template:", error);
     } finally {
       setIsLoading(false);
@@ -76,7 +68,7 @@ export default function EditFormTemplatePage() {
       setInitialSchema(schema);
       setLastSaved(new Date());
       router.push("/manage/forms");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update template:", error);
       setIsSubmitting(false);
     }
@@ -86,7 +78,7 @@ export default function EditFormTemplatePage() {
     try {
       await deleteFormTemplate(id);
       router.push("/manage/forms");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to delete template:", error);
       setDeleteDialogOpen(false);
     }
@@ -94,17 +86,45 @@ export default function EditFormTemplatePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-5xl py-8 px-4">
-        <Skeleton className="h-12 w-64 mb-8" />
+      <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+        {/* Header */}
+        <div className="border-b pb-6 space-y-3">
+          <Skeleton className="h-9 w-24" />
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <Skeleton className="h-7 w-52" />
+              <Skeleton className="h-4 w-72" />
+            </div>
+            <Skeleton className="h-4 w-28" />
+          </div>
+        </div>
+
+        {/* Card */}
         <Card>
           <CardHeader>
-            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-5 w-24" />
           </CardHeader>
           <CardContent className="space-y-6">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-65 w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-px w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-96 w-full rounded-md" />
+            </div>
           </CardContent>
         </Card>
+
+        {/* Bottom actions */}
+        <div className="flex items-center justify-between pt-6 border-t">
+          <Skeleton className="h-9 w-12" />
+          <div className="flex gap-3">
+            <Skeleton className="h-9 w-16" />
+            <Skeleton className="h-10 w-16" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -113,7 +133,7 @@ export default function EditFormTemplatePage() {
     return (
       <div className="container mx-auto max-w-5xl py-8 px-4">
         <div className="text-center">
-          <p className="text-muted-foreground">템플릿을 찾을 수 없어요.</p>
+          <p className="text-muted-foreground">템플릿을 찾을 수 없습니다</p>
           <Button className="mt-4" onClick={() => router.push("/manage/forms")}>
             목록으로 돌아가기
           </Button>
@@ -124,36 +144,32 @@ export default function EditFormTemplatePage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
-      <div className="border-b pb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push("/manage/forms")}
-          className="mb-2"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          돌아가기
-        </Button>
-        <div className="flex items-start justify-between">
-          <div className="space-y-3">
-            <h1 className="text-2xl font-bold">신청서 템플릿 편집</h1>
-            <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-              신청서 템플릿을 수정할 수 있습니다.
-            </p>
-          </div>
-          <div className="text-sm text-right">
-            {hasUnsavedChanges ? (
-              <span className="text-amber-600 font-medium">
-                저장되지 않은 변경 사항 있음
-              </span>
-            ) : lastSaved ? (
-              <span className="text-muted-foreground">
-                {new Date().getTime() - lastSaved.getTime() < 60000
-                  ? "방금 저장됨"
-                  : `${Math.floor((new Date().getTime() - lastSaved.getTime()) / 60000)}분 전 저장됨`}
-              </span>
-            ) : null}
-          </div>
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <h1 className="text-xl font-bold tracking-tight">템플릿 수정하기</h1>
+          <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+            템플릿 기본 정보를 수정합니다
+          </p>
+        </div>
+        <div className="text-sm text-right">
+          {hasUnsavedChanges ? (
+            <span className="text-amber-600 font-medium">
+              저장되지 않은 변경 사항 있음
+            </span>
+          ) : lastSaved ? (
+            <span className="text-muted-foreground">
+              {(() => {
+                const diffMs = new Date().getTime() - lastSaved.getTime();
+                const diffMin = Math.floor(diffMs / 60000);
+                const diffHour = Math.floor(diffMs / 3600000);
+                const diffDay = Math.floor(diffMs / 86400000);
+                if (diffMs < 60000) return "방금 저장됨";
+                if (diffMin < 60) return `${diffMin}분 전 저장됨`;
+                if (diffHour < 24) return `${diffHour}시간 전 저장됨`;
+                return `${diffDay}일 전 저장됨`;
+              })()}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -183,16 +199,7 @@ export default function EditFormTemplatePage() {
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-between mt-8 pt-6 border-t">
-          <Button
-            type="button"
-            variant="ghost"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => setDeleteDialogOpen(true)}
-            disabled={isSubmitting}
-          >
-            삭제
-          </Button>
+        <div className="flex items-center justify-end gap-4 pt-4">
           <div className="flex gap-3">
             <Button
               type="button"
@@ -209,26 +216,12 @@ export default function EditFormTemplatePage() {
         </div>
       </form>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>정말 삭제하시겠어요?</AlertDialogTitle>
-            <AlertDialogDescription>
-              템플릿 "{template.title}"을(를) 삭제하면 되돌릴 수 없어요.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              삭제
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        itemValue={template.title || ""}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

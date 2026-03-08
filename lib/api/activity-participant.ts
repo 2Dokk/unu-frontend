@@ -75,7 +75,7 @@ export async function getMyParticipantByActivityId(
       `/activity-participants/activities/${activityId}/me`,
     );
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     return null;
   }
 }

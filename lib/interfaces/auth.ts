@@ -21,7 +21,9 @@ export interface UserResponseDto {
   studentId: string;
   phoneNumber: string;
   githubId: string;
-  isActive: boolean;
+  major: string;
+  subMajor?: string;
+  isCurrentQuarterActive: boolean;
   joinedQuarter?: QuarterResponse;
   userRoles: UserRoleResponse[];
 }
@@ -33,7 +35,7 @@ export interface UserInfoResponseDto {
   studentId: string;
   phoneNumber: string;
   githubId: string;
-  isActive: boolean;
+  isCurrentQuarterActive: boolean;
   joinedQuarter?: QuarterResponse;
 }
 

@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Save, X as XIcon } from "lucide-react";
+import { ArrowLeft, CalendarIcon } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { ko } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -15,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -242,20 +251,10 @@ export default function ActivityEditPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="space-y-3 border-b pb-6">
-        <Button
-          onClick={() => router.push("/manage/activities")}
-          variant="ghost"
-          size="sm"
-          className="mb-2"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          목록으로
-        </Button>
-
-        <h1 className="text-2xl font-bold tracking-tight">활동 정보 수정</h1>
+      <div className="space-y-2">
+        <h1 className="text-xl font-bold tracking-tight">활동 수정하기</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          활동의 기본 정보와 일정을 수정할 수 있습니다.
+          활동 기본 정보를 수정합니다
         </p>
       </div>
 
@@ -336,7 +335,7 @@ export default function ActivityEditPage() {
                       handleInputChange("activityTypeId", parseInt(value))
                     }
                   >
-                    <SelectTrigger id="activityType">
+                    <SelectTrigger id="activityType" className="text-xs">
                       <SelectValue placeholder="유형 선택" />
                     </SelectTrigger>
                     <SelectContent>
@@ -355,9 +354,9 @@ export default function ActivityEditPage() {
                     분기 <span className="text-destructive">*</span>
                   </Label>
                   <Select
-                    value={formData.quarterId.toString()}
+                    value={formData.quarterId}
                     onValueChange={(value) =>
-                      handleInputChange("quarterId", parseInt(value))
+                      handleInputChange("quarterId", value)
                     }
                   >
                     <SelectTrigger id="quarter">
@@ -432,68 +431,91 @@ export default function ActivityEditPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Start Date */}
                 <div className="space-y-2">
-                  <Label htmlFor="startDate">
+                  <Label>
                     시작일 <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) =>
-                      handleInputChange("startDate", e.target.value)
-                    }
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal text-xs",
+                          !formData.startDate && "text-muted-foreground",
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.startDate
+                          ? format(parseISO(formData.startDate), "PPP", {
+                              locale: ko,
+                            })
+                          : "시작일 선택"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={
+                          formData.startDate
+                            ? parseISO(formData.startDate)
+                            : undefined
+                        }
+                        onSelect={(date) =>
+                          handleInputChange(
+                            "startDate",
+                            date ? format(date, "yyyy-MM-dd") : "",
+                          )
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* End Date */}
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">
+                  <Label>
                     종료일 <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) =>
-                      handleInputChange("endDate", e.target.value)
-                    }
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal text-xs",
+                          !formData.endDate && "text-muted-foreground",
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.endDate
+                          ? format(parseISO(formData.endDate), "PPP", {
+                              locale: ko,
+                            })
+                          : "종료일 선택"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={
+                          formData.endDate
+                            ? parseISO(formData.endDate)
+                            : undefined
+                        }
+                        onSelect={(date) =>
+                          handleInputChange(
+                            "endDate",
+                            date ? format(date, "yyyy-MM-dd") : "",
+                          )
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
                 종료일은 시작일 이후여야 합니다.
               </p>
-            </CardContent>
-          </Card>
-
-          {/* 메타 정보 Card (Read-only) */}
-          <Card>
-            <CardHeader>
-              <CardTitle>메타 정보</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground mb-1">생성 일시</p>
-                  <p className="font-medium">
-                    {formatDateTime(activity.createdAt)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground mb-1">수정 일시</p>
-                  <p className="font-medium">
-                    {formatDateTime(activity.modifiedAt)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground mb-1">생성자</p>
-                  <p className="font-medium">{activity.createdBy}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground mb-1">수정자</p>
-                  <p className="font-medium">{activity.modifiedBy}</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
 
