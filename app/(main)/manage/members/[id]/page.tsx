@@ -42,52 +42,8 @@ import { UserResponseDto } from "@/lib/interfaces/auth";
 import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
 import { getRoleBadgeVariant, getRoleLabel } from "@/lib/utils/role-utils";
 import { useAuth } from "@/lib/contexts/AuthContext";
-
-// ========================
-// HELPER FUNCTIONS
-// ========================
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}.${month}.${day}`;
-}
-
-function formatDateTime(dateString: string): string {
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}.${month}.${day} ${hours}:${minutes}`;
-}
-
-function getStatusLabel(status: string): string {
-  const statusMap: Record<string, string> = {
-    APPLIED: "신청됨",
-    APPROVED: "승인됨",
-    REJECTED: "거절됨",
-  };
-  return statusMap[status] || status;
-}
-
-function getStatusBadgeVariant(
-  status: string,
-): "default" | "secondary" | "outline" | "destructive" {
-  switch (status) {
-    case "APPROVED":
-      return "default";
-    case "APPLIED":
-      return "secondary";
-    case "REJECTED":
-      return "destructive";
-    default:
-      return "outline";
-  }
-}
+import { formatDate, formatDateTime } from "@/lib/utils/date-utils";
+import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
 
 // ========================
 // INFO ROW COMPONENT
@@ -549,13 +505,9 @@ export default function MemberDetailPage() {
                                           : "—"}
                                       </TableCell>
                                       <TableCell className="text-center">
-                                        <Badge
-                                          variant={getStatusBadgeVariant(
-                                            participant.status,
-                                          )}
-                                        >
-                                          {getStatusLabel(participant.status)}
-                                        </Badge>
+                                        <ParticipantStatusBadge
+                                          status={participant.status}
+                                        />
                                       </TableCell>
                                       <TableCell className="text-center">
                                         <Badge
@@ -662,13 +614,9 @@ export default function MemberDetailPage() {
                                           : "—"}
                                       </TableCell>
                                       <TableCell className="text-center">
-                                        <Badge
-                                          variant={getStatusBadgeVariant(
-                                            participant.status,
-                                          )}
-                                        >
-                                          {getStatusLabel(participant.status)}
-                                        </Badge>
+                                        <ParticipantStatusBadge
+                                          status={participant.status}
+                                        />
                                       </TableCell>
                                       <TableCell className="text-center">
                                         <Badge

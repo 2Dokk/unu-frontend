@@ -18,6 +18,7 @@ export type UserRole = "ADMIN" | "MANAGER" | "MEMBER" | "GUEST";
 interface AuthContextType {
   isAuthenticated: boolean;
   userRole: UserRole;
+  userId: string | null;
   isLoading: boolean;
   login: (token: string, refreshToken?: string) => void;
   logout: () => void;
@@ -78,6 +79,7 @@ function extractRoleFromToken(token: string): UserRole {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>("GUEST");
+  const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -102,9 +104,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           Cookies.remove("refreshToken");
           setIsAuthenticated(false);
           setUserRole("GUEST");
+          setUserId(null);
         } else {
+          const decoded = jwtDecode<DecodedToken>(token);
           setIsAuthenticated(true);
           setUserRole(role);
+          setUserId(decoded.sub ?? null);
         }
       } catch (error: any) {
         console.error("Auth initialization error:", error);
@@ -127,8 +132,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const role = extractRoleFromToken(token);
+    const decoded = jwtDecode<DecodedToken>(token);
     setIsAuthenticated(true);
     setUserRole(role);
+    setUserId(decoded.sub ?? null);
   };
 
   const logout = () => {
@@ -136,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     Cookies.remove("refreshToken");
     setIsAuthenticated(false);
     setUserRole("GUEST");
+    setUserId(null);
 
     if (typeof window !== "undefined") {
       router.push("/login");
@@ -160,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextType = {
     isAuthenticated,
     userRole,
+    userId,
     isLoading,
     login,
     logout,

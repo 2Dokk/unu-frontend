@@ -192,7 +192,7 @@ export default function ActivityNewPage() {
                     handleInputChange("activityTypeId", value)
                   }
                 >
-                  <SelectTrigger id="activityType">
+                  <SelectTrigger id="activityType" className="w-48">
                     <SelectValue placeholder="유형 선택" />
                   </SelectTrigger>
                   <SelectContent>
@@ -217,7 +217,7 @@ export default function ActivityNewPage() {
                     handleInputChange("quarterId", value)
                   }
                 >
-                  <SelectTrigger id="quarter">
+                  <SelectTrigger id="quarter" className="w-48">
                     <SelectValue placeholder="분기 선택" />
                   </SelectTrigger>
                   <SelectContent>
@@ -240,7 +240,7 @@ export default function ActivityNewPage() {
                   value={formData.status}
                   onValueChange={(value) => handleInputChange("status", value)}
                 >
-                  <SelectTrigger id="status">
+                  <SelectTrigger id="status" className="w-48">
                     <SelectValue placeholder="상태 선택" />
                   </SelectTrigger>
                   <SelectContent>
@@ -264,25 +264,34 @@ export default function ActivityNewPage() {
                     <Button
                       variant="outline"
                       role="combobox"
-                      className="w-full justify-between font-normal"
+                      className="w-48 justify-between font-normal text-xs"
                     >
-                      <span className={cn(!formData.assigneeId && "text-muted-foreground")}>
+                      <span
+                        className={cn(
+                          !formData.assigneeId && "text-muted-foreground",
+                        )}
+                      >
                         {formData.assigneeId
-                          ? (users.find((u) => u.id === formData.assigneeId)?.name ||
-                             users.find((u) => u.id === formData.assigneeId)?.username ||
-                             "담당자 선택")
+                          ? users.find((u) => u.id === formData.assigneeId)
+                              ?.name ||
+                            users.find((u) => u.id === formData.assigneeId)
+                              ?.username ||
+                            "담당자 선택"
                           : "담당자 선택"}
                       </span>
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <div className="border-b px-3 py-2">
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] min-w-48 p-0"
+                    align="start"
+                  >
+                    <div className="border-b px-3 py-1">
                       <Input
                         placeholder="이름 또는 학번 검색"
                         value={assigneeSearch}
                         onChange={(e) => setAssigneeSearch(e.target.value)}
-                        className="h-8 border-0 p-0 shadow-none focus-visible:ring-0"
+                        className="h-6 border-0 p-0 shadow-none focus-visible:ring-0"
                         autoFocus
                       />
                     </div>
@@ -307,14 +316,16 @@ export default function ActivityNewPage() {
                               setAssigneeSearch("");
                             }}
                             className={cn(
-                              "flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted",
+                              "flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted",
                               formData.assigneeId === user.id && "bg-muted",
                             )}
                           >
                             <Check
                               className={cn(
-                                "h-4 w-4 shrink-0",
-                                formData.assigneeId === user.id ? "opacity-100" : "opacity-0",
+                                "h-3 w-3 shrink-0",
+                                formData.assigneeId === user.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
                               )}
                             />
                             <span>{user.name || user.username}</span>
@@ -332,7 +343,7 @@ export default function ActivityNewPage() {
                           u.studentId?.toLowerCase().includes(q)
                         );
                       }).length === 0 && (
-                        <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                        <p className="px-3 py-4 text-center text-xs text-muted-foreground">
                           검색 결과가 없습니다
                         </p>
                       )}

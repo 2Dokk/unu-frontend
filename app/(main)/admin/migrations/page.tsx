@@ -98,11 +98,11 @@ export default function MigrationsPage() {
       const data = await migrateUsers(selectedFile);
       setResult(data);
       toast.success(
-        `마이그레이션 완료: ${data.created}명 생성, ${data.skipped}명 스킵, ${data.failed}명 실패`,
+        `사용자 등록 완료: ${data.created}명 생성, ${data.skipped}명 스킵, ${data.failed}명 실패`,
       );
     } catch (error: any) {
       console.error("Migration failed:", error);
-      toast.error(error.response?.data || "마이그레이션에 실패했습니다.");
+      toast.error(error.response?.data || "사용자 등록에 실패했습니다.");
     } finally {
       setUploading(false);
     }

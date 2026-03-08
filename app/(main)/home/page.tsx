@@ -23,6 +23,7 @@ import {
   Clock,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
 
 interface ParticipationWithStats {
   participant: ActivityParticipantResponse;
@@ -30,12 +31,6 @@ interface ParticipationWithStats {
   totalSessions: number;
   attendanceRate: number;
 }
-
-const STATUS_MAP = {
-  APPLIED: { label: "신청됨", variant: "secondary" as const },
-  APPROVED: { label: "승인됨", variant: "default" as const },
-  REJECTED: { label: "거절됨", variant: "destructive" as const },
-};
 
 export default function HomePage() {
   const router = useRouter();
@@ -164,7 +159,7 @@ export default function HomePage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Page Header */}
-      <div className="space-y-2 border-b pb-6">
+      <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">내 활동</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
           활동 참여 현황과 출석 정보를 확인하세요
@@ -261,7 +256,6 @@ export default function HomePage() {
                 totalSessions,
                 attendanceRate,
               }) => {
-                const statusInfo = STATUS_MAP[participant.status];
                 const attendedCount =
                   attendanceStats.presentCount + attendanceStats.excusedCount;
 
@@ -282,9 +276,9 @@ export default function HomePage() {
                             {participant.activity?.title || "활동명 없음"}
                           </CardTitle>
                           <div className="flex items-center gap-2">
-                            <Badge variant={statusInfo.variant}>
-                              {statusInfo.label}
-                            </Badge>
+                            <ParticipantStatusBadge
+                              status={participant.status}
+                            />
                             {participant.completed ? (
                               <Badge
                                 variant="outline"
@@ -343,7 +337,7 @@ export default function HomePage() {
             </CardContent>
           </Card>
         ) : (
-          <Card>
+          <Card className="py-0">
             <CardContent className="p-0">
               <div className="divide-y">
                 {participations.map(

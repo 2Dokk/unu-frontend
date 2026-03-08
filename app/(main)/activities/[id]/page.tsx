@@ -52,6 +52,7 @@ import {
   Pencil,
   Trash2,
   ArrowLeft,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { CourseTimeReservationCard } from "@/components/custom/activity/course-time-reservation";
@@ -255,7 +256,7 @@ export default function ActivityDetails() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
-  const { userRole } = useAuth();
+  const { userRole, hasRole, userId } = useAuth();
 
   useEffect(() => {
     const fetchActivityDetails = async () => {
@@ -416,6 +417,10 @@ export default function ActivityDetails() {
 
   const activityStatusMeta = getActivityStatusMeta(activity.status);
   const participantMeta = getMyParticipantMeta(myParticipant);
+  const canManage =
+    hasRole("MANAGER") ||
+    hasRole("ADMIN") ||
+    activity.assignee.id === userId;
   const ctaConfig = deriveCtaConfig(activity, myParticipant, {
     onApply: handleApply,
     onCancel: handleCancel,
@@ -684,6 +689,18 @@ export default function ActivityDetails() {
                       {action.label}
                     </Button>
                   ))}
+                {canManage && (
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() =>
+                      router.push(`/manage/activities/${activityId}`)
+                    }
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    활동 관리하러 가기
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
