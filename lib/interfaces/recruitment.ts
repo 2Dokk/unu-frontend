@@ -1,3 +1,4 @@
+import { AuditorDto } from "./auth";
 import { FormResponse } from "./form";
 import { QuarterResponse } from "./quarter";
 
@@ -22,6 +23,6 @@ export interface RecruitmentResponse {
   form: FormResponse;
   createdAt: string;
   modifiedAt: string;
-  createdBy: string;
-  modifiedBy: string;
+  createdBy: AuditorDto;
+  modifiedBy: AuditorDto;
 }

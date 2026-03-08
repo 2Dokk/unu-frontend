@@ -1,3 +1,5 @@
+import { AuditorDto } from "./auth";
+
 export interface FormRequest {
   templateId?: string;
   title: string;
@@ -11,8 +13,8 @@ export interface FormResponse {
   schema: string;
   createdAt: string;
   modifiedAt: string;
-  createdBy: string;
-  modifiedBy: string;
+  createdBy: AuditorDto;
+  modifiedBy: AuditorDto;
 }
 
 export interface FormTemplateRequest {
@@ -26,6 +28,6 @@ export interface FormTemplateResponse {
   schema: string;
   createdAt: string;
   modifiedAt: string;
-  createdBy: string;
-  modifiedBy: string;
+  createdBy: AuditorDto;
+  modifiedBy: AuditorDto;
 }

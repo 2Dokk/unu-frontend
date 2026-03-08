@@ -1,5 +1,5 @@
 import { QuarterResponse } from "./quarter";
-import { UserResponseDto } from "./auth";
+import { AuditorDto, UserResponseDto } from "./auth";
 
 export const ACTIVITY_STATUS_MAP: Record<string, string> = {
   CREATED: "생성됨",
@@ -27,8 +27,8 @@ export interface ActivityResponse {
   parentActivityId?: string;
   createdAt: string;
   modifiedAt: string;
-  createdBy: string;
-  modifiedBy: string;
+  createdBy: AuditorDto;
+  modifiedBy: AuditorDto;
 }
 
 export interface ActivityRequest {

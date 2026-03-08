@@ -337,6 +337,7 @@ export default function ActivityDetailManagePage() {
         ]);
 
         setActivity(activityData);
+        console.log(activityData);
         setParticipants(participantsData);
         setFilteredParticipants(participantsData);
       } catch (error: any) {
@@ -1257,14 +1258,14 @@ export default function ActivityDetailManagePage() {
                   생성자
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {activity.createdBy || "알 수 없음"}
+                  {activity.createdBy?.name || "알 수 없음"}
                 </div>
 
                 <div className="text-sm font-medium text-muted-foreground">
                   수정자
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {activity.modifiedBy || "알 수 없음"}
+                  {activity.modifiedBy?.name || "알 수 없음"}
                 </div>
               </div>
             </CardContent>

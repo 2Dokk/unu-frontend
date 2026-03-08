@@ -369,14 +369,14 @@ export default function RecruitmentDetailPage() {
                 생성자
               </div>
               <div className="text-sm text-muted-foreground">
-                {recruitment.createdBy}
+                {recruitment.createdBy?.name || "알 수 없음"}
               </div>
 
               <div className="text-sm font-medium text-muted-foreground">
                 수정자
               </div>
               <div className="text-sm text-muted-foreground">
-                {recruitment.modifiedBy}
+                {recruitment.modifiedBy?.name || "알 수 없음"}
               </div>
             </div>
           </CardContent>

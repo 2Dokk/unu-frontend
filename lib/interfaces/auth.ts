@@ -1,6 +1,13 @@
 import { QuarterResponse } from "./quarter";
 import { UserRoleResponse } from "./role";
 
+export interface AuditorDto {
+  id: string;
+  name: string;
+  username: string;
+  studentId: string;
+}
+
 export interface LoginRequest {
   username: string;
   password: string;

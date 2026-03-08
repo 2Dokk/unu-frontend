@@ -265,14 +265,14 @@ export default function ViewFormPage() {
                   생성자
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {form.createdBy || "알 수 없음"}
+                  {form.createdBy?.name || "알 수 없음"}
                 </div>
 
                 <div className="text-sm font-medium text-muted-foreground">
                   수정자
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {form.modifiedBy || "알 수 없음"}
+                  {form.modifiedBy?.name || "알 수 없음"}
                 </div>
               </div>
             </CardContent>
