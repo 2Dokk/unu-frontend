@@ -51,13 +51,17 @@ interface EnrichedSession {
 }
 
 const CATEGORY_MAP: Record<string, { label: string; color: string }> = {
-  스터디: {
+  STUDY: {
     label: "스터디",
-    color: "bg-violet-100 text-black border-violet-500",
+    color: "bg-blue-50 text-blue-700 border-blue-200",
   },
-  프로젝트: {
+  PROJECT: {
     label: "프로젝트",
-    color: "bg-blue-100 text-black border-blue-500",
+    color: "bg-violet-50 text-violet-700 border-violet-200",
+  },
+  ONLINE_COURSE: {
+    label: "온라인 강좌",
+    color: "bg-amber-50 text-amber-700 border-amber-200",
   },
 };
 
@@ -203,10 +207,10 @@ export default function ManagePage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Header */}
-      <div className="space-y-2 border-b pb-6">
-        <h1 className="text-2xl font-bold tracking-tight">운영 대시보드</h1>
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">일정 관리</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          활동 세션 일정 및 참석 관리
+          활동 일정과 회차별 출결 현황을 확인합니다
         </p>
       </div>
 
@@ -232,25 +236,11 @@ export default function ManagePage() {
 
         {/* Category Filter */}
         <Card className="p-4">
-          <div className="space-y-3">
-            <Label className="text-sm font-semibold">
-              활동 유형 필터
-              {selectedActivityTypeIds.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedActivityTypeIds([])}
-                  className="h-4 text-xs"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  초기화
-                </Button>
-              )}
-            </Label>
+          <div>
             <div className="flex flex-wrap gap-4">
               {activityTypes.map((type, index) => {
                 const isChecked = selectedActivityTypeIds.includes(type.id);
-                const categoryColor = getActivityTypeColor(type.name, index);
+                const categoryColor = getActivityTypeColor(type.code, index);
 
                 return (
                   <div key={type.id} className="flex items-center space-x-2">
@@ -297,8 +287,8 @@ export default function ManagePage() {
       >
         <SheetContent className="sm:max-w-md overflow-y-auto">
           <SheetHeader className="sr-only">
-            <SheetTitle>세션 상세</SheetTitle>
-            <SheetDescription>선택한 세션의 상세 정보</SheetDescription>
+            <SheetTitle>상세</SheetTitle>
+            <SheetDescription>선택한 일자 상세 정보</SheetDescription>
           </SheetHeader>
           {selectedSession && (
             <SessionDetailPanel
@@ -414,13 +404,13 @@ function CalendarView({
                 {/* Session Indicators */}
                 <div className="space-y-1">
                   {daySessions.slice(0, 2).map((enriched) => {
-                    const categoryName =
-                      enriched.session.activity?.activityType?.name || "";
+                    const categoryCode =
+                      enriched.session.activity?.activityType?.code || "";
                     const typeIndex = activityTypes.findIndex(
-                      (t) => t.name === categoryName,
+                      (t) => t.code === categoryCode,
                     );
                     const categoryColor = getActivityTypeColor(
-                      categoryName,
+                      categoryCode,
                       typeIndex,
                     );
 
@@ -435,7 +425,7 @@ function CalendarView({
                             "ring-1 ring-primary",
                         )}
                       >
-                        {enriched.session.activity?.title || "세션"}
+                        {enriched.session.activity?.title || "활동 진행"}
                       </button>
                     );
                   })}
@@ -460,14 +450,14 @@ function CalendarView({
                           <Separator />
                           <div className="space-y-2 max-h-96 overflow-y-auto">
                             {daySessions.map((enriched) => {
-                              const categoryName =
-                                enriched.session.activity?.activityType?.name ||
+                              const categoryCode =
+                                enriched.session.activity?.activityType?.code ||
                                 "";
                               const typeIndex = activityTypes.findIndex(
-                                (t) => t.name === categoryName,
+                                (t) => t.code === categoryCode,
                               );
                               const categoryColor = getActivityTypeColor(
-                                categoryName,
+                                categoryCode,
                                 typeIndex,
                               );
 
@@ -483,7 +473,8 @@ function CalendarView({
                                   )}
                                 >
                                   <div className="font-medium">
-                                    {enriched.session.activity?.title || "세션"}
+                                    {enriched.session.activity?.title ||
+                                      "활동 진행"}
                                   </div>
                                 </button>
                               );
@@ -513,10 +504,10 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
   if (!session) return null;
 
   const { session: sessionData, attendances } = session;
-  const categoryName = session.session.activity?.activityType?.name || "";
-  const categoryColor = CATEGORY_MAP[categoryName]
-    ? CATEGORY_MAP[categoryName].color
-    : "bg-gray-200 text-gray-800 border-gray-300";
+  const categoryCode = session.session.activity?.activityType?.code || "";
+  const categoryColor =
+    CATEGORY_MAP[categoryCode]?.color ??
+    "bg-gray-100 text-gray-700 border-gray-200";
 
   const attendanceStats = {
     present: attendances.filter((a) => a.status === "PRESENT").length,
@@ -530,13 +521,13 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
       {/* Title & Badges */}
       <div className="space-y-2">
         <h2 className="text-xl font-bold">
-          {session.session.activity?.title || "활동명 없음"}
+          {session.session.activity?.title || "활동 진행"}
         </h2>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className={categoryColor}>
-            {categoryName || "기타"}
+            {CATEGORY_MAP[categoryCode]?.label ?? "기타"}
           </Badge>
-          <Badge variant="secondary">세션 {sessionData.sessionNumber}</Badge>
+          <Badge variant="secondary">{sessionData.sessionNumber} 회차</Badge>
         </div>
       </div>
 

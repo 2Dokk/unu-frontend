@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { searchActivities } from "@/lib/api/activity";
 import { getAllActivityTypes } from "@/lib/api/activity-type";
-import { getAllQuarters } from "@/lib/api/quarter";
+import { getAllQuarters, getCurrentQuarter } from "@/lib/api/quarter";
 import {
   ActivityResponse,
   ActivityTypeResponse,
@@ -137,16 +137,16 @@ const ActivityPage = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [typesData, quartersData] = await Promise.all([
+        const [typesData, quartersData, currentQuarter] = await Promise.all([
           getAllActivityTypes(),
           getAllQuarters(),
+          getCurrentQuarter().catch(() => null),
         ]);
         setActivityTypes(typesData);
         setQuarters(quartersData);
         if (quartersData.length > 0) {
-          setSelectedQuarterId(
-            quartersData[quartersData.length - 1].id.toString(),
-          );
+          const defaultId = currentQuarter?.id ?? quartersData[quartersData.length - 1].id;
+          setSelectedQuarterId(defaultId.toString());
         }
       } catch (error: any) {
         console.error("Failed to fetch initial data:", error);

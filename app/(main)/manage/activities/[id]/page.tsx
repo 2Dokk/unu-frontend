@@ -335,9 +335,7 @@ export default function ActivityDetailManagePage() {
           getActivityById(activityId),
           getActivityParticipantsByActivityId({ activityId }),
         ]);
-
         setActivity(activityData);
-        console.log(activityData);
         setParticipants(participantsData);
         setFilteredParticipants(participantsData);
       } catch (error: any) {
