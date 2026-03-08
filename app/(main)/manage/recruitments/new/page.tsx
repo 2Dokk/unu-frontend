@@ -1,6 +1,6 @@
 "use client";
 import RecruitmentForm from "@/components/custom/recruitment/recruitment-form";
-import { Button } from "@/components/ui/button copy";
+import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 

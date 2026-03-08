@@ -11,7 +11,7 @@ import {
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { getAllQuarters, getCurrentQuarter } from "@/lib/api/quarter";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button copy";
+import { Button } from "@/components/ui/button";
 
 interface QuarterSelectorProps {
   value?: string;
@@ -32,7 +32,7 @@ export function QuarterSelector({ value, onChange }: QuarterSelectorProps) {
         ]);
         const sortedQuarters = allQuarters.sort(
           (a, b) =>
-            new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+            new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
         );
         setQuarters(sortedQuarters);
         onChange(currentQuarter.id.toString());
