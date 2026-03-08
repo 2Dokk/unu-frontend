@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, ChevronsUpDown, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +52,8 @@ export default function ActivityNewPage() {
   const [users, setUsers] = useState<UserResponseDto[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [assigneeOpen, setAssigneeOpen] = useState(false);
+  const [assigneeSearch, setAssigneeSearch] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -253,27 +255,90 @@ export default function ActivityNewPage() {
 
               {/* Assignee */}
               <div className="space-y-2">
-                <Label htmlFor="assignee">
+                <Label>
                   담당자
                   <span className="text-destructive">*</span>
                 </Label>
-                <Select
-                  value={formData.assigneeId}
-                  onValueChange={(value) =>
-                    handleInputChange("assigneeId", value)
-                  }
-                >
-                  <SelectTrigger id="assignee">
-                    <SelectValue placeholder="담당자 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id.toString()}>
-                        {user.name || user.username}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal"
+                    >
+                      <span className={cn(!formData.assigneeId && "text-muted-foreground")}>
+                        {formData.assigneeId
+                          ? (users.find((u) => u.id === formData.assigneeId)?.name ||
+                             users.find((u) => u.id === formData.assigneeId)?.username ||
+                             "담당자 선택")
+                          : "담당자 선택"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <div className="border-b px-3 py-2">
+                      <Input
+                        placeholder="이름 또는 학번 검색"
+                        value={assigneeSearch}
+                        onChange={(e) => setAssigneeSearch(e.target.value)}
+                        className="h-8 border-0 p-0 shadow-none focus-visible:ring-0"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="max-h-56 overflow-y-auto py-1">
+                      {users
+                        .filter((u) => {
+                          const q = assigneeSearch.toLowerCase();
+                          return (
+                            !q ||
+                            u.name?.toLowerCase().includes(q) ||
+                            u.username?.toLowerCase().includes(q) ||
+                            u.studentId?.toLowerCase().includes(q)
+                          );
+                        })
+                        .map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => {
+                              handleInputChange("assigneeId", user.id);
+                              setAssigneeOpen(false);
+                              setAssigneeSearch("");
+                            }}
+                            className={cn(
+                              "flex w-full items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted",
+                              formData.assigneeId === user.id && "bg-muted",
+                            )}
+                          >
+                            <Check
+                              className={cn(
+                                "h-4 w-4 shrink-0",
+                                formData.assigneeId === user.id ? "opacity-100" : "opacity-0",
+                              )}
+                            />
+                            <span>{user.name || user.username}</span>
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {user.studentId}
+                            </span>
+                          </button>
+                        ))}
+                      {users.filter((u) => {
+                        const q = assigneeSearch.toLowerCase();
+                        return (
+                          !q ||
+                          u.name?.toLowerCase().includes(q) ||
+                          u.username?.toLowerCase().includes(q) ||
+                          u.studentId?.toLowerCase().includes(q)
+                        );
+                      }).length === 0 && (
+                        <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                          검색 결과가 없습니다
+                        </p>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </CardContent>

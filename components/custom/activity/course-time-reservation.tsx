@@ -31,6 +31,7 @@ import {
   createCourseReservation,
   deleteCourseReservation,
   getMyReservations,
+  getActivityReservations,
 } from "@/lib/api/course-time-reservation";
 
 const DISPLAY_HOURS = Array.from({ length: 14 }, (_, i) => i + 8); // 08 ~ 21
@@ -119,6 +120,9 @@ export function CourseTimeReservationCard({
   >([]);
   const [dayLoading, setDayLoading] = useState(false);
   const [selectedBlocks, setSelectedBlocks] = useState<Set<number>>(new Set());
+  const [othersReservedHours, setOthersReservedHours] = useState<Set<number>>(
+    new Set(),
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -145,14 +149,32 @@ export function CourseTimeReservationCard({
     if (!date) return;
     setSelectedDate(date);
     setSelectedBlocks(new Set());
+    setOthersReservedHours(new Set());
     setError(null);
     setDayLoading(true);
     try {
       const dateStr = format(date, "yyyy-MM-dd");
-      const myDay = await getMyReservations({ date: dateStr });
+      const [myDay, allDay] = await Promise.all([
+        getMyReservations({ date: dateStr }),
+        getActivityReservations(activityId, dateStr),
+      ]);
       setMyDayReservations(myDay);
+      console.log("Selected date reservations:", myDay);
+      console.log("All reservations for the date:", allDay);
+
+      const myIds = new Set(myDay.map((r) => r.id));
+      const othersHours = new Set<number>();
+      allDay
+        .filter((r) => !myIds.has(r.id))
+        .forEach((r) => {
+          const start = new Date(r.startAt).getHours();
+          const end = new Date(r.endAt).getHours();
+          for (let h = start; h < end; h++) othersHours.add(h);
+        });
+      setOthersReservedHours(othersHours);
     } catch {
       setMyDayReservations([]);
+      setOthersReservedHours(new Set());
     } finally {
       setDayLoading(false);
     }
@@ -173,7 +195,7 @@ export function CourseTimeReservationCard({
     Math.max(0, MAX_DAILY_BLOCKS - existingBlocksCount());
 
   const toggleBlock = (hour: number) => {
-    if (getMyExistingHours().has(hour)) return;
+    if (getMyExistingHours().has(hour) || othersReservedHours.has(hour)) return;
     setError(null);
     setSelectedBlocks((prev) => {
       const next = new Set(prev);
@@ -192,8 +214,9 @@ export function CourseTimeReservationCard({
 
   const getSlotState = (
     hour: number,
-  ): "existing" | "selected" | "available" => {
+  ): "existing" | "others" | "selected" | "available" => {
     if (getMyExistingHours().has(hour)) return "existing";
+    if (othersReservedHours.has(hour)) return "others";
     if (selectedBlocks.has(hour)) return "selected";
     return "available";
   };
@@ -243,6 +266,7 @@ export function CourseTimeReservationCard({
     setSelectedDate(undefined);
     setSelectedBlocks(new Set());
     setMyDayReservations([]);
+    setOthersReservedHours(new Set());
     setError(null);
   };
 
@@ -338,7 +362,7 @@ export function CourseTimeReservationCard({
               {!selectedDate ? (
                 <div className="flex h-full items-center justify-center py-8">
                   <p className="text-sm text-muted-foreground">
-                    왼쪽에서 날짜를 선택하세요.
+                    날짜를 선택하세요.
                   </p>
                 </div>
               ) : dayLoading ? (
@@ -356,34 +380,51 @@ export function CourseTimeReservationCard({
                     </p>
                   </div>
 
-                  {remainingBlocks() === 0 ? (
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {DISPLAY_HOURS.map((hour) => {
+                      const state = getSlotState(hour);
+                      const isDisabled =
+                        state === "existing" ||
+                        state === "others" ||
+                        (state === "available" && remainingBlocks() === 0);
+                      return (
+                        <button
+                          key={hour}
+                          onClick={() => toggleBlock(hour)}
+                          disabled={isDisabled}
+                          title={
+                            state === "others"
+                              ? "다른 사람이 예약한 시간입니다"
+                              : state === "existing"
+                                ? "내가 예약한 시간입니다"
+                                : undefined
+                          }
+                          className={cn(
+                            "rounded-md border px-1.5 py-2 text-xs font-medium transition-colors",
+                            state === "existing" &&
+                              "cursor-not-allowed bg-muted text-muted-foreground opacity-60",
+                            state === "others" &&
+                              "cursor-not-allowed bg-rose-50 text-rose-400 border-rose-200 opacity-70",
+                            state === "selected" &&
+                              "border-primary bg-primary text-primary-foreground",
+                            state === "available" &&
+                              remainingBlocks() === 0 &&
+                              "cursor-not-allowed opacity-40",
+                            state === "available" &&
+                              remainingBlocks() > 0 &&
+                              "cursor-pointer hover:border-primary hover:bg-primary/10",
+                          )}
+                        >
+                          {String(hour).padStart(2, "0")}:00
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {remainingBlocks() === 0 && (
                     <p className="rounded-md bg-muted px-3 py-2.5 text-xs text-muted-foreground">
                       이 날짜에는 더 이상 예약할 수 없습니다
                     </p>
-                  ) : (
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {DISPLAY_HOURS.map((hour) => {
-                        const state = getSlotState(hour);
-                        return (
-                          <button
-                            key={hour}
-                            onClick={() => toggleBlock(hour)}
-                            disabled={state === "existing"}
-                            className={cn(
-                              "rounded-md border px-1.5 py-2 text-xs font-medium transition-colors",
-                              state === "existing" &&
-                                "cursor-not-allowed bg-muted text-muted-foreground opacity-60",
-                              state === "selected" &&
-                                "border-primary bg-primary text-primary-foreground",
-                              state === "available" &&
-                                "cursor-pointer hover:border-primary hover:bg-primary/10",
-                            )}
-                          >
-                            {String(hour).padStart(2, "0")}:00
-                          </button>
-                        );
-                      })}
-                    </div>
                   )}
 
                   {selectedBlocks.size > 0 && (
