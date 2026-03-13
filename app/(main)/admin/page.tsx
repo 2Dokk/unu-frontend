@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus, Tag, CalendarDays, Users } from "lucide-react";
+import { UserPlus, Tag, CalendarDays, Users, KeyRound } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import {
   Card,
@@ -45,6 +45,12 @@ const adminMenuItems: AdminMenuItem[] = [
     description: "CSV 파일을 업로드하여 회원을 일괄 생성합니다.",
     icon: Users,
     href: "/admin/migrations",
+  },
+  {
+    title: "비밀번호 초기화",
+    description: "학회원의 비밀번호를 초기화하고 임시 비밀번호를 발급합니다.",
+    icon: KeyRound,
+    href: "/admin/reset-password",
   },
 ];
 

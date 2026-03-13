@@ -79,6 +79,15 @@ export async function changeUserRole(
   return response.data;
 }
 
+export async function resetUserPassword(
+  userId: string,
+): Promise<{ temporaryPassword: string }> {
+  const response = await axiosInstance.post<{ temporaryPassword: string }>(
+    `/admin/users/${userId}/reset-password`,
+  );
+  return response.data;
+}
+
 export async function searchUsers(params: {
   role?: string;
   isCurrentQuarterActive?: boolean;
