@@ -7,10 +7,10 @@ import {
   Pencil,
   Trash2,
   FileText,
-  LayoutTemplate,
-  Info,
-  Database,
   File,
+  ChevronDown,
+  ChevronUp,
+  Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ import { getFormById, deleteForm } from "@/lib/api/form";
 import { FormResponse } from "@/lib/interfaces/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime } from "@/lib/utils/date-utils";
+import { getFormSubmissionsByFormId } from "@/lib/api/form-submission";
+import { FormSubmissionResponseDto } from "@/lib/interfaces/form-submission";
 
 interface InfoRowProps {
   icon: React.ReactNode;
@@ -53,6 +55,9 @@ export default function ViewFormPage() {
   const [form, setForm] = useState<FormResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [submissions, setSubmissions] = useState<FormSubmissionResponseDto[]>([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     loadForm();
@@ -67,6 +72,18 @@ export default function ViewFormPage() {
       console.error("Failed to load form:", error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadSubmissions() {
+    setSubmissionsLoading(true);
+    try {
+      const data = await getFormSubmissionsByFormId(id);
+      setSubmissions(data);
+    } catch (error: any) {
+      console.error("Failed to load submissions:", error);
+    } finally {
+      setSubmissionsLoading(false);
     }
   }
 
@@ -177,7 +194,11 @@ export default function ViewFormPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="info" className="space-y-4">
+      <Tabs
+        defaultValue="info"
+        className="space-y-4"
+        onValueChange={(v) => v === "applications" && loadSubmissions()}
+      >
         <TabsList>
           <TabsTrigger value="info" className="px-4 py-2">
             기본 정보
@@ -275,6 +296,109 @@ export default function ViewFormPage() {
                   {form.modifiedBy?.name || "알 수 없음"}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 2: 신청 내역 */}
+        <TabsContent value="applications" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Users className="h-4 w-4" />
+                신청 내역
+                {!submissionsLoading && (
+                  <Badge variant="secondary">{submissions.length}건</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {submissionsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-14 w-full" />
+                  ))}
+                </div>
+              ) : submissions.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  아직 신청 내역이 없습니다
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {submissions.map((sub) => {
+                    const isExpanded = expandedId === sub.id;
+                    const schema = (() => {
+                      try {
+                        return parseSchema(
+                          typeof sub.formSnapshot === "string"
+                            ? sub.formSnapshot
+                            : JSON.stringify(sub.formSnapshot),
+                        );
+                      } catch {
+                        return null;
+                      }
+                    })();
+
+                    return (
+                      <div
+                        key={sub.id}
+                        className="rounded-md border overflow-hidden"
+                      >
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+                          onClick={() =>
+                            setExpandedId(isExpanded ? null : sub.id)
+                          }
+                        >
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <p className="text-sm font-medium">
+                                {sub.createdBy?.name || "알 수 없음"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDateTime(sub.submittedAt || sub.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                          {isExpanded ? (
+                            <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                          )}
+                        </button>
+
+                        {isExpanded && (
+                          <div className="border-t bg-muted/30 px-4 py-4 space-y-3">
+                            {schema ? (
+                              schema.questions.map((q) => {
+                                const answer = sub.answers?.[q.id];
+                                const displayAnswer = Array.isArray(answer)
+                                  ? answer.join(", ")
+                                  : answer ?? "—";
+                                return (
+                                  <div key={q.id} className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                      {q.title}
+                                    </p>
+                                    <p className="text-sm whitespace-pre-wrap">
+                                      {displayAnswer || "—"}
+                                    </p>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap">
+                                {JSON.stringify(sub.answers, null, 2)}
+                              </pre>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
