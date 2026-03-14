@@ -2,26 +2,14 @@ import { UserResponseDto } from "../interfaces/auth";
 import { UserRoleUpdateRequestDto } from "../interfaces/role";
 import axiosInstance from "./axiosInstance";
 import axios from "axios";
-
-// Public API instance (no auth required)
-const publicAxios = axios.create({
-  baseURL:
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/public",
-  timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// ===== Public APIs (no authentication required) =====
+import publicClient from "./publicClient";
 
 export async function getPublicUserByStudentId(
   studentId: string,
 ): Promise<UserResponseDto> {
-  const response = await publicAxios.get<UserResponseDto>(
+  return await publicClient.get<UserResponseDto>(
     `/users/studentId/${studentId}`,
   );
-  return response.data;
 }
 
 export async function searchPublicUsers(params: {
@@ -32,10 +20,9 @@ export async function searchPublicUsers(params: {
   if (params.name) queryParams.append("name", params.name);
   if (params.studentId) queryParams.append("student-id", params.studentId);
 
-  const response = await publicAxios.get<UserResponseDto[]>(
+  return await publicClient.get<UserResponseDto[]>(
     `/users/search?${queryParams.toString()}`,
   );
-  return response.data;
 }
 
 // ===== Authenticated APIs =====

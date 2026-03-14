@@ -2,7 +2,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api",
+  baseURL: "/api",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
@@ -21,7 +21,7 @@ axiosInstance.interceptors.request.use(
   },
   (error: any) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // --- token refresh middleware (response interceptor) ---
@@ -112,9 +112,8 @@ axiosInstance.interceptors.response.use(
           if (newRefreshToken) Cookies.set("refreshToken", newRefreshToken);
 
           // update default header for subsequent requests
-          axiosInstance.defaults.headers[
-            "Authorization"
-          ] = `Bearer ${newAccessToken}`;
+          axiosInstance.defaults.headers["Authorization"] =
+            `Bearer ${newAccessToken}`;
 
           processQueue(null, newAccessToken);
 
@@ -131,7 +130,7 @@ axiosInstance.interceptors.response.use(
           reject(err);
         });
     });
-  }
+  },
 );
 
 export default axiosInstance;

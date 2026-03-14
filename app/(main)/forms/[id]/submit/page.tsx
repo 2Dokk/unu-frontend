@@ -217,13 +217,15 @@ export default function FormSubmitPage() {
       <div className="space-y-1">
         <h1 className="text-xl font-bold tracking-tight">{form.title}</h1>
         {form.description && (
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap ">
             {form.description}
           </p>
         )}
-        <p className="text-sm text-muted-foreground">
-          모든 필수 항목을 작성해 주세요.
-        </p>
+        <div className="border-t pt-4 mt-4">
+          <p className="text-sm text-muted-foreground">
+            모든 필수 항목을 작성해 주세요.
+          </p>
+        </div>
       </div>
 
       {/* Questions */}
