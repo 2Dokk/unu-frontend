@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { FormBuilder } from "@/components/custom/form/form-builder";
 import { createForm } from "@/lib/api/form";
 import { getAllFormTemplates } from "@/lib/api/form-template";
@@ -23,6 +24,7 @@ import { FormTemplateResponse } from "@/lib/interfaces/form";
 import { parseSchema, serializeSchema } from "@/lib/interfaces/form-builder";
 
 import { Suspense } from "react";
+import { X } from "lucide-react";
 
 function NewFormPageInner() {
   const router = useRouter();
@@ -35,6 +37,8 @@ function NewFormPageInner() {
   );
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [startAt, setStartAt] = useState("");
+  const [endAt, setEndAt] = useState("");
   const [schema, setSchema] = useState(
     serializeSchema({ version: 1, questions: [] }),
   );
@@ -52,6 +56,7 @@ function NewFormPageInner() {
       const template = templates.find((t) => t.id === templateIdFromQuery);
       if (template) {
         setSchema(template.schema);
+        if (template.title) setTitle(template.title);
         if (template.description) setDescription(template.description);
       }
     }
@@ -74,6 +79,7 @@ function NewFormPageInner() {
     const template = templates.find((t) => t.id === templateId);
     if (template) {
       setSchema(template.schema);
+      if (template.title) setTitle(template.title);
       if (template.description) setDescription(template.description);
     }
   }
@@ -101,6 +107,8 @@ function NewFormPageInner() {
         templateId: selectedTemplateId,
         title,
         description,
+        startAt: startAt || undefined,
+        endAt: endAt || undefined,
         schema,
       });
       router.push("/manage/forms");
@@ -156,7 +164,9 @@ function NewFormPageInner() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="title">제목</Label>
+              <Label htmlFor="title">
+                제목 <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="title"
                 placeholder="신청서 제목을 입력하세요"
@@ -182,11 +192,62 @@ function NewFormPageInner() {
               <Label htmlFor="description">설명</Label>
               <Textarea
                 id="description"
-                placeholder="신청서 설명을 입력하세요 (선택)"
+                placeholder="신청서 설명을 입력하세요"
                 className="min-h-24 resize-none"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>신청 시작일시</Label>
+                <div className="flex items-center gap-2">
+                  <div className="w-64">
+                    <DateTimePicker
+                      value={startAt}
+                      onChange={setStartAt}
+                      placeholder="시작일시를 선택하세요"
+                    />
+                  </div>
+                  {startAt && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() => setStartAt("")}
+                      title="시작일시 삭제"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>신청 마감일시</Label>
+                <div className="flex items-center gap-2">
+                  <div className="w-64">
+                    <DateTimePicker
+                      value={endAt}
+                      onChange={setEndAt}
+                      placeholder="마감일시를 선택하세요"
+                    />
+                  </div>
+                  {endAt && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() => setEndAt("")}
+                      title="마감일시 삭제"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
 
             <Separator />

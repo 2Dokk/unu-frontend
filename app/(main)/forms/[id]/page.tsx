@@ -46,6 +46,17 @@ export default function FormViewPage() {
     );
   }
 
+  const now = new Date();
+  const isBeforeStart = form.startAt ? now < new Date(form.startAt) : false;
+  const isAfterEnd = form.endAt ? now > new Date(form.endAt) : false;
+  const isOutOfPeriod = (form.startAt || form.endAt) && (isBeforeStart || isAfterEnd);
+
+  const periodMessage = isBeforeStart
+    ? `신청 기간이 아직 시작되지 않았습니다`
+    : isAfterEnd
+      ? `신청 기간이 종료되었습니다`
+      : null;
+
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       <Card>
@@ -62,9 +73,16 @@ export default function FormViewPage() {
             )}
           </div>
 
+          {periodMessage && (
+            <p className="text-sm text-muted-foreground text-center">
+              {periodMessage}
+            </p>
+          )}
+
           <Button
             className="w-full"
             size="lg"
+            disabled={!!isOutOfPeriod}
             onClick={() => router.push(`/forms/${id}/submit`)}
           >
             <PenLine className="mr-2 h-4 w-4" />

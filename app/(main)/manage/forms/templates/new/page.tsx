@@ -52,7 +52,10 @@ export default function NewFormTemplatePage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="title">제목</Label>
+              <Label htmlFor="title">
+                제목
+                <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="title"
                 placeholder="템플릿 제목을 입력하세요"
@@ -66,7 +69,7 @@ export default function NewFormTemplatePage() {
               <Label htmlFor="description">설명</Label>
               <Textarea
                 id="description"
-                placeholder="템플릿 설명을 입력하세요 (선택)"
+                placeholder="템플릿 설명을 입력하세요"
                 className="min-h-24 resize-none"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}

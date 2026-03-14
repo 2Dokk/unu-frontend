@@ -4,6 +4,8 @@ export interface FormRequest {
   templateId?: string;
   title: string;
   description?: string;
+  startAt?: string;
+  endAt?: string;
   schema: string;
 }
 
@@ -12,6 +14,8 @@ export interface FormResponse {
   template?: FormTemplateResponse;
   title: string;
   description?: string;
+  startAt?: string;
+  endAt?: string;
   schema: string;
   createdAt: string;
   modifiedAt: string;

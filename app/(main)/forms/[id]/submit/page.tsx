@@ -34,7 +34,7 @@ function QuestionField({
 }) {
   return (
     <Card className={error ? "border-destructive" : ""}>
-      <CardContent className="space-y-3 pt-4">
+      <CardContent className="space-y-3">
         <div className="flex items-start gap-2">
           <span className="flex-1 text-sm font-medium whitespace-pre-wrap">
             {index + 1}. {question.title || "(제목 없음)"}

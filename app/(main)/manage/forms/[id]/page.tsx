@@ -59,12 +59,19 @@ function computeStats(
     const total = submissions.length;
 
     if (q.type === "SINGLE_CHOICE" || q.type === "MULTIPLE_CHOICE") {
-      const optionMap = new Map<string, { name: string; studentId: string }[]>();
+      const optionMap = new Map<
+        string,
+        { name: string; studentId: string }[]
+      >();
       (q.options ?? []).forEach((opt) => optionMap.set(opt, []));
 
       submissions.forEach((sub) => {
         const answer = sub.answers?.[q.id];
-        const selected = Array.isArray(answer) ? answer : answer ? [answer] : [];
+        const selected = Array.isArray(answer)
+          ? answer
+          : answer
+            ? [answer]
+            : [];
         const submitter = {
           name: sub.createdBy?.name || "알 수 없음",
           studentId: sub.createdBy?.studentId || "",
@@ -79,12 +86,19 @@ function computeStats(
         ([label, submitters]) => ({
           label,
           count: submitters.length,
-          percentage: total > 0 ? Math.round((submitters.length / total) * 100) : 0,
+          percentage:
+            total > 0 ? Math.round((submitters.length / total) * 100) : 0,
           submitters,
         }),
       );
 
-      return { id: q.id, title: q.title, type: q.type, totalResponses: total, options };
+      return {
+        id: q.id,
+        title: q.title,
+        type: q.type,
+        totalResponses: total,
+        options,
+      };
     }
 
     const responded = submissions.filter((sub) => {
@@ -92,7 +106,12 @@ function computeStats(
       return a !== undefined && a !== null && a !== "";
     }).length;
 
-    return { id: q.id, title: q.title, type: q.type, totalResponses: responded };
+    return {
+      id: q.id,
+      title: q.title,
+      type: q.type,
+      totalResponses: responded,
+    };
   });
 }
 
@@ -332,28 +351,29 @@ export default function ViewFormPage() {
                   label="신청서 템플릿"
                   value={form.template?.title}
                 />
+
+                <InfoRow
+                  icon={<Copy className="h-4 w-4" />}
+                  label="신청서 링크"
+                  value={
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-xs font-mono text-muted-foreground">
+                        {typeof window !== "undefined"
+                          ? `${window.location.origin}/forms/${id}`
+                          : `/forms/${id}`}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={handleCopyLink}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  }
+                />
               </div>
-              <InfoRow
-                icon={<Copy className="h-4 w-4" />}
-                label="신청서 링크"
-                value={
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-xs font-mono text-muted-foreground">
-                      {typeof window !== "undefined"
-                        ? `${window.location.origin}/forms/${id}`
-                        : `/forms/${id}`}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={handleCopyLink}
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                }
-              />
             </CardContent>
           </Card>
 
@@ -428,76 +448,80 @@ export default function ViewFormPage() {
         {/* Tab 2: 신청 내역 */}
         <TabsContent value="applications" className="space-y-4">
           {/* 통계 Card */}
-          {!submissionsLoading && submissions.length > 0 && (() => {
-            const schema = parseSchema(form.schema);
-            const stats = computeStats(schema, submissions);
-            return (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <BarChart3 className="h-4 w-4" />
-                    응답 통계
-                    <Badge variant="secondary">{submissions.length}명 응답</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {stats.map((stat, idx) => (
-                    <div key={stat.id} className="space-y-2">
-                      <p className="text-sm font-medium">
-                        {idx + 1}. {stat.title}
-                      </p>
-
-                      {stat.options ? (
-                        <div className="space-y-2.5">
-                          {stat.options.map((opt) => (
-                            <div key={opt.label} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground truncate max-w-[60%]">
-                                  {opt.label}
-                                </span>
-                                <span className="font-medium tabular-nums shrink-0">
-                                  {opt.count}명 ({opt.percentage}%)
-                                </span>
-                              </div>
-                              {/* Progress bar */}
-                              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className="h-full rounded-full bg-primary transition-all"
-                                  style={{ width: `${opt.percentage}%` }}
-                                />
-                              </div>
-                              {/* Submitters */}
-                              {opt.submitters.length > 0 && (
-                                <div className="flex flex-wrap gap-1 pt-0.5">
-                                  {opt.submitters.map((s, i) => (
-                                    <span
-                                      key={i}
-                                      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
-                                    >
-                                      {s.name}
-                                      {s.studentId && (
-                                        <span className="text-muted-foreground/60">
-                                          {s.studentId}
-                                        </span>
-                                      )}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          {stat.totalResponses}명 응답
+          {!submissionsLoading &&
+            submissions.length > 0 &&
+            (() => {
+              const schema = parseSchema(form.schema);
+              const stats = computeStats(schema, submissions);
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <BarChart3 className="h-4 w-4" />
+                      응답 통계
+                      <Badge variant="secondary">
+                        {submissions.length}명 응답
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {stats.map((stat, idx) => (
+                      <div key={stat.id} className="space-y-2">
+                        <p className="text-sm font-medium">
+                          {idx + 1}. {stat.title}
                         </p>
-                      )}
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            );
-          })()}
+
+                        {stat.options ? (
+                          <div className="space-y-2.5">
+                            {stat.options.map((opt) => (
+                              <div key={opt.label} className="space-y-1">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground truncate max-w-[60%]">
+                                    {opt.label}
+                                  </span>
+                                  <span className="font-medium tabular-nums shrink-0">
+                                    {opt.count}명 ({opt.percentage}%)
+                                  </span>
+                                </div>
+                                {/* Progress bar */}
+                                <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full bg-primary transition-all"
+                                    style={{ width: `${opt.percentage}%` }}
+                                  />
+                                </div>
+                                {/* Submitters */}
+                                {opt.submitters.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 pt-0.5">
+                                    {opt.submitters.map((s, i) => (
+                                      <span
+                                        key={i}
+                                        className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
+                                      >
+                                        {s.name}
+                                        {s.studentId && (
+                                          <span className="text-muted-foreground/60">
+                                            {s.studentId}
+                                          </span>
+                                        )}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            {stat.totalResponses}명 응답
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
