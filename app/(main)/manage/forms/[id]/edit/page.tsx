@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ export default function EditFormPage() {
 
   const [form, setForm] = useState<FormResponse | null>(null);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [schema, setSchema] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,6 +40,7 @@ export default function EditFormPage() {
       const data = await getFormById(id);
       setForm(data);
       setTitle(data.title);
+      setDescription(data.description ?? "");
       setSchema(data.schema);
     } catch (error: any) {
       console.error("Failed to load form:", error);
@@ -54,6 +57,7 @@ export default function EditFormPage() {
       setIsSubmitting(true);
       await updateForm(id, {
         title,
+        description,
         schema,
       });
       router.push("/manage/forms");
@@ -178,6 +182,17 @@ export default function EditFormPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">설명</Label>
+              <Textarea
+                id="description"
+                placeholder="신청서 설명을 입력하세요 (선택)"
+                className="min-h-24 resize-none"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
             </div>
 

@@ -216,6 +216,11 @@ export default function FormSubmitPage() {
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       <div className="space-y-1">
         <h1 className="text-xl font-bold tracking-tight">{form.title}</h1>
+        {form.description && (
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {form.description}
+          </p>
+        )}
         <p className="text-sm text-muted-foreground">
           모든 필수 항목을 작성해 주세요.
         </p>

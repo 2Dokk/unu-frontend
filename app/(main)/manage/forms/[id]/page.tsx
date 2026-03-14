@@ -316,6 +316,17 @@ export default function ViewFormPage() {
                   label="신청서 제목"
                   value={form.title}
                 />
+                {form.description && (
+                  <InfoRow
+                    icon={<FileText className="h-4 w-4" />}
+                    label="설명"
+                    value={
+                      <span className="whitespace-pre-wrap font-normal">
+                        {form.description}
+                      </span>
+                    }
+                  />
+                )}
                 <InfoRow
                   icon={<File className="h-4 w-4" />}
                   label="신청서 템플릿"

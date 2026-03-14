@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { FormBuilder } from "@/components/custom/form/form-builder";
@@ -14,6 +15,7 @@ import { serializeSchema } from "@/lib/interfaces/form-builder";
 export default function NewFormTemplatePage() {
   const router = useRouter();
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [schema, setSchema] = useState(
     serializeSchema({ version: 1, questions: [] }),
   );
@@ -25,7 +27,7 @@ export default function NewFormTemplatePage() {
 
     try {
       setIsSubmitting(true);
-      await createFormTemplate({ title, schema });
+      await createFormTemplate({ title, description, schema });
       router.push("/manage/forms");
     } catch (error: any) {
       console.error("Failed to create template:", error);
@@ -57,6 +59,17 @@ export default function NewFormTemplatePage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">설명</Label>
+              <Textarea
+                id="description"
+                placeholder="템플릿 설명을 입력하세요 (선택)"
+                className="min-h-24 resize-none"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
             </div>
 

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -33,6 +34,7 @@ function NewFormPageInner() {
     templateIdFromQuery || "",
   );
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [schema, setSchema] = useState(
     serializeSchema({ version: 1, questions: [] }),
   );
@@ -50,6 +52,7 @@ function NewFormPageInner() {
       const template = templates.find((t) => t.id === templateIdFromQuery);
       if (template) {
         setSchema(template.schema);
+        if (template.description) setDescription(template.description);
       }
     }
   }, [templateIdFromQuery, templates]);
@@ -71,6 +74,7 @@ function NewFormPageInner() {
     const template = templates.find((t) => t.id === templateId);
     if (template) {
       setSchema(template.schema);
+      if (template.description) setDescription(template.description);
     }
   }
 
@@ -96,6 +100,7 @@ function NewFormPageInner() {
       await createForm({
         templateId: selectedTemplateId,
         title,
+        description,
         schema,
       });
       router.push("/manage/forms");
@@ -171,6 +176,17 @@ function NewFormPageInner() {
               {errors.title && (
                 <p className="text-sm text-destructive">{errors.title}</p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">설명</Label>
+              <Textarea
+                id="description"
+                placeholder="신청서 설명을 입력하세요 (선택)"
+                className="min-h-24 resize-none"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
             </div>
 
             <Separator />

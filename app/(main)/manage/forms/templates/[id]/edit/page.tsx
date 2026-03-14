@@ -6,6 +6,7 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,15 +27,20 @@ export default function EditFormTemplatePage() {
 
   const [template, setTemplate] = useState<FormTemplateResponse | null>(null);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [schema, setSchema] = useState("");
   const [initialTitle, setInitialTitle] = useState("");
+  const [initialDescription, setInitialDescription] = useState("");
   const [initialSchema, setInitialSchema] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  const hasUnsavedChanges = title !== initialTitle || schema !== initialSchema;
+  const hasUnsavedChanges =
+    title !== initialTitle ||
+    description !== initialDescription ||
+    schema !== initialSchema;
 
   useEffect(() => {
     loadTemplate();
@@ -46,8 +52,10 @@ export default function EditFormTemplatePage() {
       const data = await getFormTemplateById(id);
       setTemplate(data);
       setTitle(data.title);
+      setDescription(data.description ?? "");
       setSchema(data.schema);
       setInitialTitle(data.title);
+      setInitialDescription(data.description ?? "");
       setInitialSchema(data.schema);
       setLastSaved(new Date(data.modifiedAt));
     } catch (error: any) {
@@ -63,8 +71,9 @@ export default function EditFormTemplatePage() {
 
     try {
       setIsSubmitting(true);
-      await updateFormTemplate(id, { title, schema });
+      await updateFormTemplate(id, { title, description, schema });
       setInitialTitle(title);
+      setInitialDescription(description);
       setInitialSchema(schema);
       setLastSaved(new Date());
       router.push("/manage/forms");
@@ -187,6 +196,17 @@ export default function EditFormTemplatePage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">설명</Label>
+              <Textarea
+                id="description"
+                placeholder="템플릿 설명을 입력하세요 (선택)"
+                className="min-h-24 resize-none"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
             </div>
 
