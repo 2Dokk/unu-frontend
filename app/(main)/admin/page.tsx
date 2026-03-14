@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus, Tag, CalendarDays, Users, KeyRound } from "lucide-react";
+import { UserPlus, Tag, CalendarDays, Users, KeyRound, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import {
   Card,
@@ -51,6 +51,12 @@ const adminMenuItems: AdminMenuItem[] = [
     description: "학회원의 비밀번호를 초기화하고 임시 비밀번호를 발급합니다.",
     icon: KeyRound,
     href: "/admin/reset-password",
+  },
+  {
+    title: "활동 학회원 계산",
+    description: "현재 분기 활동 학회원 여부를 계산하여 업데이트합니다.",
+    icon: RefreshCw,
+    href: "/admin/calculate-active",
   },
 ];
 

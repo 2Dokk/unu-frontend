@@ -75,6 +75,10 @@ export async function resetUserPassword(
   return response.data;
 }
 
+export async function calculateActiveMembers(): Promise<void> {
+  await axiosInstance.post("/admin/users/calculate-active");
+}
+
 export async function searchUsers(params: {
   role?: string;
   isCurrentQuarterActive?: boolean;

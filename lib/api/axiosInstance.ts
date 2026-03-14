@@ -2,7 +2,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const axiosInstance = axios.create({
-  baseURL: "/api",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
@@ -45,7 +45,7 @@ const processQueue = (error: any, token: string | null = null) => {
 
 // create a plain axios instance to call refresh endpoint (to avoid interceptor loop)
 const refreshClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
   headers: { "Content-Type": "application/json" },
 });
 
