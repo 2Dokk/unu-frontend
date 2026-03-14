@@ -25,6 +25,7 @@ import { Calendar, ChevronRight, Plus, Search, User, X } from "lucide-react";
 import { formatDate } from "@/lib/utils/date-utils";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
+import { toast } from "sonner";
 
 // ========================
 // ACTIVITY CARD COMPONENT
@@ -145,11 +146,15 @@ const ActivityPage = () => {
         setActivityTypes(typesData);
         setQuarters(quartersData);
         if (quartersData.length > 0) {
-          const defaultId = currentQuarter?.id ?? quartersData[quartersData.length - 1].id;
+          const defaultId =
+            currentQuarter?.id ?? quartersData[quartersData.length - 1].id;
           setSelectedQuarterId(defaultId.toString());
         }
       } catch (error: any) {
         console.error("Failed to fetch initial data:", error);
+        toast.error(
+          "데이터를 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.",
+        );
       }
     };
     fetchInitialData();
@@ -170,6 +175,9 @@ const ActivityPage = () => {
         setActivities(data);
       } catch (error: any) {
         console.error("Failed to fetch activities:", error);
+        toast.error(
+          "활동 데이터를 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.",
+        );
         setActivities([]);
       } finally {
         setLoading(false);

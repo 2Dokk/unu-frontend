@@ -38,7 +38,7 @@ const adminMenuItems: AdminMenuItem[] = [
     title: "회원가입 링크 생성",
     description: "새 학회원을 초대하기 위한 1회성 회원가입 링크를 생성합니다.",
     icon: UserPlus,
-    href: "/manage/members/signup-link",
+    href: "/admin/signup-link",
   },
   {
     title: "회원 대량 생성",

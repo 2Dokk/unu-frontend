@@ -17,7 +17,7 @@ export async function getFormSubmissionsByFormId(
   formId: string,
 ): Promise<FormSubmissionResponseDto[]> {
   const response = await axiosInstance.get<FormSubmissionResponseDto[]>(
-    `/forms/${formId}/submissions`,
+    `/form-submissions/forms/${formId}`,
   );
   return response.data;
 }

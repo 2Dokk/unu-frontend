@@ -60,6 +60,7 @@ import { CourseSessionReportCard } from "@/components/custom/activity/course-ses
 import { formatDate } from "@/lib/utils/date-utils";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
+import { toast } from "sonner";
 
 // ========================
 // TYPES & HELPERS
@@ -270,6 +271,9 @@ export default function ActivityDetails() {
         setMyParticipant(participantData);
       } catch (error: any) {
         console.error("Failed to fetch activity details:", error);
+        toast.error(
+          "활동 정보를 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.",
+        );
       } finally {
         setLoading(false);
       }
@@ -288,6 +292,7 @@ export default function ActivityDetails() {
       setMyParticipant(newParticipant);
     } catch (error: any) {
       console.error("Failed to apply for activity:", error);
+      toast.error("참여 신청에 실패했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
       setActionLoading(false);
     }
@@ -301,6 +306,9 @@ export default function ActivityDetails() {
       setMyParticipant(null);
     } catch (error: any) {
       console.error("Failed to cancel activity:", error);
+      toast.error(
+        "참여를 취소하는 데 실패했습니다. 잠시 후 다시 시도해주세요.",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -320,6 +328,9 @@ export default function ActivityDetails() {
       setLeaveDialogOpen(false);
     } catch (error: any) {
       console.error("Failed to leave activity:", error);
+      toast.error(
+        "참여를 취소하는 데 실패했습니다. 잠시 후 다시 시도해주세요.",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -340,6 +351,10 @@ export default function ActivityDetails() {
       setActivity(updated);
     } catch (error: any) {
       console.error("Failed to update activity status:", error);
+      toast.error(
+        error.response?.data?.message ||
+          "활동 상태를 변경하는 데 실패했습니다. 잠시 후 다시 시도해주세요.",
+      );
     }
   };
 
@@ -350,6 +365,10 @@ export default function ActivityDetails() {
       router.push("/activities");
     } catch (error: any) {
       console.error("Failed to delete activity:", error);
+      toast.error(
+        error.response?.data?.message ||
+          "활동을 삭제하는 데 실패했습니다. 잠시 후 다시 시도해주세요.",
+      );
     } finally {
       setDeleteDialogOpen(false);
     }
@@ -418,9 +437,7 @@ export default function ActivityDetails() {
   const activityStatusMeta = getActivityStatusMeta(activity.status);
   const participantMeta = getMyParticipantMeta(myParticipant);
   const canManage =
-    hasRole("MANAGER") ||
-    hasRole("ADMIN") ||
-    activity.assignee.id === userId;
+    hasRole("MANAGER") || hasRole("ADMIN") || activity.assignee.id === userId;
   const ctaConfig = deriveCtaConfig(activity, myParticipant, {
     onApply: handleApply,
     onCancel: handleCancel,

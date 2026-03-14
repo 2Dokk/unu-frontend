@@ -11,7 +11,10 @@ import {
   ChevronDown,
   ChevronUp,
   Users,
+  Copy,
+  BarChart3,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +31,70 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime } from "@/lib/utils/date-utils";
 import { getFormSubmissionsByFormId } from "@/lib/api/form-submission";
 import { FormSubmissionResponseDto } from "@/lib/interfaces/form-submission";
+
+// ========================
+// STATISTICS HELPERS
+// ========================
+
+interface OptionStat {
+  label: string;
+  count: number;
+  percentage: number;
+  submitters: { name: string; studentId: string }[];
+}
+
+interface QuestionStat {
+  id: string;
+  title: string;
+  type: string;
+  totalResponses: number;
+  options?: OptionStat[];
+}
+
+function computeStats(
+  schema: ReturnType<typeof parseSchema>,
+  submissions: FormSubmissionResponseDto[],
+): QuestionStat[] {
+  return schema.questions.map((q) => {
+    const total = submissions.length;
+
+    if (q.type === "SINGLE_CHOICE" || q.type === "MULTIPLE_CHOICE") {
+      const optionMap = new Map<string, { name: string; studentId: string }[]>();
+      (q.options ?? []).forEach((opt) => optionMap.set(opt, []));
+
+      submissions.forEach((sub) => {
+        const answer = sub.answers?.[q.id];
+        const selected = Array.isArray(answer) ? answer : answer ? [answer] : [];
+        const submitter = {
+          name: sub.createdBy?.name || "알 수 없음",
+          studentId: sub.createdBy?.studentId || "",
+        };
+        selected.forEach((opt) => {
+          if (!optionMap.has(opt)) optionMap.set(opt, []);
+          optionMap.get(opt)!.push(submitter);
+        });
+      });
+
+      const options: OptionStat[] = Array.from(optionMap.entries()).map(
+        ([label, submitters]) => ({
+          label,
+          count: submitters.length,
+          percentage: total > 0 ? Math.round((submitters.length / total) * 100) : 0,
+          submitters,
+        }),
+      );
+
+      return { id: q.id, title: q.title, type: q.type, totalResponses: total, options };
+    }
+
+    const responded = submissions.filter((sub) => {
+      const a = sub.answers?.[q.id];
+      return a !== undefined && a !== null && a !== "";
+    }).length;
+
+    return { id: q.id, title: q.title, type: q.type, totalResponses: responded };
+  });
+}
 
 interface InfoRowProps {
   icon: React.ReactNode;
@@ -55,7 +122,9 @@ export default function ViewFormPage() {
   const [form, setForm] = useState<FormResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [submissions, setSubmissions] = useState<FormSubmissionResponseDto[]>([]);
+  const [submissions, setSubmissions] = useState<FormSubmissionResponseDto[]>(
+    [],
+  );
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -84,6 +153,30 @@ export default function ViewFormPage() {
       console.error("Failed to load submissions:", error);
     } finally {
       setSubmissionsLoading(false);
+    }
+  }
+
+  async function handleCopyLink() {
+    const url = `${window.location.origin}/forms/${id}`;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = url;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      toast.success("링크가 클립보드에 복사되었습니다.");
+    } catch (error: any) {
+      toast.error(
+        error.response?.data || "복사에 실패했습니다. 직접 복사해주세요.",
+      );
     }
   }
 
@@ -229,6 +322,27 @@ export default function ViewFormPage() {
                   value={form.template?.title}
                 />
               </div>
+              <InfoRow
+                icon={<Copy className="h-4 w-4" />}
+                label="신청서 링크"
+                value={
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-xs font-mono text-muted-foreground">
+                      {typeof window !== "undefined"
+                        ? `${window.location.origin}/forms/${id}`
+                        : `/forms/${id}`}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={handleCopyLink}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                }
+              />
             </CardContent>
           </Card>
 
@@ -302,6 +416,78 @@ export default function ViewFormPage() {
 
         {/* Tab 2: 신청 내역 */}
         <TabsContent value="applications" className="space-y-4">
+          {/* 통계 Card */}
+          {!submissionsLoading && submissions.length > 0 && (() => {
+            const schema = parseSchema(form.schema);
+            const stats = computeStats(schema, submissions);
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <BarChart3 className="h-4 w-4" />
+                    응답 통계
+                    <Badge variant="secondary">{submissions.length}명 응답</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {stats.map((stat, idx) => (
+                    <div key={stat.id} className="space-y-2">
+                      <p className="text-sm font-medium">
+                        {idx + 1}. {stat.title}
+                      </p>
+
+                      {stat.options ? (
+                        <div className="space-y-2.5">
+                          {stat.options.map((opt) => (
+                            <div key={opt.label} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground truncate max-w-[60%]">
+                                  {opt.label}
+                                </span>
+                                <span className="font-medium tabular-nums shrink-0">
+                                  {opt.count}명 ({opt.percentage}%)
+                                </span>
+                              </div>
+                              {/* Progress bar */}
+                              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-primary transition-all"
+                                  style={{ width: `${opt.percentage}%` }}
+                                />
+                              </div>
+                              {/* Submitters */}
+                              {opt.submitters.length > 0 && (
+                                <div className="flex flex-wrap gap-1 pt-0.5">
+                                  {opt.submitters.map((s, i) => (
+                                    <span
+                                      key={i}
+                                      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
+                                    >
+                                      {s.name}
+                                      {s.studentId && (
+                                        <span className="text-muted-foreground/60">
+                                          {s.studentId}
+                                        </span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {stat.totalResponses}명 응답
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -355,9 +541,16 @@ export default function ViewFormPage() {
                             <div>
                               <p className="text-sm font-medium">
                                 {sub.createdBy?.name || "알 수 없음"}
+                                {sub.createdBy?.studentId && (
+                                  <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                                    {sub.createdBy.studentId}
+                                  </span>
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {formatDateTime(sub.submittedAt || sub.createdAt)}
+                                {formatDateTime(
+                                  sub.submittedAt || sub.createdAt,
+                                )}
                               </p>
                             </div>
                           </div>
@@ -375,7 +568,7 @@ export default function ViewFormPage() {
                                 const answer = sub.answers?.[q.id];
                                 const displayAnswer = Array.isArray(answer)
                                   ? answer.join(", ")
-                                  : answer ?? "—";
+                                  : (answer ?? "—");
                                 return (
                                   <div key={q.id} className="space-y-1">
                                     <p className="text-xs font-medium text-muted-foreground">
