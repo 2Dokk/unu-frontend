@@ -29,7 +29,6 @@ export type MenuItem =
 export interface MenuConfig {
   common: MenuItem[];
   member: MenuItem[];
-  lectureRoomManager: MenuItem[];
   manager: MenuItem[];
   admin: MenuItem[];
 }
@@ -51,9 +50,6 @@ export const menuConfig: MenuConfig = {
       href: "/activities",
       icon: Calendar,
     },
-  ],
-
-  lectureRoomManager: [
     {
       label: "학회실 관리",
       href: "/manage/lecture-room",
@@ -122,21 +118,8 @@ export function getMenuByRole(
   menus.push(...menuConfig.common);
 
   // MEMBER 이상의 권한
-  if (
-    role === "MEMBER" ||
-    role === "LECTURE_ROOM_MANAGER" ||
-    role === "MANAGER" ||
-    role === "ADMIN"
-  ) {
+  if (role === "MEMBER" || role === "MANAGER" || role === "ADMIN") {
     menus.push(...menuConfig.member);
-  }
-
-  if (
-    role === "LECTURE_ROOM_MANAGER" ||
-    role === "MANAGER" ||
-    role === "ADMIN"
-  ) {
-    menus.push(...menuConfig.lectureRoomManager);
   }
 
   // MANAGER 이상의 권한
