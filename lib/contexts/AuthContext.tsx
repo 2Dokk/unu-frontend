@@ -13,7 +13,7 @@ interface DecodedToken {
   [key: string]: any;
 }
 
-export type UserRole = "ADMIN" | "MANAGER" | "MEMBER" | "GUEST";
+export type UserRole = "ADMIN" | "MANAGER" | "LECTURE_ROOM_MANAGER" | "MEMBER" | "GUEST";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -57,6 +57,14 @@ function extractRoleFromToken(token: string): UserRole {
       )
     ) {
       return "MANAGER";
+    } else if (
+      roles.some(
+        (r) =>
+          r.toUpperCase() === "LECTURE_ROOM_MANAGER" ||
+          r.toUpperCase() === "ROLE_LECTURE_ROOM_MANAGER",
+      )
+    ) {
+      return "LECTURE_ROOM_MANAGER";
     } else if (
       roles.some(
         (r) =>
@@ -158,8 +166,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const roleHierarchy: Record<UserRole, number> = {
       ADMIN: 4,
       MANAGER: 3,
-      MEMBER: 2,
-      GUEST: 1,
+      LECTURE_ROOM_MANAGER: 2,
+      MEMBER: 1,
+      GUEST: 0,
     };
 
     return roleHierarchy[userRole] >= roleHierarchy[requiredRole];

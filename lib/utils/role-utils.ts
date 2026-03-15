@@ -6,6 +6,8 @@ export function getRoleLabel(role?: string): string {
       return "운영자";
     case "MEMBER":
       return "학회원";
+    case "LECTURE_ROOM_MANAGER":
+      return "학회실 관리자";
     default:
       return "없음";
   }

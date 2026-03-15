@@ -71,7 +71,12 @@ function InfoRow({ icon, label, value }: InfoRowProps) {
 // MAIN COMPONENT
 // ========================
 
-const ASSIGNABLE_ROLES = ["MEMBER", "MANAGER", "ADMIN"] as const;
+const ASSIGNABLE_ROLES = [
+  "MEMBER",
+  "MANAGER",
+  "ADMIN",
+  "LECTURE_ROOM_MANAGER",
+] as const;
 
 export default function MemberDetailPage() {
   const params = useParams();
@@ -108,6 +113,7 @@ export default function MemberDetailPage() {
         ]);
 
         setMember(memberData);
+        console.log("Loaded member data:", memberData);
         setSelectedRoles(memberData.userRoles?.map((r) => r.role.name) ?? []);
         setParticipants(participantsData);
       } catch (err) {

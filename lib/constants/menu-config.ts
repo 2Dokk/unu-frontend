@@ -12,6 +12,7 @@ import {
   UserRound,
   UserRoundPlus,
   UsersRound,
+  Clock,
 } from "lucide-react";
 
 export type MenuItem =
@@ -28,6 +29,7 @@ export type MenuItem =
 export interface MenuConfig {
   common: MenuItem[];
   member: MenuItem[];
+  lectureRoomManager: MenuItem[];
   manager: MenuItem[];
   admin: MenuItem[];
 }
@@ -48,6 +50,14 @@ export const menuConfig: MenuConfig = {
       label: "모든 활동",
       href: "/activities",
       icon: Calendar,
+    },
+  ],
+
+  lectureRoomManager: [
+    {
+      label: "학회실 관리",
+      href: "/manage/lecture-room",
+      icon: Clock,
     },
   ],
 
@@ -100,7 +110,7 @@ export const menuConfig: MenuConfig = {
  * 권한 누적 방식: ADMIN은 MANAGER 메뉴도 볼 수 있음
  */
 export function getMenuByRole(
-  role: "ADMIN" | "MANAGER" | "MEMBER" | "GUEST",
+  role: "ADMIN" | "MANAGER" | "MEMBER" | "GUEST" | "LECTURE_ROOM_MANAGER",
 ): MenuItem[] {
   const menus: MenuItem[] = [];
 
@@ -112,8 +122,21 @@ export function getMenuByRole(
   menus.push(...menuConfig.common);
 
   // MEMBER 이상의 권한
-  if (role === "MEMBER" || role === "MANAGER" || role === "ADMIN") {
+  if (
+    role === "MEMBER" ||
+    role === "LECTURE_ROOM_MANAGER" ||
+    role === "MANAGER" ||
+    role === "ADMIN"
+  ) {
     menus.push(...menuConfig.member);
+  }
+
+  if (
+    role === "LECTURE_ROOM_MANAGER" ||
+    role === "MANAGER" ||
+    role === "ADMIN"
+  ) {
+    menus.push(...menuConfig.lectureRoomManager);
   }
 
   // MANAGER 이상의 권한
