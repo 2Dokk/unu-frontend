@@ -341,7 +341,27 @@ export default function ViewFormPage() {
                     label="설명"
                     value={
                       <span className="whitespace-pre-wrap font-normal">
-                        {form.description}
+                        {form.description
+                          .split(/(\[[^\]]+\]\([^)]+\))/g)
+                          .map((part, i) => {
+                            const match = part.match(
+                              /^\[([^\]]+)\]\(([^)]+)\)$/,
+                            );
+                            if (match) {
+                              return (
+                                <a
+                                  key={i}
+                                  href={match[2]}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary underline underline-offset-2 hover:opacity-80"
+                                >
+                                  {match[1]}
+                                </a>
+                              );
+                            }
+                            return part;
+                          })}
                       </span>
                     }
                   />

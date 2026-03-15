@@ -217,8 +217,24 @@ export default function FormSubmitPage() {
       <div className="space-y-1">
         <h1 className="text-xl font-bold tracking-tight">{form.title}</h1>
         {form.description && (
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap ">
-            {form.description}
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {form.description.split(/(\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
+              const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+              if (match) {
+                return (
+                  <a
+                    key={i}
+                    href={match[2]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-2 hover:opacity-80"
+                  >
+                    {match[1]}
+                  </a>
+                );
+              }
+              return part;
+            })}
           </p>
         )}
         <div className="border-t pt-4 mt-4">

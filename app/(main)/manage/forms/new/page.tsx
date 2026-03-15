@@ -197,6 +197,16 @@ function NewFormPageInner() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                링크 삽입:{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                  [표시텍스트](URL)
+                </code>{" "}
+                예){" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                  [스터디계획서](https://...)
+                </code>
+              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

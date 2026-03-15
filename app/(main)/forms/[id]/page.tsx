@@ -67,7 +67,23 @@ export default function FormViewPage() {
               <>
                 <Separator />
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                  {form.description}
+                  {form.description.split(/(\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
+                    const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+                    if (match) {
+                      return (
+                        <a
+                          key={i}
+                          href={match[2]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline underline-offset-2 hover:opacity-80"
+                        >
+                          {match[1]}
+                        </a>
+                      );
+                    }
+                    return part;
+                  })}
                 </p>
               </>
             )}
