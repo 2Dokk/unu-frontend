@@ -47,17 +47,16 @@ const DAYS = [
   { key: "FRIDAY", label: "금요일" },
 ];
 
-const TIME_SLOTS: string[] = (() => {
-  const slots: string[] = [];
-  for (let m = 9 * 60; m < 20 * 60; m += 15) {
-    const h = Math.floor(m / 60)
-      .toString()
-      .padStart(2, "0");
-    const min = (m % 60).toString().padStart(2, "0");
-    slots.push(`${h}:${min}:00`);
-  }
-  return slots;
-})();
+// 90-minute school class periods: 09:00, 10:30, 12:00, 13:30, 15:00, 16:30, 18:00
+const TIME_SLOTS: string[] = [
+  "09:00:00",
+  "10:30:00",
+  "12:00:00",
+  "13:30:00",
+  "15:00:00",
+  "16:30:00",
+  "18:00:00",
+];
 
 const USER_COLORS = [
   { bg: "#DBEAFE", border: "#93C5FD", text: "#1E40AF" },
@@ -79,7 +78,7 @@ function formatSlotTime(slot: string) {
 function getEndTime(toIdx: number): string {
   if (toIdx + 1 < TIME_SLOTS.length)
     return formatSlotTime(TIME_SLOTS[toIdx + 1]);
-  return "20:00";
+  return "19:30";
 }
 
 // ─── Page Component ───────────────────────────────────────────────────────────
@@ -394,16 +393,10 @@ export default function LectureRoomSchedulePage() {
                   </thead>
                   <tbody>
                     {TIME_SLOTS.map((slot, idx) => {
-                      const isHourBoundary = idx % 4 === 0;
-                      const showLabel = idx % 2 === 0;
                       return (
                         <tr
                           key={slot}
-                          style={
-                            isHourBoundary
-                              ? { borderTop: "2px solid #CBD5E1" }
-                              : undefined
-                          }
+                          style={{ borderTop: "2px solid #CBD5E1" }}
                         >
                           {/* Time label */}
                           <td
@@ -411,11 +404,13 @@ export default function LectureRoomSchedulePage() {
                             style={{
                               minWidth: "48px",
                               width: "48px",
-                              height: "22px",
+                              height: "56px",
                               fontSize: "11px",
+                              verticalAlign: "top",
+                              paddingTop: "4px",
                             }}
                           >
-                            {showLabel ? formatSlotTime(slot) : ""}
+                            {formatSlotTime(slot)}
                           </td>
 
                           {/* Day cells */}
@@ -432,7 +427,7 @@ export default function LectureRoomSchedulePage() {
                                 key={day.key}
                                 className="border cursor-pointer"
                                 style={{
-                                  height: "22px",
+                                  height: "56px",
                                   padding: 0,
                                   borderColor: "#E2E8F0",
                                   backgroundColor: selected
