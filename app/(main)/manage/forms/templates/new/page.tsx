@@ -1,0 +1,104 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { FormBuilder } from "@/components/custom/form/form-builder";
+import { createFormTemplate } from "@/lib/api/form-template";
+import { serializeSchema } from "@/lib/interfaces/form-builder";
+
+export default function NewFormTemplatePage() {
+  const router = useRouter();
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [schema, setSchema] = useState(
+    serializeSchema({ version: 1, questions: [] }),
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim() || !schema.trim()) return;
+
+    try {
+      setIsSubmitting(true);
+      await createFormTemplate({ title, description, schema });
+      router.push("/manage/forms");
+    } catch (error: any) {
+      console.error("Failed to create template:", error);
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-xl font-bold tracking-tight">템플릿 생성하기</h1>
+        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+          다양한 학회 활동에서 사용할 신청서 구조를 구성합니다
+          <br />이 템플릿은 여러 활동에서 재사용될 수 있습니다
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>템플릿 정보</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title">
+                제목
+                <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="title"
+                placeholder="템플릿 제목을 입력하세요"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">설명</Label>
+              <Textarea
+                id="description"
+                placeholder="템플릿 설명을 입력하세요"
+                className="min-h-24 resize-none"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label>질문 구성</Label>
+              <FormBuilder initialSchema={schema} onChange={setSchema} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex items-center justify-end gap-4 pt-4">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => router.push("/manage/forms")}
+            disabled={isSubmitting}
+          >
+            취소
+          </Button>
+          <Button type="submit" disabled={isSubmitting} size="lg">
+            {isSubmitting ? "저장 중..." : "저장"}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}

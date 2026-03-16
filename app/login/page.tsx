@@ -1,0 +1,125 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { login as loginApi } from "@/lib/api/auth";
+import { LoginRequest } from "@/lib/interfaces/auth";
+import { useState } from "react";
+import { useAuth } from "@/lib/contexts/AuthContext";
+
+const LoginPage = () => {
+  const router = useRouter();
+  const { login } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const username = formData.get("username");
+    const password = formData.get("password");
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data: LoginRequest = {
+        username: username as string,
+        password: password as string,
+      };
+      const response = await loginApi(data);
+
+      // AuthContext를 통해 로그인 상태 업데이트
+      login(response.token, response.refreshToken);
+
+      // Redirect to dashboard after successful login
+      router.push("/home");
+    } catch (error: any) {
+      const serverMessage = error?.response?.data;
+      setError(
+        serverMessage ??
+          (error instanceof Error
+            ? error.message
+            : "로그인 중 오류가 발생했습니다."),
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-2 text-center">
+          <CardTitle className="text-2xl font-bold">CNU&U</CardTitle>
+          <CardDescription>
+            학회 운영 및 활동 관리를 위한 내부 시스템입니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="username">아이디</FieldLabel>
+                <Input
+                  id="username"
+                  name="username"
+                  type="text"
+                  placeholder="아이디를 입력하세요"
+                  className="h-11"
+                  required
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="password">비밀번호</FieldLabel>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="비밀번호를 입력하세요"
+                  className="h-11"
+                  required
+                />
+              </Field>
+              {error && (
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+              <Field>
+                <Button
+                  type="submit"
+                  className="w-full h-11"
+                  disabled={loading}
+                >
+                  {loading ? "로그인 중..." : "로그인"}
+                </Button>
+              </Field>
+              <FieldDescription className="text-center text-xs text-muted-foreground">
+                학회원 및 운영진만 로그인이 가능합니다.
+                <br />
+                계정 관련 문의는 운영진에게 연락해주세요.
+              </FieldDescription>
+            </FieldGroup>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default LoginPage;
