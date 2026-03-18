@@ -129,22 +129,6 @@ export default function BudgetPage() {
   const selectedQuarterName =
     quarters.find((q) => q.id === selectedQuarterId)?.name ?? "";
 
-  // ── SVG 도넛 차트 헬퍼 ────────────────────────────────
-  function buildDonutPath(
-    cx: number,
-    cy: number,
-    r: number,
-    startPct: number,
-    endPct: number,
-  ) {
-    const toRad = (p: number) => ((p / 100) * 2 * Math.PI) - Math.PI / 2;
-    const x1 = cx + r * Math.cos(toRad(startPct));
-    const y1 = cy + r * Math.sin(toRad(startPct));
-    const x2 = cx + r * Math.cos(toRad(endPct));
-    const y2 = cy + r * Math.sin(toRad(endPct));
-    const large = endPct - startPct > 50 ? 1 : 0;
-    return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-  }
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-8 space-y-8">
@@ -267,61 +251,39 @@ export default function BudgetPage() {
       {!loading && activitiesWithBudget.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          {/* 상태별 예산 도넛 차트 */}
+          {/* 상태별 예산 분포 */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold">상태별 예산 분포</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                총 {activitiesWithBudget.length}개 활동 · {formatCurrency(totalBudget)}
+              </p>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-8">
-                {/* SVG 도넛 */}
-                <svg viewBox="0 0 160 160" className="w-36 h-36 shrink-0">
-                  {(() => {
-                    let cursor = 0;
-                    return donutSlices.map((slice) => {
-                      const start = cursor;
-                      const end = cursor + slice.pct;
-                      cursor = end;
-                      // 안쪽 원(도넛 구멍)은 흰색 원으로 덮기
-                      return (
-                        <path
-                          key={slice.status}
-                          d={buildDonutPath(80, 80, 70, start, end)}
-                          fill={slice.color}
-                          stroke="white"
-                          strokeWidth="2"
+            <CardContent className="pt-2">
+              <div className="flex flex-col gap-2.5">
+                {donutSlices.map((slice) => (
+                  <div key={slice.status} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: slice.color }}
                         />
-                      );
-                    });
-                  })()}
-                  {/* 가운데 구멍 */}
-                  <circle cx="80" cy="80" r="42" fill="white" className="fill-background" />
-                  {/* 가운데 텍스트 */}
-                  <text x="80" y="76" textAnchor="middle" className="fill-foreground" style={{ fontSize: 11, fontWeight: 600, fill: "currentColor" }}>
-                    총 예산
-                  </text>
-                  <text x="80" y="92" textAnchor="middle" style={{ fontSize: 9, fill: "#6b7280" }}>
-                    {activitiesWithBudget.length}개 활동
-                  </text>
-                </svg>
-
-                {/* 범례 */}
-                <div className="flex flex-col gap-2 flex-1 min-w-0">
-                  {donutSlices.map((slice) => (
-                    <div key={slice.status} className="flex items-center gap-2">
-                      <span
-                        className="inline-block w-3 h-3 rounded-sm shrink-0"
-                        style={{ backgroundColor: slice.color }}
-                      />
-                      <span className="text-xs text-muted-foreground truncate flex-1">
-                        {slice.label}
-                      </span>
-                      <span className="text-xs font-semibold tabular-nums">
-                        {slice.pct.toFixed(1)}%
-                      </span>
+                        <span className="text-muted-foreground">{slice.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2 tabular-nums">
+                        <span className="text-muted-foreground">{formatCurrency(slice.amount)}</span>
+                        <span className="font-semibold w-10 text-right">{slice.pct.toFixed(1)}%</span>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${slice.pct}%`, backgroundColor: slice.color }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
