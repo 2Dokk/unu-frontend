@@ -64,6 +64,8 @@ export default function ActivityNewPage() {
     quarterId: "",
     startDate: "",
     endDate: "",
+    budget: "",
+    budgetNote: "",
   });
 
   useEffect(() => {
@@ -117,6 +119,8 @@ export default function ActivityNewPage() {
         quarterId: formData.quarterId,
         startDate: formData.startDate,
         endDate: formData.endDate,
+        budget: formData.budget ? Number(formData.budget) : undefined,
+        budgetNote: formData.budgetNote || undefined,
       };
 
       const created = await createActivity(data);
@@ -449,6 +453,37 @@ export default function ActivityNewPage() {
             <p className="text-sm text-muted-foreground">
               종료일은 시작일 이후여야 합니다.
             </p>
+          </CardContent>
+        </Card>
+
+        {/* 예산 Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>예산</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="budget">예산 (원)</Label>
+              <Input
+                id="budget"
+                type="number"
+                value={formData.budget}
+                onChange={(e) => handleInputChange("budget", e.target.value)}
+                placeholder="예: 500000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="budgetNote">예산 메모</Label>
+              <Textarea
+                id="budgetNote"
+                value={formData.budgetNote}
+                onChange={(e) =>
+                  handleInputChange("budgetNote", e.target.value)
+                }
+                placeholder="예산 용도를 입력하세요"
+                rows={2}
+              />
+            </div>
           </CardContent>
         </Card>
 

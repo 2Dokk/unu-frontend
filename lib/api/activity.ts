@@ -3,7 +3,7 @@ import axiosInstance from "./axiosInstance";
 
 export async function getAllActivities(): Promise<ActivityResponse[]> {
   const response =
-    await axiosInstance.get<ActivityResponse[]>("/activity-types");
+    await axiosInstance.get<ActivityResponse[]>("/activities");
   return response.data;
 }
 
