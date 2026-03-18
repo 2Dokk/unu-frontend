@@ -148,7 +148,7 @@ const ActivityPage = () => {
         if (quartersData.length > 0) {
           const defaultId =
             currentQuarter?.id ?? quartersData[quartersData.length - 1].id;
-          setSelectedQuarterId(defaultId.toString());
+          setSelectedQuarterId(defaultId);
         }
       } catch (error: any) {
         console.error("Failed to fetch initial data:", error);
@@ -215,7 +215,7 @@ const ActivityPage = () => {
           </SelectTrigger>
           <SelectContent>
             {quarters.map((quarter) => (
-              <SelectItem key={quarter.id} value={quarter.id.toString()}>
+              <SelectItem key={quarter.id} value={quarter.id}>
                 {quarter.year} {quarter.season}
               </SelectItem>
             ))}
@@ -251,11 +251,7 @@ const ActivityPage = () => {
                 전체 유형
               </SelectItem>
               {activityTypes.map((type) => (
-                <SelectItem
-                  key={type.id}
-                  value={type.id.toString()}
-                  className="text-xs"
-                >
+                <SelectItem key={type.id} value={type.id} className="text-xs">
                   {type.name}
                 </SelectItem>
               ))}

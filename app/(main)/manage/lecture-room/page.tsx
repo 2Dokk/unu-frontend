@@ -55,6 +55,7 @@ const TIME_SLOTS: string[] = [
   "15:00:00",
   "16:30:00",
   "18:00:00",
+  "19:30:00",
 ];
 
 const USER_COLORS = [
@@ -306,7 +307,7 @@ export default function LectureRoomSchedulePage() {
           </SelectTrigger>
           <SelectContent>
             {quarters.map((quarter) => (
-              <SelectItem key={quarter.id} value={quarter.id.toString()}>
+              <SelectItem key={quarter.id} value={quarter.id}>
                 {quarter.year} {quarter.season}
               </SelectItem>
             ))}

@@ -315,7 +315,7 @@ export default function ActivityEditPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {activityTypes.map((type) => (
-                        <SelectItem key={type.id} value={type.id.toString()}>
+                        <SelectItem key={type.id} value={type.id}>
                           {type.name}
                         </SelectItem>
                       ))}
@@ -339,10 +339,7 @@ export default function ActivityEditPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {quarters.map((quarter) => (
-                        <SelectItem
-                          key={quarter.id}
-                          value={quarter.id.toString()}
-                        >
+                        <SelectItem key={quarter.id} value={quarter.id}>
                           {quarter.name}
                         </SelectItem>
                       ))}

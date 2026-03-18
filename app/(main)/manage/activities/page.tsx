@@ -300,7 +300,7 @@ export default function ActivitiesManagementPage() {
                     {activityTypes.map((type) => (
                       <SelectItem
                         key={type.id}
-                        value={type.id.toString()}
+                        value={type.id}
                         className="text-xs"
                       >
                         {type.name}
@@ -320,7 +320,7 @@ export default function ActivitiesManagementPage() {
                     {quarters.map((quarter) => (
                       <SelectItem
                         key={quarter.id}
-                        value={quarter.id.toString()}
+                        value={quarter.id}
                         className="text-xs"
                       >
                         {quarter.name}
