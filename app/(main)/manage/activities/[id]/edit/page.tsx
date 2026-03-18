@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, CalendarIcon } from "lucide-react";
+import { CalendarIcon, ChevronsUpDown, Check } from "lucide-react";
+import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +36,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import { getActivityById, updateActivity } from "@/lib/api/activity";
 import { getAllActivityTypes } from "@/lib/api/activity-type";
 import { getAllQuarters } from "@/lib/api/quarter";
@@ -103,8 +103,8 @@ export default function ActivityEditPage() {
   const [users, setUsers] = useState<UserResponseDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [assigneeOpen, setAssigneeOpen] = useState(false);
+  const [assigneeSearch, setAssigneeSearch] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -129,7 +129,6 @@ export default function ActivityEditPage() {
   async function loadData() {
     try {
       setLoading(true);
-      setError(null);
 
       const [activityData, typesData, quartersData, usersData] =
         await Promise.all([
@@ -157,20 +156,15 @@ export default function ActivityEditPage() {
       });
     } catch (err) {
       console.error("Failed to load activity:", err);
-      setError("활동 정보를 불러오는데 실패했습니다.");
+      toast.error("활동 정보를 불러오는데 실패했습니다.");
     } finally {
       setLoading(false);
     }
   }
 
-  function handleInputChange(
-    field: keyof typeof formData,
-    value: string | number,
-  ) {
+  function handleInputChange(field: keyof typeof formData, value: string) {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setIsDirty(true);
-    setError(null);
-    setSuccessMessage(null);
   }
 
   function validateForm(): string | null {
@@ -200,13 +194,12 @@ export default function ActivityEditPage() {
   async function handleSave() {
     const validationError = validateForm();
     if (validationError) {
-      setError(validationError);
+      toast.error(validationError);
       return;
     }
 
     try {
       setSaving(true);
-      setError(null);
 
       const updateData: ActivityRequest = {
         title: formData.title,
@@ -220,16 +213,12 @@ export default function ActivityEditPage() {
       };
 
       await updateActivity(activityId, updateData);
-      setSuccessMessage("활동이 성공적으로 수정되었습니다.");
+      toast.success("활동이 수정되었습니다.");
       setIsDirty(false);
-
-      // Redirect after a brief delay
-      setTimeout(() => {
-        router.push(`/manage/activities`);
-      }, 1000);
+      router.push(`/manage/activities`);
     } catch (err) {
       console.error("Failed to update activity:", err);
-      setError("활동 수정에 실패했습니다. 다시 시도해주세요.");
+      toast.error("활동 수정에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setSaving(false);
     }
@@ -257,20 +246,6 @@ export default function ActivityEditPage() {
           활동 기본 정보를 수정합니다
         </p>
       </div>
-
-      {/* Success Message */}
-      {successMessage && (
-        <div className="rounded-md bg-green-50 border border-green-200 p-4 text-sm text-green-700 mb-5">
-          {successMessage}
-        </div>
-      )}
-
-      {/* Error Message */}
-      {error && (
-        <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive mb-5">
-          {error}
-        </div>
-      )}
 
       {/* Loading State */}
       {loading && (
@@ -330,12 +305,12 @@ export default function ActivityEditPage() {
                     유형 <span className="text-destructive">*</span>
                   </Label>
                   <Select
-                    value={formData.activityTypeId.toString()}
+                    value={formData.activityTypeId}
                     onValueChange={(value) =>
-                      handleInputChange("activityTypeId", parseInt(value))
+                      handleInputChange("activityTypeId", value)
                     }
                   >
-                    <SelectTrigger id="activityType" className="text-xs">
+                    <SelectTrigger id="activityType" className="w-48">
                       <SelectValue placeholder="유형 선택" />
                     </SelectTrigger>
                     <SelectContent>
@@ -359,7 +334,7 @@ export default function ActivityEditPage() {
                       handleInputChange("quarterId", value)
                     }
                   >
-                    <SelectTrigger id="quarter">
+                    <SelectTrigger id="quarter" className="w-48">
                       <SelectValue placeholder="분기 선택" />
                     </SelectTrigger>
                     <SelectContent>
@@ -384,7 +359,7 @@ export default function ActivityEditPage() {
                       handleInputChange("status", value)
                     }
                   >
-                    <SelectTrigger id="status">
+                    <SelectTrigger id="status" className="w-48">
                       <SelectValue placeholder="상태 선택" />
                     </SelectTrigger>
                     <SelectContent>
@@ -399,24 +374,100 @@ export default function ActivityEditPage() {
 
                 {/* Assignee */}
                 <div className="space-y-2">
-                  <Label htmlFor="assignee">담당자</Label>
-                  <Select
-                    value={formData.assigneeId.toString()}
-                    onValueChange={(value) =>
-                      handleInputChange("assigneeId", parseInt(value))
-                    }
-                  >
-                    <SelectTrigger id="assignee">
-                      <SelectValue placeholder="담당자 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map((user) => (
-                        <SelectItem key={user.id} value={user.id.toString()}>
-                          {user.name || user.username}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>
+                    담당자 <span className="text-destructive">*</span>
+                  </Label>
+                  <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-48 justify-between font-normal text-xs"
+                      >
+                        <span
+                          className={cn(
+                            !formData.assigneeId && "text-muted-foreground",
+                          )}
+                        >
+                          {formData.assigneeId
+                            ? users.find((u) => u.id === formData.assigneeId)
+                                ?.name ||
+                              users.find((u) => u.id === formData.assigneeId)
+                                ?.username ||
+                              "담당자 선택"
+                            : "담당자 선택"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] min-w-48 p-0"
+                      align="start"
+                    >
+                      <div className="border-b px-3 py-1">
+                        <Input
+                          placeholder="이름 또는 학번 검색"
+                          value={assigneeSearch}
+                          onChange={(e) => setAssigneeSearch(e.target.value)}
+                          className="h-6 border-0 p-0 shadow-none focus-visible:ring-0"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-56 overflow-y-auto py-1">
+                        {users
+                          .filter((u) => {
+                            const q = assigneeSearch.toLowerCase();
+                            return (
+                              !q ||
+                              u.name?.toLowerCase().includes(q) ||
+                              u.username?.toLowerCase().includes(q) ||
+                              u.studentId?.toLowerCase().includes(q)
+                            );
+                          })
+                          .map((user) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => {
+                                handleInputChange("assigneeId", user.id);
+                                setAssigneeOpen(false);
+                                setAssigneeSearch("");
+                              }}
+                              className={cn(
+                                "flex w-full items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted",
+                                formData.assigneeId === user.id && "bg-muted",
+                              )}
+                            >
+                              <Check
+                                className={cn(
+                                  "h-3 w-3 shrink-0",
+                                  formData.assigneeId === user.id
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              <span>{user.name || user.username}</span>
+                              <span className="ml-auto text-xs text-muted-foreground">
+                                {user.studentId}
+                              </span>
+                            </button>
+                          ))}
+                        {users.filter((u) => {
+                          const q = assigneeSearch.toLowerCase();
+                          return (
+                            !q ||
+                            u.name?.toLowerCase().includes(q) ||
+                            u.username?.toLowerCase().includes(q) ||
+                            u.studentId?.toLowerCase().includes(q)
+                          );
+                        }).length === 0 && (
+                          <p className="px-3 py-4 text-center text-xs text-muted-foreground">
+                            검색 결과가 없습니다
+                          </p>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             </CardContent>
