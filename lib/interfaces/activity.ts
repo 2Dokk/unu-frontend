@@ -1,4 +1,4 @@
-import { QuarterResponse } from "./quarter";
+﻿import { QuarterResponse } from "./quarter";
 import { AuditorDto, UserResponseDto } from "./auth";
 
 export const ACTIVITY_STATUS_MAP: Record<string, string> = {
@@ -25,6 +25,8 @@ export interface ActivityResponse {
   startDate: string;
   endDate: string;
   parentActivityId?: string;
+  budget?: number;
+  budgetNote?: string;
   createdAt: string;
   modifiedAt: string;
   createdBy: AuditorDto;
@@ -41,6 +43,8 @@ export interface ActivityRequest {
   startDate: string;
   endDate: string;
   parentActivityId?: string;
+  budget?: number;
+  budgetNote?: string;
 }
 
 export interface ActivityTypeReponse {

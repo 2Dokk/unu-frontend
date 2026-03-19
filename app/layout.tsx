@@ -5,6 +5,7 @@ import { NavigationBar } from "@/components/custom/navigation-bar";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { SidebarProvider } from "@/lib/contexts/SidebarContext";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "next-themes";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,19 +31,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <div className="min-h-screen flex flex-col">
-            <SidebarProvider>
-            <NavigationBar />
-            {children}
-          </SidebarProvider>
-          </div>
-          <Toaster />
-        </AuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          <AuthProvider>
+            <div className="min-h-screen flex flex-col">
+              <SidebarProvider>
+                <NavigationBar />
+                {children}
+              </SidebarProvider>
+            </div>
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
