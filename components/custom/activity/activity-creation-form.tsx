@@ -69,8 +69,6 @@ export function ActivityCreationForm({
     quarterId: "",
     startDate: "",
     endDate: "",
-    budget: undefined,
-    budgetNote: "",
   });
 
   // Project-specific state
@@ -364,41 +362,6 @@ export function ActivityCreationForm({
                 }
                 required
                 rows={5}
-                className="resize-none"
-              />
-            </div>
-
-            {/* Budget */}
-            <div className="space-y-2">
-              <Label htmlFor="budget" className="text-sm font-medium">
-                예산 (원)
-              </Label>
-              <Input
-                id="budget"
-                type="number"
-                value={formData.budget ?? ""}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    budget: e.target.value ? Number(e.target.value) : undefined,
-                  }))
-                }
-                placeholder="예: 500000"
-                className="h-10"
-              />
-            </div>
-
-            {/* Budget Note */}
-            <div className="space-y-2">
-              <Label htmlFor="budgetNote" className="text-sm font-medium">
-                예산 메모
-              </Label>
-              <Textarea
-                id="budgetNote"
-                value={formData.budgetNote ?? ""}
-                onChange={(e) => handleChange("budgetNote", e.target.value)}
-                placeholder="예산 용도를 입력하세요"
-                rows={2}
                 className="resize-none"
               />
             </div>

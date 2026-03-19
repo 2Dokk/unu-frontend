@@ -22,7 +22,7 @@ export function ActivityTypeSelector({
   onChange,
 }: ActivityTypeSelectorProps) {
   const [activityTypes, setActivityTypes] = useState<ActivityTypeResponse[]>(
-    []
+    [],
   );
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function ActivityTypeSelector({
       </SelectTrigger>
       <SelectContent>
         {activityTypes.map((q) => (
-          <SelectItem key={q.id} value={q.id.toString()}>
+          <SelectItem key={q.id} value={q.id}>
             {q.name}
           </SelectItem>
         ))}

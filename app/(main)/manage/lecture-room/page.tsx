@@ -24,7 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Loader2, X, Check } from "lucide-react";
-import { DeleteConfirmDialog } from "@/components/custom/common/delete-confirm-dialog";
 import { getAllQuarters, getCurrentQuarter } from "@/lib/api/quarter";
 import { searchUsers } from "@/lib/api/user";
 import {
@@ -40,11 +39,11 @@ import { LectureRoomScheduleResponseDto } from "@/lib/interfaces/lecture-room-sc
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DAYS = [
-  { key: "MONDAY", label: "월요일" },
-  { key: "TUESDAY", label: "화요일" },
-  { key: "WEDNESDAY", label: "수요일" },
-  { key: "THURSDAY", label: "목요일" },
-  { key: "FRIDAY", label: "금요일" },
+  { key: "MONDAY", label: "월요일", short: "월" },
+  { key: "TUESDAY", label: "화요일", short: "화" },
+  { key: "WEDNESDAY", label: "수요일", short: "수" },
+  { key: "THURSDAY", label: "목요일", short: "목" },
+  { key: "FRIDAY", label: "금요일", short: "금" },
 ];
 
 // 90-minute school class periods: 09:00, 10:30, 12:00, 13:30, 15:00, 16:30, 18:00
@@ -56,6 +55,7 @@ const TIME_SLOTS: string[] = [
   "15:00:00",
   "16:30:00",
   "18:00:00",
+  "19:30:00",
 ];
 
 const USER_COLORS = [
@@ -75,17 +75,27 @@ function formatSlotTime(slot: string) {
   return slot.slice(0, 5);
 }
 
+// Returns class end time (slot start + 75 min, excludes 15-min break)
+function getClassEndTime(slot: string): string {
+  const [h, m] = slot.split(":").map(Number);
+  const total = h * 60 + m + 75;
+  return `${Math.floor(total / 60)
+    .toString()
+    .padStart(2, "0")}:${(total % 60).toString().padStart(2, "0")}`;
+}
+
 function getEndTime(toIdx: number): string {
-  if (toIdx + 1 < TIME_SLOTS.length)
-    return formatSlotTime(TIME_SLOTS[toIdx + 1]);
-  return "19:30";
+  return getClassEndTime(TIME_SLOTS[toIdx]);
 }
 
 // ─── Page Component ───────────────────────────────────────────────────────────
 
 export default function LectureRoomSchedulePage() {
-  const { userRole } = useAuth();
-  const canAssign = userRole === "ADMIN" || userRole === "MANAGER";
+  const { userRole, userId } = useAuth();
+  const canAssign =
+    userRole === "ADMIN" ||
+    userRole === "MANAGER" ||
+    userRole === "LECTURE_ROOM_MANAGER";
 
   // Data
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
@@ -95,17 +105,14 @@ export default function LectureRoomSchedulePage() {
   );
   const [loading, setLoading] = useState(false);
 
-  // Drag
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragDay, setDragDay] = useState<string | null>(null);
-  const [dragStartIdx, setDragStartIdx] = useState<number>(-1);
-  const [dragEndIdx, setDragEndIdx] = useState<number>(-1);
-
-  // Create dialog
-  const [createOpen, setCreateOpen] = useState(false);
+  // Slot dialog
+  const [slotDialogOpen, setSlotDialogOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedSlotIdx, setSelectedSlotIdx] = useState<number>(-1);
   const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Admin user search (multi-select)
+  // User search (canAssign only)
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [userSearchResults, setUserSearchResults] = useState<UserResponseDto[]>(
     [],
@@ -116,18 +123,13 @@ export default function LectureRoomSchedulePage() {
   // Filter
   const [hiddenUserIds, setHiddenUserIds] = useState<Set<string>>(new Set());
 
-  const toggleUserVisibility = (userId: string) => {
+  const toggleUserVisibility = (uid: string) => {
     setHiddenUserIds((prev) => {
       const next = new Set(prev);
-      next.has(userId) ? next.delete(userId) : next.add(userId);
+      next.has(uid) ? next.delete(uid) : next.add(uid);
       return next;
     });
   };
-
-  // Delete
-  const [deleteTarget, setDeleteTarget] =
-    useState<LectureRoomScheduleResponseDto | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   // ─── Derived: schedule map (slot → multiple schedules) & color map ──────────
 
@@ -186,114 +188,80 @@ export default function LectureRoomSchedulePage() {
     loadSchedules();
   }, [loadSchedules]);
 
-  // ─── Drag handlers ──────────────────────────────────────────────────────────
+  // ─── Click handler ──────────────────────────────────────────────────────────
 
-  const startDrag = (day: string, idx: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-    setDragDay(day);
-    setDragStartIdx(idx);
-    setDragEndIdx(idx);
+  const handleCellClick = (day: string, idx: number) => {
+    setSelectedDay(day);
+    setSelectedSlotIdx(idx);
+    setSlotDialogOpen(true);
   };
-
-  const handleCellMouseEnter = (day: string, idx: number) => {
-    if (!isDragging || dragDay !== day) return;
-    setDragEndIdx(idx);
-  };
-
-  const handleMouseUp = useCallback(() => {
-    if (isDragging) {
-      if (dragDay && dragStartIdx >= 0) {
-        setCreateOpen(true);
-      }
-      setIsDragging(false);
-    }
-  }, [isDragging, dragDay, dragStartIdx]);
-
-  useEffect(() => {
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => document.removeEventListener("mouseup", handleMouseUp);
-  }, [handleMouseUp]);
-
-  // Drag range: preserved while dragging or while create dialog is open
-  const dragRange =
-    isDragging || createOpen
-      ? dragStartIdx >= 0 && dragEndIdx >= 0 && dragDay
-        ? {
-            day: dragDay,
-            from: Math.min(dragStartIdx, dragEndIdx),
-            to: Math.max(dragStartIdx, dragEndIdx),
-          }
-        : null
-      : null;
 
   const isCellSelected = (day: string, idx: number) =>
-    dragRange !== null &&
-    dragRange.day === day &&
-    idx >= dragRange.from &&
-    idx <= dragRange.to;
+    slotDialogOpen && selectedDay === day && selectedSlotIdx === idx;
+
+  // Schedules for the currently open dialog slot
+  const dialogSlot = selectedSlotIdx >= 0 ? TIME_SLOTS[selectedSlotIdx] : null;
+  const dialogSchedules =
+    selectedDay && dialogSlot
+      ? (scheduleMap[selectedDay]?.[dialogSlot] ?? []).sort((a, b) =>
+          a.userId.localeCompare(b.userId),
+        )
+      : [];
+  const myDialogSchedule = dialogSchedules.find((s) => s.userId === userId);
 
   // ─── Create ─────────────────────────────────────────────────────────────────
 
-  const handleCreate = async (userIds?: string[]) => {
-    if (!selectedQuarterId || !dragDay || dragStartIdx < 0 || dragEndIdx < 0)
-      return;
+  const handleCreate = async () => {
+    if (!selectedQuarterId || !selectedDay || selectedSlotIdx < 0) return;
     setCreating(true);
-    const from = Math.min(dragStartIdx, dragEndIdx);
-    const to = Math.max(dragStartIdx, dragEndIdx);
-    const slots = TIME_SLOTS.slice(from, to + 1);
+    const slot = TIME_SLOTS[selectedSlotIdx];
 
-    if (userIds && userIds.length > 0) {
+    if (canAssign && selectedUsers.length > 0) {
       await Promise.all(
-        userIds.flatMap((uid) =>
-          slots.map((slot) =>
-            createLectureRoomSchedule({
-              quarterId: selectedQuarterId,
-              dayOfWeek: dragDay!,
-              timeSlot: slot,
-              userId: uid,
-            }).catch(() => {}),
-          ),
-        ),
-      );
-    } else {
-      await Promise.all(
-        slots.map((slot) =>
-          createLectureRoomScheduleForMe({
+        selectedUsers.map((u) =>
+          createLectureRoomSchedule({
             quarterId: selectedQuarterId,
-            dayOfWeek: dragDay!,
+            dayOfWeek: selectedDay,
             timeSlot: slot,
+            userId: u.id,
           }).catch(() => {}),
         ),
       );
+      setSelectedUsers([]);
+      setUserSearchResults([]);
+      setUserSearchQuery("");
+    } else if (!canAssign) {
+      await createLectureRoomScheduleForMe({
+        quarterId: selectedQuarterId,
+        dayOfWeek: selectedDay,
+        timeSlot: slot,
+      }).catch(() => {});
     }
 
     await loadSchedules();
     setCreating(false);
-    closeCreateDialog();
+    if (!canAssign) closeSlotDialog();
   };
 
   // ─── Delete ─────────────────────────────────────────────────────────────────
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
+  const handleDeleteSchedule = async (scheduleId: string) => {
+    setDeletingId(scheduleId);
     try {
-      await deleteLectureRoomSchedule(deleteTarget.id);
+      await deleteLectureRoomSchedule(scheduleId);
       await loadSchedules();
     } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
+      setDeletingId(null);
+      if (!canAssign) closeSlotDialog();
     }
   };
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
-  const closeCreateDialog = () => {
-    setCreateOpen(false);
-    setDragDay(null);
-    setDragStartIdx(-1);
-    setDragEndIdx(-1);
+  const closeSlotDialog = () => {
+    setSlotDialogOpen(false);
+    setSelectedDay(null);
+    setSelectedSlotIdx(-1);
     setUserSearchQuery("");
     setUserSearchResults([]);
     setSelectedUsers([]);
@@ -318,9 +286,10 @@ export default function LectureRoomSchedulePage() {
     );
   };
 
-  const selectedTimeLabel = dragRange
-    ? `${DAYS.find((d) => d.key === dragRange.day)?.label} ${formatSlotTime(TIME_SLOTS[dragRange.from])} ~ ${getEndTime(dragRange.to)}`
-    : "";
+  const selectedTimeLabel =
+    selectedDay && selectedSlotIdx >= 0
+      ? `${DAYS.find((d) => d.key === selectedDay)?.label} ${formatSlotTime(TIME_SLOTS[selectedSlotIdx])} ~ ${getEndTime(selectedSlotIdx)}`
+      : "";
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
@@ -338,7 +307,7 @@ export default function LectureRoomSchedulePage() {
           </SelectTrigger>
           <SelectContent>
             {quarters.map((quarter) => (
-              <SelectItem key={quarter.id} value={quarter.id.toString()}>
+              <SelectItem key={quarter.id} value={quarter.id}>
                 {quarter.year} {quarter.season}
               </SelectItem>
             ))}
@@ -346,215 +315,233 @@ export default function LectureRoomSchedulePage() {
         </Select>
       </div>
 
-      {/* Timetable + Legend */}
-      <div className="flex gap-4 items-start">
-        {/* Timetable */}
-        <Card className="flex-1 min-w-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-normal text-muted-foreground">
-              드래그로 시간을 선택하여 예약하세요. 예약된 셀을 클릭하면 삭제할
-              수 있습니다.
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-8 w-full" />
-                ))}
-              </div>
-            ) : (
+      {/* Filter chips */}
+      {userList.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {userList.map((u) => {
+            const color = USER_COLORS[u.colorIdx];
+            const visible = !hiddenUserIds.has(u.id);
+            return (
               <div
-                className="overflow-auto rounded border border-border"
-                style={{ maxHeight: "600px", userSelect: "none" }}
+                key={u.id}
+                className="flex items-center gap-1.5 text-xs px-2 py-1 rounded border cursor-pointer select-none"
+                style={{
+                  backgroundColor: visible ? color.bg : undefined,
+                  borderColor: visible ? color.border : "#E2E8F0",
+                  color: visible ? color.text : "#94A3B8",
+                  opacity: visible ? 1 : 0.5,
+                }}
+                onClick={() => toggleUserVisibility(u.id)}
               >
-                <table
-                  className="border-collapse text-xs w-full"
-                  style={{ tableLayout: "fixed" }}
-                >
-                  <colgroup>
-                    <col style={{ width: "48px" }} />
-                    {DAYS.map((day) => (
-                      <col key={day.key} />
-                    ))}
-                  </colgroup>
-                  <thead className="sticky top-0 z-10 bg-background">
-                    <tr>
-                      <th className="sticky left-0 z-20 bg-background border border-border px-2 py-1.5 text-right text-muted-foreground font-normal" />
-                      {DAYS.map((day) => (
-                        <th
-                          key={day.key}
-                          className="border border-border px-2 py-1.5 text-center font-medium"
-                        >
-                          {day.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {TIME_SLOTS.map((slot, idx) => {
-                      return (
-                        <tr
-                          key={slot}
-                          style={{ borderTop: "2px solid #CBD5E1" }}
-                        >
-                          {/* Time label */}
-                          <td
-                            className="sticky left-0 bg-background border-r border-border text-right pr-2 text-muted-foreground"
-                            style={{
-                              minWidth: "48px",
-                              width: "48px",
-                              height: "56px",
-                              fontSize: "11px",
-                              verticalAlign: "top",
-                              paddingTop: "4px",
-                            }}
-                          >
-                            {formatSlotTime(slot)}
-                          </td>
-
-                          {/* Day cells */}
-                          {DAYS.map((day) => {
-                            const slotSchedules = (
-                              scheduleMap[day.key]?.[slot] ?? []
-                            )
-                              .filter((s) => !hiddenUserIds.has(s.userId))
-                              .sort((a, b) => a.userId.localeCompare(b.userId));
-                            const selected = isCellSelected(day.key, idx);
-
-                            return (
-                              <td
-                                key={day.key}
-                                className="border cursor-pointer"
-                                style={{
-                                  height: "56px",
-                                  padding: 0,
-                                  borderColor: "#E2E8F0",
-                                  backgroundColor: selected
-                                    ? "#BFDBFE"
-                                    : undefined,
-                                }}
-                                onMouseDown={
-                                  slotSchedules.length === 0
-                                    ? (e) => startDrag(day.key, idx, e)
-                                    : undefined
-                                }
-                                onMouseEnter={() =>
-                                  handleCellMouseEnter(day.key, idx)
-                                }
-                              >
-                                {/* Split sub-sections per user (hidden when selected) */}
-                                {!selected && slotSchedules.length > 0 && (
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      height: "100%",
-                                      width: "100%",
-                                    }}
-                                  >
-                                    {slotSchedules.map((s) => {
-                                      const ci = userColorMap[s.userId] ?? 0;
-                                      const c = USER_COLORS[ci];
-                                      return (
-                                        <div
-                                          key={s.id}
-                                          title={`${s.userName} (${formatSlotTime(slot)})`}
-                                          style={{
-                                            flex: 1,
-                                            backgroundColor: c.bg,
-                                            borderRight: `1px solid ${c.border}`,
-                                          }}
-                                          onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setDeleteTarget(s);
-                                          }}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <Checkbox
+                  checked={visible}
+                  onCheckedChange={() => toggleUserVisibility(u.id)}
+                  style={
+                    visible
+                      ? {
+                          borderColor: color.border,
+                          backgroundColor: color.border,
+                        }
+                      : undefined
+                  }
+                />
+                <span>{u.name}</span>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            );
+          })}
+        </div>
+      )}
 
-        {/* Legend sidebar */}
-        <div className="w-44 shrink-0 sticky top-6">
-          <Card className="gap-2 py-2">
-            <CardHeader className="pt-2">
-              <CardTitle className="text-sm">관리자 목록</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-2">
-              {userList.length === 0 ? (
-                <p className="text-xs text-muted-foreground">예약이 없습니다</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {userList.map((u) => {
-                    const color = USER_COLORS[u.colorIdx];
-                    const visible = !hiddenUserIds.has(u.id);
-                    return (
-                      <div
-                        key={u.id}
-                        className="flex items-center gap-1.5 text-xs px-2 py-1 rounded border cursor-pointer select-none"
-                        style={{
-                          backgroundColor: visible ? color.bg : undefined,
-                          borderColor: visible ? color.border : "#E2E8F0",
-                          color: visible ? color.text : "#94A3B8",
-                          opacity: visible ? 1 : 0.5,
-                        }}
-                        onClick={() => toggleUserVisibility(u.id)}
+      {/* Timetable */}
+      <Card className="w-full">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-normal text-muted-foreground">
+            관리 시간을 클릭하여 등록하거나 삭제할 수 있습니다.
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div
+              className="overflow-auto rounded border border-border"
+              style={{ maxHeight: "600px", userSelect: "none" }}
+            >
+              <table
+                className="border-collapse text-xs w-full"
+                style={{ tableLayout: "fixed" }}
+              >
+                <colgroup>
+                  <col style={{ width: "72px" }} />
+                  {DAYS.map((day) => (
+                    <col key={day.key} />
+                  ))}
+                </colgroup>
+                <thead className="sticky top-0 z-10 bg-background">
+                  <tr>
+                    <th className="sticky left-0 z-20 bg-background border border-border px-2 py-1.5 text-right text-muted-foreground font-normal" />
+                    {DAYS.map((day) => (
+                      <th
+                        key={day.key}
+                        className="border border-border px-2 py-1.5 text-center font-medium"
                       >
-                        <Checkbox
-                          checked={visible}
-                          onCheckedChange={() => toggleUserVisibility(u.id)}
-                          style={
-                            visible
-                              ? {
-                                  borderColor: color.border,
-                                  backgroundColor: color.border,
-                                }
-                              : undefined
-                          }
-                        />
-                        <span className="truncate">{u.name}</span>
-                      </div>
+                        <span className="hidden sm:inline">{day.label}</span>
+                        <span className="sm:hidden">{day.short}</span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {TIME_SLOTS.map((slot, idx) => {
+                    return (
+                      <tr key={slot} style={{ borderTop: "2px solid #CBD5E1" }}>
+                        {/* Time label */}
+                        <td
+                          className="sticky left-0 bg-background border-r border-border text-right pr-2 text-muted-foreground"
+                          style={{
+                            minWidth: "72px",
+                            width: "72px",
+                            height: "56px",
+                            fontSize: "11px",
+                            verticalAlign: "middle",
+                            lineHeight: "1.4",
+                          }}
+                        >
+                          <div>{formatSlotTime(slot)}</div>
+                          <div>~{getClassEndTime(slot)}</div>
+                        </td>
+
+                        {/* Day cells */}
+                        {DAYS.map((day) => {
+                          const slotSchedules = (
+                            scheduleMap[day.key]?.[slot] ?? []
+                          )
+                            .filter((s) => !hiddenUserIds.has(s.userId))
+                            .sort((a, b) => a.userId.localeCompare(b.userId));
+                          const selected = isCellSelected(day.key, idx);
+
+                          return (
+                            <td
+                              key={day.key}
+                              className="border cursor-pointer"
+                              style={{
+                                height: "56px",
+                                padding: 0,
+                                borderColor: "#E2E8F0",
+                                backgroundColor: selected
+                                  ? "#BFDBFE"
+                                  : undefined,
+                              }}
+                              onClick={() => handleCellClick(day.key, idx)}
+                            >
+                              {/* Split sub-sections per user (hidden when selected) */}
+                              {!selected && slotSchedules.length > 0 && (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    height: "100%",
+                                    width: "100%",
+                                  }}
+                                >
+                                  {slotSchedules.map((s) => {
+                                    const ci = userColorMap[s.userId] ?? 0;
+                                    const c = USER_COLORS[ci];
+                                    return (
+                                      <div
+                                        key={s.id}
+                                        title={`${s.userName} (${formatSlotTime(slot)})`}
+                                        style={{
+                                          flex: 1,
+                                          backgroundColor: c.bg,
+                                          borderRight: `1px solid ${c.border}`,
+                                        }}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
                     );
                   })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* ── Create Dialog ──────────────────────────────────────────────────────── */}
+      {/* ── Slot Dialog ────────────────────────────────────────────────────────── */}
       <Dialog
-        open={createOpen}
-        onOpenChange={(open) => !open && closeCreateDialog()}
+        open={slotDialogOpen}
+        onOpenChange={(open) => !open && closeSlotDialog()}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>시간표 등록</DialogTitle>
+            <DialogTitle>{selectedTimeLabel}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            {/* Selected range info */}
-            <div className="rounded bg-muted px-3 py-2 text-sm font-medium">
-              {selectedTimeLabel}
-            </div>
+          {canAssign ? (
+            /* ── Manager view: see all + add/delete ── */
+            <div className="space-y-4">
+              {/* Current users */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">
+                  등록된 관리자
+                </Label>
+                {dialogSchedules.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-1">
+                    등록된 관리자가 없습니다
+                  </p>
+                ) : (
+                  <div className="border rounded divide-y">
+                    {dialogSchedules.map((s) => {
+                      const ci = userColorMap[s.userId] ?? 0;
+                      const c = USER_COLORS[ci];
+                      return (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between px-3 py-2"
+                        >
+                          <div className="flex items-center gap-2 text-sm">
+                            <div
+                              className="w-2.5 h-2.5 rounded-full border shrink-0"
+                              style={{
+                                backgroundColor: c.bg,
+                                borderColor: c.border,
+                              }}
+                            />
+                            {s.userName}
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleDeleteSchedule(s.id)}
+                            disabled={deletingId !== null}
+                          >
+                            {deletingId === s.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <X className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-            {canAssign && (
+              {/* Add section */}
               <div className="space-y-2">
-                <Label>학회원 검색</Label>
+                <Label>관리자 추가</Label>
                 <div className="flex gap-2">
                   <Input
                     placeholder="이름으로 검색"
@@ -585,7 +572,7 @@ export default function LectureRoomSchedulePage() {
                       return (
                         <button
                           key={u.id}
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center justify-between ${
+                          className={`w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors flex items-center justify-between ${
                             isSelected ? "bg-muted" : ""
                           }`}
                           onClick={() => toggleUser(u)}
@@ -625,45 +612,65 @@ export default function LectureRoomSchedulePage() {
                   </div>
                 )}
               </div>
-            )}
-          </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={closeCreateDialog}
-              disabled={creating}
-            >
-              취소
-            </Button>
-            <Button
-              onClick={() =>
-                handleCreate(
-                  canAssign ? selectedUsers.map((u) => u.id) : undefined,
-                )
-              }
-              disabled={creating || (canAssign && selectedUsers.length === 0)}
-            >
-              {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              확인
-            </Button>
-          </DialogFooter>
+              <DialogFooter>
+                <Button variant="outline" onClick={closeSlotDialog}>
+                  닫기
+                </Button>
+                <Button
+                  onClick={handleCreate}
+                  disabled={creating || selectedUsers.length === 0}
+                >
+                  {creating && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  추가
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : myDialogSchedule ? (
+            /* ── Member: already registered → delete ── */
+            <>
+              <p className="text-sm text-muted-foreground">
+                강의실 관리자로 등록되어 있습니다.
+              </p>
+              <DialogFooter>
+                <Button variant="outline" onClick={closeSlotDialog}>
+                  취소
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDeleteSchedule(myDialogSchedule.id)}
+                  disabled={deletingId !== null}
+                >
+                  {deletingId && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  삭제
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            /* ── Member: not registered → add ── */
+            <>
+              <p className="text-sm text-muted-foreground">
+                강의실 관리자로 등록하시겠습니까?
+              </p>
+              <DialogFooter>
+                <Button variant="outline" onClick={closeSlotDialog}>
+                  취소
+                </Button>
+                <Button onClick={handleCreate} disabled={creating}>
+                  {creating && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  확인
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
-
-      {/* ── Delete Confirm ─────────────────────────────────────────────────────── */}
-      <DeleteConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="예약을 삭제하시겠어요?"
-        itemValue={
-          deleteTarget
-            ? `${deleteTarget.userName} — ${DAYS.find((d) => d.key === deleteTarget.dayOfWeek)?.label} ${formatSlotTime(deleteTarget.timeSlot)}`
-            : ""
-        }
-        onConfirm={handleDelete}
-        loading={deleting}
-      />
     </div>
   );
 }

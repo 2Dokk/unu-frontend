@@ -13,7 +13,6 @@ import {
   UserRoundPlus,
   UsersRound,
   Clock,
-  Wallet,
 } from "lucide-react";
 
 export type MenuItem =
@@ -89,11 +88,6 @@ export const menuConfig: MenuConfig = {
       label: "활동 관리",
       href: "/manage/activities",
       icon: Calendar,
-    },
-    {
-      label: "예산 관리",
-      href: "/manage/budget",
-      icon: Wallet,
     },
   ],
 

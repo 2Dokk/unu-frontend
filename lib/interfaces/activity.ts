@@ -29,8 +29,6 @@ export interface ActivityResponse {
   modifiedAt: string;
   createdBy: AuditorDto;
   modifiedBy: AuditorDto;
-  budget?: number;
-  budgetNote?: string;
 }
 
 export interface ActivityRequest {
@@ -43,8 +41,6 @@ export interface ActivityRequest {
   startDate: string;
   endDate: string;
   parentActivityId?: string;
-  budget?: number;
-  budgetNote?: string;
 }
 
 export interface ActivityTypeReponse {

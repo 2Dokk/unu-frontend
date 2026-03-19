@@ -53,7 +53,6 @@ import {
   Trash2,
   ArrowLeft,
   ExternalLink,
-  Wallet,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { CourseTimeReservationCard } from "@/components/custom/activity/course-time-reservation";
@@ -651,25 +650,6 @@ export default function ActivityDetails() {
                   activity.assignee.email
                 }
               />
-
-              {/* 예산 정보 */}
-              {activity.budget != null && (
-                <InfoRow
-                  icon={<Wallet className="h-4 w-4" />}
-                  label="예산"
-                  value={new Intl.NumberFormat("ko-KR", {
-                    style: "currency",
-                    currency: "KRW",
-                  }).format(activity.budget)}
-                />
-              )}
-              {activity.budgetNote && (
-                <InfoRow
-                  icon={<Wallet className="h-4 w-4 opacity-0" />}
-                  label="예산 메모"
-                  value={activity.budgetNote}
-                />
-              )}
 
               {/* My Participant Status (Desktop) */}
               <div className="hidden lg:flex items-start gap-3 py-3">

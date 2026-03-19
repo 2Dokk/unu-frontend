@@ -35,7 +35,7 @@ export function QuarterSelector({ value, onChange }: QuarterSelectorProps) {
             new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
         );
         setQuarters(sortedQuarters);
-        onChange(currentQuarter.id.toString());
+        onChange(currentQuarter.id);
       } catch (error: any) {
         console.error("Failed to fetch quarters:", error);
       }
@@ -45,22 +45,22 @@ export function QuarterSelector({ value, onChange }: QuarterSelectorProps) {
   }, []);
 
   useEffect(() => {
-    const currentIndex = quarters.findIndex((q) => q.id.toString() === value);
+    const currentIndex = quarters.findIndex((q) => q.id === value);
     setPrevButtonDisabled(currentIndex <= 0);
     setNextButtonDisabled(currentIndex >= quarters.length - 1);
   }, [value, quarters]);
 
   const onPrev = () => {
-    const currentIndex = quarters.findIndex((q) => q.id.toString() === value);
+    const currentIndex = quarters.findIndex((q) => q.id === value);
     if (currentIndex > 0) {
-      onChange(quarters[currentIndex - 1].id.toString());
+      onChange(quarters[currentIndex - 1].id);
     }
   };
 
   const onNext = () => {
-    const currentIndex = quarters.findIndex((q) => q.id.toString() === value);
+    const currentIndex = quarters.findIndex((q) => q.id === value);
     if (currentIndex < quarters.length - 1) {
-      onChange(quarters[currentIndex + 1].id.toString());
+      onChange(quarters[currentIndex + 1].id);
     }
   };
 
@@ -81,7 +81,7 @@ export function QuarterSelector({ value, onChange }: QuarterSelectorProps) {
         </SelectTrigger>
         <SelectContent>
           {quarters.map((q) => (
-            <SelectItem key={q.id} value={q.id.toString()}>
+            <SelectItem key={q.id} value={q.id}>
               {q.name}
             </SelectItem>
           ))}

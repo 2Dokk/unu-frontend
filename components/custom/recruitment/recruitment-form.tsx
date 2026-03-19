@@ -53,10 +53,8 @@ export default function RecruitmentForm({
   const [endAt, setEndAt] = useState(
     initialData?.endAt ? initialData.endAt : "",
   );
-  const [quarterId, setQuarterId] = useState(
-    initialData?.quarter.id.toString() || "",
-  );
-  const [formId, setFormId] = useState(initialData?.form.id.toString() || "");
+  const [quarterId, setQuarterId] = useState(initialData?.quarter.id || "");
+  const [formId, setFormId] = useState(initialData?.form.id || "");
   const [active, setActive] = useState(initialData?.active ?? true);
 
   // Data loading
@@ -234,10 +232,7 @@ export default function RecruitmentForm({
                     </SelectTrigger>
                     <SelectContent>
                       {quarters.map((quarter) => (
-                        <SelectItem
-                          key={quarter.id}
-                          value={quarter.id.toString()}
-                        >
+                        <SelectItem key={quarter.id} value={quarter.id}>
                           {quarter.name}
                         </SelectItem>
                       ))}
@@ -289,7 +284,7 @@ export default function RecruitmentForm({
                     </SelectTrigger>
                     <SelectContent>
                       {forms.map((form) => (
-                        <SelectItem key={form.id} value={form.id.toString()}>
+                        <SelectItem key={form.id} value={form.id}>
                           {form.title}
                         </SelectItem>
                       ))}
