@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BudgetLedger } from "@/components/custom/budget/BudgetLedger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -146,6 +147,8 @@ export default function BudgetPage() {
     return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
   }
 
+  const [activeTab, setActiveTab] = useState<"activity" | "ledger">("ledger");
+
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-8 space-y-8">
       {/* Header */}
@@ -153,10 +156,9 @@ export default function BudgetPage() {
         <div className="space-y-1">
           <h1 className="text-xl font-bold tracking-tight">예산 관리</h1>
           <p className="text-sm text-muted-foreground">
-            활동별 예산 현황을 확인하고 관리하세요
+            학회 예산 현황을 확인하고 관리하세요
           </p>
         </div>
-
         {/* 분기 선택 */}
         <Select
           value={selectedQuarterId}
@@ -175,6 +177,44 @@ export default function BudgetPage() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* 탭 */}
+      <div className="flex gap-1 border-b">
+        <button
+          onClick={() => setActiveTab("ledger")}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === "ledger"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          가계부
+        </button>
+        <button
+          onClick={() => setActiveTab("activity")}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === "activity"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          활동별 예산
+        </button>
+      </div>
+
+      {/* 가계부 탭 */}
+      {activeTab === "ledger" && (
+        <BudgetLedger
+          quarters={quarters}
+          selectedQuarterId={selectedQuarterId}
+          onQuarterChange={setSelectedQuarterId}
+          quartersLoading={quartersLoading}
+        />
+      )}
+
+      {/* 활동별 예산 탭 */}
+      {activeTab === "activity" && (
+        <>
 
       {/* KPI 카드 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -442,6 +482,8 @@ export default function BudgetPage() {
           )}
         </CardContent>
       </Card>
+      </>
+      )}
     </div>
   );
 }
