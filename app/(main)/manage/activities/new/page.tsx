@@ -24,16 +24,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { createActivity } from "@/lib/api/activity";
 import { getAllActivityTypes } from "@/lib/api/activity-type";
 import { getAllQuarters } from "@/lib/api/quarter";
 import { getAllUsers } from "@/lib/api/user";
+import { createActivityParticipant } from "@/lib/api/activity-participant";
 import {
   ActivityRequest,
   ActivityTypeResponse,
 } from "@/lib/interfaces/activity";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { UserResponseDto } from "@/lib/interfaces/auth";
+import { ParticipantsCard } from "@/components/custom/activity/participants-card";
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "준비 중" },
@@ -52,6 +55,7 @@ export default function ActivityNewPage() {
   const [users, setUsers] = useState<UserResponseDto[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newParticipantIds, setNewParticipantIds] = useState<string[]>([]);
   const [assigneeOpen, setAssigneeOpen] = useState(false);
   const [assigneeSearch, setAssigneeSearch] = useState("");
 
@@ -120,6 +124,17 @@ export default function ActivityNewPage() {
       };
 
       const created = await createActivity(data);
+      if (newParticipantIds.length > 0) {
+        await Promise.all(
+          newParticipantIds.map((userId) =>
+            createActivityParticipant({
+              activityId: created.id,
+              userId,
+              status: "APPROVED",
+            }),
+          ),
+        );
+      }
       router.push(`/manage/activities/${created.id}`);
     } catch (err) {
       console.error("Failed to create activity:", err);
@@ -448,6 +463,17 @@ export default function ActivityNewPage() {
             </p>
           </CardContent>
         </Card>
+
+        {/* 참여자 Card */}
+        <ParticipantsCard
+          allUsers={users}
+          newUserIds={newParticipantIds}
+          onToggleNew={(uid) =>
+            setNewParticipantIds((prev) =>
+              prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid],
+            )
+          }
+        />
 
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-4">

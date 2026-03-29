@@ -41,12 +41,19 @@ import { getAllActivityTypes } from "@/lib/api/activity-type";
 import { getAllQuarters } from "@/lib/api/quarter";
 import { getAllUsers } from "@/lib/api/user";
 import {
+  getActivityParticipantsByActivityId,
+  createActivityParticipant,
+  deleteActivityParticipant,
+} from "@/lib/api/activity-participant";
+import {
   ActivityResponse,
   ActivityRequest,
   ActivityTypeResponse,
 } from "@/lib/interfaces/activity";
+import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { UserResponseDto } from "@/lib/interfaces/auth";
+import { ParticipantsCard } from "@/components/custom/activity/participants-card";
 
 // ========================
 // HELPER FUNCTIONS
@@ -103,6 +110,13 @@ export default function ActivityEditPage() {
   const [users, setUsers] = useState<UserResponseDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [existingParticipants, setExistingParticipants] = useState<
+    ActivityParticipantResponse[]
+  >([]);
+  const [removedParticipantIds, setRemovedParticipantIds] = useState<string[]>(
+    [],
+  );
+  const [newParticipantIds, setNewParticipantIds] = useState<string[]>([]);
   const [assigneeOpen, setAssigneeOpen] = useState(false);
   const [assigneeSearch, setAssigneeSearch] = useState("");
 
@@ -130,18 +144,25 @@ export default function ActivityEditPage() {
     try {
       setLoading(true);
 
-      const [activityData, typesData, quartersData, usersData] =
-        await Promise.all([
-          getActivityById(activityId),
-          getAllActivityTypes(),
-          getAllQuarters(),
-          getAllUsers(),
-        ]);
+      const [
+        activityData,
+        typesData,
+        quartersData,
+        usersData,
+        participantsData,
+      ] = await Promise.all([
+        getActivityById(activityId),
+        getAllActivityTypes(),
+        getAllQuarters(),
+        getAllUsers(),
+        getActivityParticipantsByActivityId({ activityId }),
+      ]);
 
       setActivity(activityData);
       setActivityTypes(typesData);
       setQuarters(quartersData);
       setUsers(usersData);
+      setExistingParticipants(participantsData);
 
       // Initialize form with activity data
       setFormData({
@@ -213,9 +234,17 @@ export default function ActivityEditPage() {
       };
 
       await updateActivity(activityId, updateData);
+
+      await Promise.all([
+        ...removedParticipantIds.map((pid) => deleteActivityParticipant(pid)),
+        ...newParticipantIds.map((userId) =>
+          createActivityParticipant({ activityId, userId, status: "APPROVED" }),
+        ),
+      ]);
+
       toast.success("활동이 수정되었습니다.");
       setIsDirty(false);
-      router.push(`/manage/activities`);
+      router.push(`/manage/activities/${activityId}`);
     } catch (err) {
       console.error("Failed to update activity:", err);
       toast.error("활동 수정에 실패했습니다. 다시 시도해주세요.");
@@ -566,6 +595,28 @@ export default function ActivityEditPage() {
               </p>
             </CardContent>
           </Card>
+
+          {/* 참여자 Card */}
+          <ParticipantsCard
+            allUsers={users}
+            existingParticipants={existingParticipants}
+            onRemoveExisting={(pid) => {
+              setExistingParticipants((prev) =>
+                prev.filter((p) => p.id !== pid),
+              );
+              setRemovedParticipantIds((prev) => [...prev, pid]);
+              setIsDirty(true);
+            }}
+            newUserIds={newParticipantIds}
+            onToggleNew={(uid) => {
+              setNewParticipantIds((prev) =>
+                prev.includes(uid)
+                  ? prev.filter((id) => id !== uid)
+                  : [...prev, uid],
+              );
+              setIsDirty(true);
+            }}
+          />
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-4">
