@@ -26,6 +26,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteConfirmDialog } from "@/components/custom/common/delete-confirm-dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -256,6 +264,10 @@ export default function ActivityDetails() {
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [studyDepositOpen, setStudyDepositOpen] = useState(false);
+  const [agreedToPolicy, setAgreedToPolicy] = useState(false);
+  const [confirmedPayment, setConfirmedPayment] = useState(false);
+  const [agreedToPromo, setAgreedToPromo] = useState(false);
 
   const { userRole, hasRole, userId } = useAuth();
 
@@ -336,7 +348,24 @@ export default function ActivityDetails() {
     }
   };
 
-  const handleReapply = async () => {
+  const handleReapply = () => {
+    handleApplyClick();
+  };
+
+  const handleApplyClick = () => {
+    if (!activity) return;
+    if (activity.activityType.code === "STUDY") {
+      setAgreedToPolicy(false);
+      setConfirmedPayment(false);
+      setAgreedToPromo(false);
+      setStudyDepositOpen(true);
+    } else {
+      handleApply();
+    }
+  };
+
+  const handleStudyDepositConfirm = async () => {
+    setStudyDepositOpen(false);
     await handleApply();
   };
 
@@ -439,7 +468,7 @@ export default function ActivityDetails() {
   const canManage =
     hasRole("MANAGER") || hasRole("ADMIN") || activity.assignee.id === userId;
   const ctaConfig = deriveCtaConfig(activity, myParticipant, {
-    onApply: handleApply,
+    onApply: handleApplyClick,
     onCancel: handleCancel,
     onComplete: handleComplete,
     onLeave: () => setLeaveDialogOpen(true),
@@ -752,6 +781,82 @@ export default function ActivityDetails() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Study Deposit Agreement Dialog */}
+      <Dialog
+        open={studyDepositOpen}
+        onOpenChange={(open) => {
+          if (!open) setStudyDepositOpen(false);
+        }}
+      >
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>스터디 보증금 유의사항</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 text-sm">
+            <ul className="space-y-1.5 list-disc pl-5 text-muted-foreground">
+              <li>스터디 보증금 <strong className="text-foreground">30,000원</strong> 발생</li>
+              <li>신청한 스터디의 수료 조건을 만족할 시, <strong className="text-foreground">전액 환급</strong></li>
+              <li>수료 조건을 만족하지 못하면 환급금 없음</li>
+            </ul>
+
+            <div className="text-xs text-muted-foreground space-y-2 leading-relaxed border-t pt-3">
+              <p>
+                * 환급받지 못한 스터디 보증금은 스터디를 운영하시는 강사님들의 강의비, 스터디 수료자 회식비, CNU 운영비 등으로 활용될 예정이니 참고해주시고 본인이 수료할 수 있을 정도의 스터디를 신청해주세요.
+              </p>
+              <p>* 입금 계좌번호: <strong className="text-foreground">1002-3463-0651 토스뱅크</strong></p>
+              <div>
+                <p className="mb-1">* 입금자명 양식</p>
+                <div className="pl-3 space-y-0.5">
+                  <p>스터디1 신청 시 : 수강자명1</p>
+                  <p>스터디2 신청 시 : 수강자명2</p>
+                  <p>스터디 1, 2 신청 시 : 수강자명12</p>
+                  <p className="mt-1">ex) 천우영 1 &nbsp; 손기령 12 &nbsp; 홍준영 2</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 border-t pt-4">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <Checkbox
+                  checked={agreedToPolicy}
+                  onCheckedChange={(v) => setAgreedToPolicy(!!v)}
+                />
+                <span>위 유의사항을 모두 확인하였으며, 동의합니다.</span>
+              </label>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <Checkbox
+                  checked={confirmedPayment}
+                  onCheckedChange={(v) => setConfirmedPayment(!!v)}
+                />
+                <span>보증금 입금을 완료하였습니다.</span>
+              </label>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <Checkbox
+                  checked={agreedToPromo}
+                  onCheckedChange={(v) => setAgreedToPromo(!!v)}
+                />
+                <span className="text-muted-foreground text-xs">
+                  활동 사진 및 결과물이 소식지 등 홍보에 사용될 수 있습니다.
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-2">
+            <Button variant="outline" onClick={() => setStudyDepositOpen(false)}>
+              취소
+            </Button>
+            <Button
+              disabled={!agreedToPolicy || !confirmedPayment || !agreedToPromo || actionLoading}
+              onClick={handleStudyDepositConfirm}
+            >
+              {actionLoading ? "처리 중..." : "신청하기"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
