@@ -35,6 +35,7 @@ import { getCurrentQuarter } from "@/lib/api/quarter";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useSidebar } from "@/lib/contexts/SidebarContext";
+import { PublicNavLinks } from "@/components/custom/public-nav-links";
 
 export function NavigationBar() {
   const router = useRouter();
@@ -130,6 +131,9 @@ export function NavigationBar() {
           <span className="text-xl font-bold tracking-tight">CNU&U</span>
         </Link>
       </div>
+
+      {/* Center Nav */}
+      <PublicNavLinks />
 
       {/* Right Content */}
       {renderRightContent()}
