@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { PortfolioResponse } from "@/lib/interfaces/portfolio";
 
 interface PortfolioRecentCardProps {
@@ -17,13 +16,14 @@ export function PortfolioRecentCard({ portfolio }: PortfolioRecentCardProps) {
       onClick={() => router.push(`/portfolio/${portfolio.id}`)}
     >
       <div className="relative aspect-video rounded-xl overflow-hidden bg-muted">
-        <Image
-          src={portfolio.thumbnailUrl}
-          alt={portfolio.title}
-          fill
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
-          sizes="(max-width: 768px) 100vw, 50vw"
-        />
+        {portfolio.thumbnailUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={portfolio.thumbnailUrl}
+            alt={portfolio.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        )}
       </div>
       <div className="mt-3 space-y-0.5">
         <p className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">

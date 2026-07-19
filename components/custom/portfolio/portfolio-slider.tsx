@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { PortfolioResponse } from "@/lib/interfaces/portfolio";
@@ -64,16 +63,15 @@ export function PortfolioSlider({ portfolios }: PortfolioSliderProps) {
                 }
               }}
             >
-              <div className="relative h-full rounded-2xl overflow-hidden shadow-sm">
-                {/* Thumbnail — fills entire card */}
-                <Image
-                  src={portfolio.thumbnailUrl}
-                  alt={portfolio.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 76vw, 52vw"
-                  priority={i === 0}
-                />
+              <div className="relative h-full rounded-2xl overflow-hidden shadow-sm bg-muted">
+                {portfolio.thumbnailUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={portfolio.thumbnailUrl}
+                    alt={portfolio.title}
+                    className="w-full h-full object-cover"
+                  />
+                )}
 
                 {/* Content overlay at bottom */}
                 <div className="absolute inset-x-0 bottom-0 bg-black/50 backdrop-blur-sm px-6 py-5 flex flex-col gap-2">

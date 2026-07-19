@@ -2,17 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
-import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getPortfolioById } from "@/lib/api/portfolio";
+import { getPortfolioById, deletePortfolio } from "@/lib/api/portfolio";
 import { PortfolioResponse } from "@/lib/interfaces/portfolio";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { MarkdownPreview } from "@/components/custom/markdown-editor";
 import { cn } from "@/lib/utils";
 
 export default function PortfolioDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { userId, hasRole } = useAuth();
   const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
   const [current, setCurrent] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -22,6 +24,16 @@ export default function PortfolioDetailPage() {
       .then(setPortfolio)
       .finally(() => setLoading(false));
   }, [id]);
+
+  const handleDelete = async () => {
+    if (!confirm("정말 삭제하시겠습니까?")) return;
+    await deletePortfolio(id);
+    router.push("/portfolio");
+  };
+
+  const isAuthor = !!userId && portfolio?.createdBy === userId;
+  const canEdit = isAuthor;
+  const canDelete = isAuthor || hasRole("MANAGER");
 
   if (loading) {
     return (
@@ -48,15 +60,42 @@ export default function PortfolioDetailPage() {
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-10 space-y-6">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="gap-1 text-muted-foreground"
-        onClick={() => router.push("/portfolio")}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        목록으로
-      </Button>
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1 text-muted-foreground"
+          onClick={() => router.push("/portfolio")}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          목록으로
+        </Button>
+
+        <div className="flex items-center gap-1">
+          {canEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1"
+              onClick={() => router.push(`/portfolio/${id}/edit`)}
+            >
+              <Pencil className="h-4 w-4" />
+              수정
+            </Button>
+          )}
+          {canDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-destructive hover:text-destructive"
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              삭제
+            </Button>
+          )}
+        </div>
+      </div>
 
       {/* Image Slider */}
       <div className="relative rounded-xl overflow-hidden aspect-video bg-muted">
@@ -68,14 +107,14 @@ export default function PortfolioDetailPage() {
               i === current ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
           >
-            <Image
-              src={src}
-              alt={`${portfolio.title} ${i + 1}`}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 768px"
-              priority={i === 0}
-            />
+            {src && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={src}
+                alt={`${portfolio.title} ${i + 1}`}
+                className="w-full h-full object-cover"
+              />
+            )}
           </div>
         ))}
 
@@ -94,7 +133,6 @@ export default function PortfolioDetailPage() {
               <ChevronRight className="h-5 w-5" />
             </button>
 
-            {/* Dot Indicators */}
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
               {portfolio.images.map((_, i) => (
                 <button
@@ -121,8 +159,11 @@ export default function PortfolioDetailPage() {
             </Badge>
           ))}
         </div>
-        <p className="text-muted-foreground leading-relaxed">{portfolio.description}</p>
+        <div className="text-muted-foreground leading-relaxed">
+          <MarkdownPreview content={portfolio.description} />
+        </div>
         <p className="text-xs text-muted-foreground">
+          {portfolio.team} · {portfolio.year} ·{" "}
           {new Date(portfolio.createdAt).toLocaleDateString("ko-KR")}
         </p>
       </div>
