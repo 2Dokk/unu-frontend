@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { label: "Portfolio", href: "/portfolio" },
-  { label: "Recruit", href: "/recruit" },
+  { label: "Recruit", href: "/apply" },
   { label: "Blog", href: "/blog" },
   { label: "Contact", href: "/contact" },
 ];
@@ -23,9 +23,7 @@ export function PublicNavLinks() {
           className={cn(
             "px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
             "hover:bg-accent hover:text-accent-foreground",
-            pathname === href
-              ? "text-foreground"
-              : "text-muted-foreground"
+            pathname === href ? "text-foreground" : "text-muted-foreground",
           )}
         >
           {label}

@@ -21,16 +21,18 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const recent = portfolios
-    .slice()
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 2);
+  const pinned = portfolios.filter((p) => p.pinned);
+  const sliderPortfolios = pinned.length > 0 ? pinned : portfolios;
 
   return (
     <main className="mx-auto w-full max-w-4xl px-6 py-8 space-y-10">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold mb-1">Portfolio</h1>
+          <h1 className="text-4xl font-bold mb-1">
+            Our
+            <br />
+            Portfolio.
+          </h1>
           <p className="text-muted-foreground text-sm">
             CNU가 만들어온 활동을 소개합니다.
           </p>
@@ -45,15 +47,14 @@ export default function PortfolioPage() {
       {loading ? (
         <div className="rounded-2xl border bg-muted animate-pulse h-120 w-full" />
       ) : (
-        <PortfolioSlider portfolios={portfolios} />
+        <PortfolioSlider portfolios={sliderPortfolios} />
       )}
 
       {/* Recent */}
-      {!loading && recent.length > 0 && (
+      {!loading && portfolios.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-base font-semibold">최신 프로젝트</h2>
           <div className="grid grid-cols-2 gap-5">
-            {recent.map((p) => (
+            {portfolios.map((p) => (
               <PortfolioRecentCard key={p.id} portfolio={p} />
             ))}
           </div>

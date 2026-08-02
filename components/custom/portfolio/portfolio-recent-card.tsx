@@ -10,6 +10,10 @@ interface PortfolioRecentCardProps {
 export function PortfolioRecentCard({ portfolio }: PortfolioRecentCardProps) {
   const router = useRouter();
 
+  const period = portfolio.endQuarterName
+    ? `${portfolio.startQuarterName} - ${portfolio.endQuarterName}`
+    : `${portfolio.startQuarterName} - 진행 중`;
+
   return (
     <div
       className="cursor-pointer group"
@@ -29,9 +33,7 @@ export function PortfolioRecentCard({ portfolio }: PortfolioRecentCardProps) {
         <p className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
           {portfolio.title}
         </p>
-        <p className="text-xs text-muted-foreground">
-          {portfolio.team} · {portfolio.year}
-        </p>
+        <p className="text-xs text-muted-foreground">{period}</p>
       </div>
     </div>
   );

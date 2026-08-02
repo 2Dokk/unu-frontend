@@ -125,10 +125,10 @@ interface MarkdownEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  /** Called with a File; should return the public URL. Falls back to blob URL if omitted. */
-  onImageUpload?: (file: File) => Promise<string>;
-  /** Called after each successful image upload with the returned URL (for cleanup tracking). */
-  onImageUploaded?: (url: string) => void;
+  /** Called with a File; should return { id, url } of the uploaded image. */
+  onImageUpload?: (file: File) => Promise<{ id: string; url: string }>;
+  /** Called after successful upload with (id, url) — use for thumbnail tracking. */
+  onImageUploaded?: (id: string, url: string) => void;
   minHeight?: number;
 }
 
@@ -267,8 +267,8 @@ export function MarkdownEditor({
       setUploading(true);
       try {
         if (onImageUpload) {
-          const url = await onImageUpload(file);
-          onImageUploaded?.(url);
+          const { id, url } = await onImageUpload(file);
+          onImageUploaded?.(id, url);
           insertImageMarkdown(url);
         } else {
           // Fallback: object URL (valid for this browser session only)

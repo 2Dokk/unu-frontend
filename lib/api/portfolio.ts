@@ -40,3 +40,13 @@ export async function updatePortfolio(
 export async function deletePortfolio(id: string): Promise<void> {
   await axiosInstance.delete(`/portfolios/${id}`);
 }
+
+export async function setPortfolioPinned(
+  id: string,
+  pinned: boolean,
+): Promise<PortfolioResponse> {
+  const response = await axiosInstance.patch<PortfolioResponse>(
+    `/portfolios/${id}/pin?pinned=${pinned}`,
+  );
+  return response.data;
+}

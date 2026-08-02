@@ -1,84 +1,76 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { MarkdownEditor } from "@/components/custom/markdown-editor";
-import { PortfolioImageManager } from "@/components/custom/portfolio/portfolio-image-manager";
+import { NotionEditor } from "@/components/custom/blog/notion-editor";
+import { UploadedImagePicker } from "@/components/custom/uploaded-image-picker";
+import { QuarterSelector } from "@/components/custom/quarter/quarter-selector";
+import { ContributorPicker } from "@/components/custom/portfolio/contributor-picker";
 import { createPortfolio } from "@/lib/api/portfolio";
 import { uploadImage, deleteImage } from "@/lib/api/image";
-import { PortfolioRequest } from "@/lib/interfaces/portfolio";
-
-const CURRENT_YEAR = new Date().getFullYear();
+import { ContributorInfo } from "@/lib/interfaces/portfolio";
+import { cn } from "@/lib/utils";
 
 export default function PortfolioCreatePage() {
   const router = useRouter();
-  const [form, setForm] = useState<PortfolioRequest>({
-    title: "",
-    description: "",
-    thumbnailUrl: "",
-    images: [],
-    tags: [],
-    team: "",
-    year: CURRENT_YEAR,
-  });
-  const [tagsText, setTagsText] = useState("");
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [startQuarterId, setStartQuarterId] = useState("");
+  const [endQuarterId, setEndQuarterId] = useState("");
+  const [isOngoing, setIsOngoing] = useState(false);
+  const [contributors, setContributors] = useState<ContributorInfo[]>([]);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<
+    { id: string; url: string }[]
+  >([]);
   const [submitting, setSubmitting] = useState(false);
 
-  // Track all images uploaded this session for cleanup
-  const sessionUploadedRef = useRef<Set<string>>(new Set());
+  const sessionIdsRef = useRef<Set<string>>(new Set());
   const submittedRef = useRef(false);
 
   useEffect(() => {
     return () => {
       if (submittedRef.current) return;
-      // Delete all session-uploaded images that weren't saved
-      sessionUploadedRef.current.forEach((url) => {
-        deleteImage(url).catch(() => {});
-      });
+      sessionIdsRef.current.forEach((id) => deleteImage(id).catch(() => {}));
     };
   }, []);
 
-  const set = (field: keyof PortfolioRequest, value: unknown) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
-
-  const handleAddImage = (url: string) => {
-    sessionUploadedRef.current.add(url);
-    setForm((prev) => ({
-      ...prev,
-      images: [...prev.images, url],
-      thumbnailUrl: prev.thumbnailUrl || url, // auto-select first as thumbnail
-    }));
+  const autoResize = (el: HTMLTextAreaElement) => {
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
   };
 
-  const handleRemoveImage = (url: string) => {
-    // Immediately delete from server if uploaded this session
-    if (sessionUploadedRef.current.has(url)) {
-      sessionUploadedRef.current.delete(url);
-      deleteImage(url).catch(() => {});
-    }
-    setForm((prev) => {
-      const newImages = prev.images.filter((u) => u !== url);
-      return {
-        ...prev,
-        images: newImages,
-        thumbnailUrl: prev.thumbnailUrl === url ? (newImages[0] ?? "") : prev.thumbnailUrl,
-      };
-    });
-  };
+  const handleImageUploaded = useCallback((id: string, url: string) => {
+    sessionIdsRef.current.add(id);
+    setUploadedImages((prev) => [...prev, { id, url }]);
+    setThumbnailUrl((prev) => prev || url);
+    setShowImagePicker(true);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload: PortfolioRequest = {
-      ...form,
-      tags: tagsText.split(",").map((s) => s.trim()).filter(Boolean),
-    };
+    if (!title.trim()) {
+      titleRef.current?.focus();
+      return;
+    }
     submittedRef.current = true;
     setSubmitting(true);
     try {
-      const portfolio = await createPortfolio(payload);
+      const portfolio = await createPortfolio({
+        title,
+        description,
+        thumbnailUrl,
+        startQuarterId,
+        endQuarterId: isOngoing ? "" : endQuarterId,
+        contributors: contributors.map((c) => ({
+          userId: c.id,
+          role: c.role,
+        })),
+      });
       router.push(`/portfolio/${portfolio.id}`);
     } catch {
       submittedRef.current = false;
@@ -87,95 +79,127 @@ export default function PortfolioCreatePage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-8 space-y-6">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="gap-1 text-muted-foreground"
-        onClick={() => router.push("/portfolio")}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        목록으로
-      </Button>
+    <form
+      onSubmit={handleSubmit}
+      className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-6"
+    >
+      {/* Top bar */}
+      <div className="flex items-center justify-between mb-8">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="gap-1 text-muted-foreground -ml-2"
+          onClick={() => router.push("/portfolio")}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="hidden sm:inline">목록으로</span>
+        </Button>
 
-      <h1 className="text-xl font-bold">포트폴리오 추가</h1>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowImagePicker((v) => !v)}
+            className={cn(
+              "flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors",
+              showImagePicker
+                ? "text-foreground bg-muted"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <ImageIcon className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">대표이미지</span>
+          </button>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">제목</label>
-          <Input
-            required
-            value={form.title}
-            onChange={(e) => set("title", e.target.value)}
-            placeholder="프로젝트 이름"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">이미지</label>
-          <PortfolioImageManager
-            images={form.images}
-            thumbnailUrl={form.thumbnailUrl}
-            onAdd={handleAddImage}
-            onRemove={handleRemoveImage}
-            onSelectThumbnail={(url) => set("thumbnailUrl", url)}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">설명</label>
-          <MarkdownEditor
-            value={form.description}
-            onChange={(v) => set("description", v)}
-            onImageUpload={uploadImage}
-            onImageUploaded={(url) => sessionUploadedRef.current.add(url)}
-            placeholder="프로젝트 설명을 마크다운으로 작성하세요."
-            minHeight={300}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">팀 이름</label>
-            <Input
-              value={form.team}
-              onChange={(e) => set("team", e.target.value)}
-              placeholder="예: 웹 개발팀"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">연도</label>
-            <Input
-              type="number"
-              value={form.year}
-              onChange={(e) => set("year", Number(e.target.value))}
-              min={2000}
-              max={CURRENT_YEAR + 1}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">
-            태그
-            <span className="text-xs text-muted-foreground ml-2">(쉼표로 구분)</span>
-          </label>
-          <Input
-            value={tagsText}
-            onChange={(e) => setTagsText(e.target.value)}
-            placeholder="React, TypeScript, Next.js"
-          />
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={() => router.back()}>
-            취소
-          </Button>
-          <Button type="submit" disabled={submitting}>
+          <Button type="submit" size="sm" disabled={submitting}>
             {submitting ? "저장 중..." : "게시"}
           </Button>
         </div>
-      </form>
-    </main>
+      </div>
+
+      {/* Title */}
+      <textarea
+        ref={titleRef}
+        rows={1}
+        value={title}
+        onChange={(e) => {
+          setTitle(e.target.value);
+          autoResize(e.target);
+        }}
+        placeholder="프로젝트 이름"
+        className="w-full resize-none overflow-hidden bg-transparent border-none outline-none text-3xl sm:text-4xl font-bold placeholder:text-muted-foreground/30 leading-tight"
+      />
+
+      {/* Quarters + contributors */}
+      <div className="mt-6 space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-muted-foreground">
+              시작 분기
+            </label>
+            <QuarterSelector
+              value={startQuarterId}
+              onChange={setStartQuarterId}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-muted-foreground">
+                종료 분기
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsOngoing((v) => !v)}
+                className={cn(
+                  "text-xs px-2 py-0.5 rounded-full transition-colors",
+                  isOngoing
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {isOngoing ? "진행 중" : "진행 중으로 표시"}
+              </button>
+            </div>
+            {isOngoing ? (
+              <div className="flex items-center h-10 px-3 rounded-md border bg-muted text-sm text-muted-foreground">
+                진행 중
+              </div>
+            ) : (
+              <QuarterSelector
+                value={endQuarterId}
+                onChange={setEndQuarterId}
+              />
+            )}
+          </div>
+        </div>
+
+        <ContributorPicker
+          contributors={contributors}
+          onChange={setContributors}
+        />
+      </div>
+
+      {/* Thumbnail picker (toggle) */}
+      {showImagePicker && (
+        <div className="mt-4">
+          <UploadedImagePicker
+            images={uploadedImages}
+            selectedUrl={thumbnailUrl}
+            onSelect={setThumbnailUrl}
+          />
+        </div>
+      )}
+
+      {/* Divider */}
+      <div className="my-6 border-t" />
+
+      {/* Body editor */}
+      <NotionEditor
+        value={description}
+        onChange={setDescription}
+        onImageUpload={uploadImage}
+        onImageUploaded={handleImageUploaded}
+      />
+    </form>
   );
 }

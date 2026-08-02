@@ -35,7 +35,7 @@ export function QuarterSelector({ value, onChange }: QuarterSelectorProps) {
             new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
         );
         setQuarters(sortedQuarters);
-        onChange(currentQuarter.id);
+        if (!value) onChange(currentQuarter.id);
       } catch (error: any) {
         console.error("Failed to fetch quarters:", error);
       }

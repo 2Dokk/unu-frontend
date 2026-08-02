@@ -2,19 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
 import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { MarkdownPreview } from "@/components/custom/markdown-editor";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { getBlogPostById, deleteBlogPost } from "@/lib/api/blog";
 import { BlogPost } from "@/lib/interfaces/blog";
 import { useAuth } from "@/lib/contexts/AuthContext";
-
-const CATEGORY_LABEL: Record<string, string> = {
-  tech: "Tech",
-  essay: "Essay",
-};
 
 export default function BlogDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,26 +28,23 @@ export default function BlogDetailPage() {
     router.push("/blog");
   };
 
-  const isAuthor = !!userId && post?.createdBy === userId;
+  const isAuthor = !!userId && post?.createdBy?.id === userId;
   const canEdit = isAuthor;
   const canDelete = isAuthor || hasRole("MANAGER");
 
   if (loading) {
     return (
-      <main className="mx-auto w-full max-w-2xl px-6 py-8 space-y-6">
+      <main className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8 space-y-6">
         <div className="h-6 w-24 bg-muted animate-pulse rounded" />
         <div className="aspect-video w-full bg-muted animate-pulse rounded-xl" />
-        <div className="space-y-3">
-          <div className="h-8 bg-muted animate-pulse rounded w-3/4" />
-          <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
-        </div>
+        <div className="h-8 bg-muted animate-pulse rounded w-3/4" />
       </main>
     );
   }
 
   if (!post) {
     return (
-      <main className="mx-auto w-full max-w-2xl px-6 py-8 text-center">
+      <main className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8 text-center">
         <p className="text-muted-foreground">게시글을 찾을 수 없습니다.</p>
         <Button variant="ghost" className="mt-4" onClick={() => router.push("/blog")}>
           목록으로 돌아가기
@@ -70,16 +60,16 @@ export default function BlogDetailPage() {
   });
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-8 space-y-6">
+    <main className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8 space-y-6">
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1 text-muted-foreground"
+          className="gap-1 text-muted-foreground -ml-2"
           onClick={() => router.push("/blog")}
         >
           <ArrowLeft className="h-4 w-4" />
-          목록으로
+          <span className="hidden sm:inline">목록으로</span>
         </Button>
 
         <div className="flex items-center gap-1">
@@ -91,7 +81,7 @@ export default function BlogDetailPage() {
               onClick={() => router.push(`/blog/${id}/edit`)}
             >
               <Pencil className="h-4 w-4" />
-              수정
+              <span className="hidden sm:inline">수정</span>
             </Button>
           )}
           {canDelete && (
@@ -102,41 +92,35 @@ export default function BlogDetailPage() {
               onClick={handleDelete}
             >
               <Trash2 className="h-4 w-4" />
-              삭제
+              <span className="hidden sm:inline">삭제</span>
             </Button>
           )}
         </div>
       </div>
 
-      {/* Thumbnail */}
       {post.thumbnailUrl && (
-        <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-muted">
-          <Image
+        <div className="aspect-video w-full rounded-xl overflow-hidden bg-muted">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={post.thumbnailUrl}
             alt={post.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 672px"
-            priority
+            className="w-full h-full object-cover"
           />
         </div>
       )}
 
-      {/* Header */}
-      <div className="space-y-3">
-        <Badge variant="secondary">{CATEGORY_LABEL[post.category] ?? post.category}</Badge>
-        <h1 className="text-2xl font-bold leading-snug">{post.title}</h1>
-        <p className="text-muted-foreground">{post.subtitle}</p>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground pt-1">
-          <span>{date}</span>
-        </div>
+      <div className="space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold leading-tight">{post.title}</h1>
+        {post.subtitle && (
+          <p className="text-base sm:text-lg text-muted-foreground">{post.subtitle}</p>
+        )}
+        <p className="text-sm text-muted-foreground">{date}</p>
       </div>
 
       <hr />
 
-      {/* Body */}
-      <article>
-        <MarkdownPreview content={post.content} />
+      <article className="prose-sm sm:prose max-w-none">
+        <MarkdownPreview content={post.description} />
       </article>
     </main>
   );

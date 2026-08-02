@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 type Filter = "all" | BlogCategory;
 
 const FILTERS: { value: Filter; label: string }[] = [
-  { value: "all", label: "See All" },
+  { value: "all", label: "All" },
   { value: "tech", label: "Tech" },
   { value: "essay", label: "Essay" },
 ];
@@ -32,22 +32,23 @@ export default function BlogPage() {
   }, [active]);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-8 space-y-6">
-      <div className="flex items-start justify-between">
+    <main className="mx-auto w-full max-w-4xl px-6 py-8 space-y-10">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold mb-1">Blog</h1>
-          <p className="text-muted-foreground text-sm">
-            CNU 멤버들이 쓴 기술 글과 에세이를 모았습니다.
-          </p>
+          <h1 className="text-4xl font-bold mb-1">Blog.</h1>
         </div>
         {isAuthenticated && (
-          <Button size="sm" onClick={() => router.push("/blog/create")}>
+          <Button
+            size="sm"
+            className="shrink-0"
+            onClick={() => router.push("/blog/create")}
+          >
             글 작성
           </Button>
         )}
       </div>
 
-      {/* Filter badges */}
+      {/* Category filter pills */}
       <div className="flex gap-2">
         {FILTERS.map(({ value, label }) => (
           <button
@@ -57,7 +58,7 @@ export default function BlogPage() {
               "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
               active === value
                 ? "bg-muted text-foreground"
-                : "bg-transparent text-muted-foreground hover:text-foreground"
+                : "bg-transparent text-muted-foreground hover:text-foreground",
             )}
           >
             {label}
@@ -65,12 +66,11 @@ export default function BlogPage() {
         ))}
       </div>
 
-      {/* Post list */}
       {loading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="flex gap-4 py-4 border-b">
-              <div className="w-36 h-24 rounded-lg bg-muted animate-pulse shrink-0" />
+              <div className="w-32 h-24 sm:w-52 sm:h-36 rounded-lg bg-muted animate-pulse shrink-0" />
               <div className="flex-1 space-y-2 py-1">
                 <div className="h-4 bg-muted animate-pulse rounded w-3/4" />
                 <div className="h-3 bg-muted animate-pulse rounded w-full" />

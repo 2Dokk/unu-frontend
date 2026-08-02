@@ -1,20 +1,12 @@
-import {
-  BlogListResponse,
-  BlogPost,
-  BlogCategory,
-  BlogRequest,
-} from "@/lib/interfaces/blog";
+import { BlogListResponse, BlogPost, BlogRequest, BlogCategory } from "@/lib/interfaces/blog";
 import publicClient from "./publicClient";
 import axiosInstance from "./axiosInstance";
 
-// 백엔드는 TECH/ESSAY 대문자로 반환 → 프론트 타입에 맞게 소문자로 정규화
 function normalizePost(post: BlogPost): BlogPost {
-  return { ...post, category: post.category.toLowerCase() as BlogCategory };
+  return { ...post, category: post.category?.toLowerCase() as BlogCategory };
 }
 
-export async function getBlogPosts(
-  category?: BlogCategory,
-): Promise<BlogListResponse> {
+export async function getBlogPosts(category?: BlogCategory): Promise<BlogListResponse> {
   const path = category
     ? `/public/blogs?category=${category.toUpperCase()}`
     : "/public/blogs";
@@ -35,10 +27,7 @@ export async function createBlogPost(data: BlogRequest): Promise<BlogPost> {
   return normalizePost(response.data);
 }
 
-export async function updateBlogPost(
-  id: string,
-  data: BlogRequest,
-): Promise<BlogPost> {
+export async function updateBlogPost(id: string, data: BlogRequest): Promise<BlogPost> {
   const response = await axiosInstance.put<BlogPost>(`/blogs/${id}`, {
     ...data,
     category: data.category.toUpperCase(),

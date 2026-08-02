@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { PortfolioResponse } from "@/lib/interfaces/portfolio";
 import { cn } from "@/lib/utils";
 
@@ -11,9 +10,8 @@ interface PortfolioSliderProps {
   portfolios: PortfolioResponse[];
 }
 
-// Each card occupies 76% of the container; 12% peeks on each side.
 const CARD_WIDTH_PCT = 52;
-const PEEK_PCT = (100 - CARD_WIDTH_PCT) / 2; // 12%
+const PEEK_PCT = (100 - CARD_WIDTH_PCT) / 2;
 const GAP_PX = 20;
 
 export function PortfolioSlider({ portfolios }: PortfolioSliderProps) {
@@ -26,7 +24,6 @@ export function PortfolioSlider({ portfolios }: PortfolioSliderProps) {
 
   if (total === 0) return null;
 
-  // Normalize offset so wrapping cards peek correctly (-1 / +1 only)
   const normalize = (raw: number) => {
     if (raw > total / 2) return raw - total;
     if (raw < -total / 2) return raw + total;
@@ -35,12 +32,17 @@ export function PortfolioSlider({ portfolios }: PortfolioSliderProps) {
 
   return (
     <div className="relative">
-      {/* Slide Track */}
       <div className="relative overflow-hidden h-96 md:h-112">
         {portfolios.map((portfolio, i) => {
           const offset = normalize(i - current);
           const isCurrent = offset === 0;
           const isAdjacent = Math.abs(offset) === 1;
+
+          const period = portfolio.endQuarterName
+            ? `${portfolio.startQuarterName} - ${portfolio.endQuarterName}`
+            : `${portfolio.startQuarterName} - 진행 중`;
+
+          const contributorNames = portfolio.contributors.map((c) => c.name).join(", ");
 
           return (
             <div
@@ -53,7 +55,7 @@ export function PortfolioSlider({ portfolios }: PortfolioSliderProps) {
                 transform: `translateX(calc(${offset * 100}% + ${offset * GAP_PX}px)) scale(${isCurrent ? 1 : 0.93})`,
                 opacity: isCurrent ? 1 : isAdjacent ? 0.45 : 0,
                 zIndex: isCurrent ? 10 : 5,
-                cursor: isCurrent ? "pointer" : "pointer",
+                cursor: "pointer",
               }}
               onClick={() => {
                 if (isCurrent) {
@@ -73,24 +75,14 @@ export function PortfolioSlider({ portfolios }: PortfolioSliderProps) {
                   />
                 )}
 
-                {/* Content overlay at bottom */}
-                <div className="absolute inset-x-0 bottom-0 bg-black/50 backdrop-blur-sm px-6 py-5 flex flex-col gap-2">
-                  <div className="flex flex-wrap gap-1">
-                    {portfolio.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
+                <div className="absolute inset-x-0 bottom-0 bg-black/50 backdrop-blur-sm px-6 py-5 space-y-1">
                   <h2 className="text-lg md:text-xl font-bold leading-snug text-white line-clamp-1">
                     {portfolio.title}
                   </h2>
-                  <p className="text-sm text-white/70 leading-relaxed line-clamp-2">
-                    {portfolio.description}
-                  </p>
-                  <p className="text-xs text-white/50">
-                    {new Date(portfolio.createdAt).toLocaleDateString("ko-KR")}
-                  </p>
+                  {contributorNames && (
+                    <p className="text-sm text-white/80 line-clamp-1">{contributorNames}</p>
+                  )}
+                  <p className="text-xs text-white/50">{period}</p>
                 </div>
               </div>
             </div>
@@ -98,7 +90,6 @@ export function PortfolioSlider({ portfolios }: PortfolioSliderProps) {
         })}
       </div>
 
-      {/* Prev / Next */}
       {total > 1 && (
         <>
           <button
@@ -116,7 +107,6 @@ export function PortfolioSlider({ portfolios }: PortfolioSliderProps) {
         </>
       )}
 
-      {/* Dot Indicators */}
       {total > 1 && (
         <div className="flex justify-center gap-2 mt-5">
           {portfolios.map((_, i) => (
@@ -127,7 +117,7 @@ export function PortfolioSlider({ portfolios }: PortfolioSliderProps) {
                 "h-2 rounded-full transition-all duration-300",
                 i === current
                   ? "w-6 bg-foreground"
-                  : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/60",
+                  : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
               )}
             />
           ))}

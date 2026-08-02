@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -119,4 +120,27 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ── Tiptap editor ────────────────────────────────────────────────── */
+.ProseMirror {
+  outline: none;
+}
+
+/* Placeholder */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muted-foreground);
+  opacity: 0.4;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Tiptap image node */
+.ProseMirror img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  display: block;
+  margin: 0.5rem 0;
 }

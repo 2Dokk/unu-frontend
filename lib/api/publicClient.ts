@@ -1,5 +1,15 @@
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -14,7 +24,7 @@ async function request<T>(
 
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
-    throw new Error(`${res.status} ${text}`);
+    throw new ApiError(res.status, text || res.statusText);
   }
 
   if (res.status === 204 || res.headers.get("content-length") === "0") {
