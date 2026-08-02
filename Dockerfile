@@ -1,7 +1,8 @@
 FROM node:20-alpine AS base
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm (pinned — corepack's "latest" tag can outpace what this Node
+# version supports, e.g. pnpm 11 throws ERR_UNKNOWN_BUILTIN_MODULE on node:20)
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 # ── deps stage ──────────────────────────────────────────────────────────────
 FROM base AS deps
