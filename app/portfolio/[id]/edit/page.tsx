@@ -199,6 +199,7 @@ export default function PortfolioEditPage() {
               <QuarterSelector
                 value={endQuarterId}
                 onChange={setEndQuarterId}
+                minQuarterId={startQuarterId}
               />
             )}
           </div>

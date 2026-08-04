@@ -16,12 +16,21 @@ import { Button } from "@/components/ui/button";
 interface QuarterSelectorProps {
   value?: string;
   onChange: (value: string) => void;
+  minQuarterId?: string;
 }
 
-export function QuarterSelector({ value, onChange }: QuarterSelectorProps) {
+export function QuarterSelector({
+  value,
+  onChange,
+  minQuarterId,
+}: QuarterSelectorProps) {
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
   const [prevButtonDisabled, setPrevButtonDisabled] = useState(false);
   const [nextButtonDisabled, setNextButtonDisabled] = useState(false);
+
+  const minQuarterIndex = quarters.findIndex((q) => q.id === minQuarterId);
+  const selectableQuarters =
+    minQuarterIndex >= 0 ? quarters.slice(minQuarterIndex) : quarters;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,31 +54,44 @@ export function QuarterSelector({ value, onChange }: QuarterSelectorProps) {
   }, []);
 
   useEffect(() => {
-    const currentIndex = quarters.findIndex((q) => q.id === value);
+    if (
+      value &&
+      selectableQuarters.length > 0 &&
+      !selectableQuarters.some((q) => q.id === value)
+    ) {
+      onChange(selectableQuarters[0].id);
+    }
+  }, [minQuarterId, quarters, value]);
+
+  useEffect(() => {
+    const currentIndex = selectableQuarters.findIndex((q) => q.id === value);
     setPrevButtonDisabled(currentIndex <= 0);
-    setNextButtonDisabled(currentIndex >= quarters.length - 1);
-  }, [value, quarters]);
+    setNextButtonDisabled(
+      currentIndex < 0 || currentIndex >= selectableQuarters.length - 1,
+    );
+  }, [value, quarters, minQuarterId]);
 
   const onPrev = () => {
-    const currentIndex = quarters.findIndex((q) => q.id === value);
+    const currentIndex = selectableQuarters.findIndex((q) => q.id === value);
     if (currentIndex > 0) {
-      onChange(quarters[currentIndex - 1].id);
+      onChange(selectableQuarters[currentIndex - 1].id);
     }
   };
 
   const onNext = () => {
-    const currentIndex = quarters.findIndex((q) => q.id === value);
-    if (currentIndex < quarters.length - 1) {
-      onChange(quarters[currentIndex + 1].id);
+    const currentIndex = selectableQuarters.findIndex((q) => q.id === value);
+    if (currentIndex >= 0 && currentIndex < selectableQuarters.length - 1) {
+      onChange(selectableQuarters[currentIndex + 1].id);
     }
   };
 
   return (
     <div className="flex items-center gap-2">
       <Button
+        type="button"
         variant="outline"
         size="icon"
-        aria-label="Submit"
+        aria-label="이전 분기"
         onClick={onPrev}
         disabled={prevButtonDisabled}
       >
@@ -80,7 +102,7 @@ export function QuarterSelector({ value, onChange }: QuarterSelectorProps) {
           <SelectValue placeholder="분기 선택" />
         </SelectTrigger>
         <SelectContent>
-          {quarters.map((q) => (
+          {selectableQuarters.map((q) => (
             <SelectItem key={q.id} value={q.id}>
               {q.name}
             </SelectItem>
@@ -88,9 +110,10 @@ export function QuarterSelector({ value, onChange }: QuarterSelectorProps) {
         </SelectContent>
       </Select>
       <Button
+        type="button"
         variant="outline"
         size="icon"
-        aria-label="Submit"
+        aria-label="다음 분기"
         onClick={onNext}
         disabled={nextButtonDisabled}
       >

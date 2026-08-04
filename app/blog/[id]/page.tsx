@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { MarkdownPreview } from "@/components/custom/markdown-editor";
+import { DefaultBlogThumbnail } from "@/components/custom/blog/default-blog-thumbnail";
 import { Button } from "@/components/ui/button";
 import { getBlogPostById, deleteBlogPost } from "@/lib/api/blog";
 import { BlogPost } from "@/lib/interfaces/blog";
@@ -98,28 +99,48 @@ export default function BlogDetailPage() {
         </div>
       </div>
 
-      {post.thumbnailUrl && (
-        <div className="aspect-video w-full rounded-xl overflow-hidden bg-muted">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={post.thumbnailUrl}
-            alt={post.title}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
-
       <div className="space-y-2">
+        <span className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          {post.category === "tech" ? "Tech" : "Essay"}
+        </span>
         <h1 className="text-2xl sm:text-3xl font-bold leading-tight">{post.title}</h1>
         {post.subtitle && (
           <p className="text-base sm:text-lg text-muted-foreground">{post.subtitle}</p>
         )}
-        <p className="text-sm text-muted-foreground">{date}</p>
+        <div className="flex items-center gap-3 pt-2">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">
+            {post.createdBy?.name?.charAt(0) || "?"}
+          </div>
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-sm font-medium">
+                {post.createdBy?.name || "알 수 없음"}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">{date}</p>
+          </div>
+        </div>
       </div>
 
       <hr />
 
-      <article className="prose-sm sm:prose max-w-none">
+      {post.thumbnailUrl ? (
+        <div className="relative aspect-[2/1] w-full overflow-hidden rounded-[8px] bg-muted after:pointer-events-none after:absolute after:inset-0 after:z-10 after:rounded-[8px] after:ring-1 after:ring-inset after:ring-[#bdbdbd]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={post.thumbnailUrl}
+            alt={post.title}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      ) : (
+        <DefaultBlogThumbnail
+          title={post.title}
+          className="aspect-[2/1] w-full"
+        />
+      )}
+
+      <article className="prose-sm sm:prose max-w-none!">
         <MarkdownPreview content={post.description} />
       </article>
     </main>

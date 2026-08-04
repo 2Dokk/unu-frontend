@@ -204,6 +204,17 @@ export default function Home() {
         </div>
       </section>
 
+      <section
+        id="recruit"
+        className="flex min-h-[585px] scroll-mt-16 items-center justify-center bg-[#14231b] py-20 sm:min-h-[720px]"
+      >
+        <div className="w-full">
+          <Suspense fallback={<RecruitmentCTASkeleton />}>
+            <RecruitmentCTA />
+          </Suspense>
+        </div>
+      </section>
+
       <Link
         href="/portfolio"
         className="group relative block h-[270px] overflow-hidden border-b border-[#e5e5e5] bg-white/30 transition-colors duration-300 hover:bg-[#14231b] sm:h-[450px]"
@@ -243,17 +254,6 @@ export default function Home() {
           </span>
         </div>
       </Link>
-
-      <section
-        id="recruit"
-        className="flex min-h-[585px] scroll-mt-16 items-center justify-center bg-[#14231b] py-20 sm:min-h-[720px]"
-      >
-        <div className="w-full">
-          <Suspense fallback={<RecruitmentCTASkeleton />}>
-            <RecruitmentCTA />
-          </Suspense>
-        </div>
-      </section>
 
       <section
         id="contact"

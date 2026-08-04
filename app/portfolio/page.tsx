@@ -25,7 +25,7 @@ export default function PortfolioPage() {
   const sliderPortfolios = pinned.length > 0 ? pinned : portfolios;
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-6 py-8 space-y-10">
+    <main className="mx-auto w-full max-w-6xl px-6 py-8 space-y-10">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="font-cnu-display mb-3 text-6xl leading-[0.92] font-bold sm:text-7xl">
@@ -51,7 +51,7 @@ export default function PortfolioPage() {
       {/* Recent */}
       {!loading && portfolios.length > 0 && (
         <section className="space-y-4">
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             {portfolios.map((p) => (
               <PortfolioRecentCard key={p.id} portfolio={p} />
             ))}
