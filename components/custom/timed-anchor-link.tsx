@@ -19,7 +19,7 @@ export function TimedAnchorLink({
   className,
   duration = 900,
   href,
-  offset = 64,
+  offset,
   targetId,
 }: TimedAnchorLinkProps) {
   const pathname = usePathname();
@@ -44,7 +44,9 @@ export function TimedAnchorLink({
     }
 
     const startY = window.scrollY;
-    const targetY = target.getBoundingClientRect().top + startY - offset;
+    const headerHeight =
+      offset ?? document.querySelector("header")?.getBoundingClientRect().height ?? 0;
+    const targetY = target.getBoundingClientRect().top + startY - headerHeight;
     const distance = targetY - startY;
 
     window.history.pushState(null, "", `#${targetId}`);

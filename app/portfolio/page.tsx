@@ -28,9 +28,7 @@ export default function PortfolioPage() {
     <main className="mx-auto w-full max-w-4xl px-6 py-8 space-y-10">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="font-cnu-display mb-3 text-6xl leading-[0.92] font-bold sm:text-[82px]">
-            Our
-            <br />
+          <h1 className="font-cnu-display mb-3 text-6xl leading-[0.92] font-bold sm:text-7xl">
             Portfolio
           </h1>
           <p className="text-muted-foreground text-xl">
@@ -38,7 +36,7 @@ export default function PortfolioPage() {
           </p>
         </div>
         {isAuthenticated && (
-          <Button size="sm" onClick={() => router.push("/portfolio/create")}>
+          <Button size="sm" className="mt-8" onClick={() => router.push("/portfolio/create")}>
             추가
           </Button>
         )}

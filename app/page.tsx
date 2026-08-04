@@ -22,7 +22,7 @@ const FEATURES = [
 ];
 
 const NEWS_ITEMS = [
-  { tag: "활동", title: "[08.29] CNU 선배와의 만남 신청 모집", date: "2026.08.18" },
+  { tag: "활동", title: "[08.29] CNU 선배와의 만남", date: "2026.08.18" },
   {
     tag: "활동",
     title: "[07.13 ~] 26 Summer 활동 시작 ",
@@ -59,7 +59,7 @@ async function RecruitmentCTA() {
 
   return (
     <div className="font-cnu-body flex flex-col items-center px-5 text-center text-white">
-      <div className="flex min-h-[50px] w-full max-w-[650px] items-center justify-center rounded-full border border-[#8b8a8a] px-5 text-sm sm:text-xl">
+      <div className="flex min-h-[45px] w-full max-w-[585px] items-center justify-center rounded-full border border-[#8b8a8a] px-5 text-sm sm:text-xl">
         {activeRecruitment
           ? `현재 모집 중${dDay !== null && dDay >= 0 ? ` · D-${dDay}` : ""}`
           : quarterLabel
@@ -67,7 +67,7 @@ async function RecruitmentCTA() {
             : "지금은 모집 기간이 아니에요 · 다음 모집 준비 중"}
       </div>
 
-      <h2 className="font-cnu-display mt-12 text-[44px] leading-[1.06] font-bold sm:text-6xl lg:text-[92px] lg:leading-[96px]">
+      <h2 className="font-cnu-display mt-12 text-[40px] leading-[1.06] font-bold sm:text-6xl lg:text-[83px] lg:leading-[86px]">
         함께할 분들을
         <br />
         기다리고 있어요.
@@ -88,7 +88,7 @@ async function RecruitmentCTA() {
 
       <Link
         href="/apply"
-        className="mt-10 flex h-[50px] w-full max-w-[434px] items-center justify-center rounded-full bg-white px-6 text-lg font-medium text-black transition-colors hover:bg-[#264638] hover:text-white sm:text-2xl"
+        className="mt-10 flex h-[45px] w-full max-w-[391px] items-center justify-center rounded-full bg-white px-6 text-lg font-medium text-black transition-colors hover:bg-[#264638] hover:text-white sm:text-2xl"
       >
         {activeRecruitment ? "지원하러 가기" : "모집 공고 확인하기"}
       </Link>
@@ -98,7 +98,7 @@ async function RecruitmentCTA() {
 
 function RecruitmentCTASkeleton() {
   return (
-    <div className="mx-auto h-[50px] w-full max-w-[650px] animate-pulse rounded-full bg-white/10" />
+    <div className="mx-auto h-[45px] w-full max-w-[585px] animate-pulse rounded-full bg-white/10" />
   );
 }
 
@@ -109,41 +109,41 @@ export default function Home() {
       className="font-cnu-body overflow-x-hidden bg-white text-black"
     >
       <section className="relative overflow-hidden border-b border-[#dddddd]">
-        <div className="pointer-events-none absolute -top-20 -left-44 h-[760px] w-[820px] opacity-80 sm:-left-24">
+        <div className="pointer-events-none absolute -top-20 -left-40 h-[684px] w-[738px] opacity-80 sm:-left-20">
           <Image
             src="/home-hero-glow.svg"
             alt=""
             fill
-            sizes="820px"
+            sizes="738px"
             className="object-contain"
             priority
           />
         </div>
 
-        <div className="relative mx-auto w-full max-w-[1354px] px-5 sm:px-8">
-          <div className="min-h-[560px] pt-12 sm:pt-16 2xl:pl-[55px]">
+        <div className="relative mx-auto w-full max-w-[1219px] px-5 sm:px-8">
+          <div className="min-h-[504px] pt-12 sm:pt-16 2xl:pl-[50px]">
             <p className="font-cnu-display text-sm font-bold text-[#2d9c64] sm:text-2xl">
               WEB DEVELOPMENT &amp; SOFTWARE SYSTEM COMMUNITY
             </p>
-            <h1 className="font-cnu-display mt-2 text-7xl leading-none font-bold tracking-[0.5px] sm:text-8xl lg:text-[128px] lg:leading-[140px]">
+            <h1 className="font-cnu-display mt-2 text-7xl leading-none font-bold tracking-[0.45px] sm:text-8xl lg:text-[115px] lg:leading-[126px]">
               CNU
             </h1>
-            <p className="mt-2 max-w-[670px] text-base leading-8 text-[#999999] sm:text-2xl sm:leading-[80px]">
+            <p className="mt-2 max-w-[603px] text-base leading-8 text-[#999999] sm:text-2xl sm:leading-[72px]">
               <span className="text-[#2d9c64]">웹과 시스템</span>을 중심으로 함께
               성장하는 서강대학교 컴퓨터공학과 학회
             </p>
             <TimedAnchorLink
               targetId="recruit"
               duration={900}
-              className="mt-4 flex h-[50px] w-[200px] items-center justify-center rounded-full border border-[#c9c9c9] bg-white text-lg font-medium transition-colors hover:border-[#264638] hover:bg-[#264638] hover:text-white sm:text-2xl"
+              className="mt-4 flex h-[45px] w-[180px] items-center justify-center rounded-full border border-[#c9c9c9] bg-white text-lg font-medium transition-colors hover:border-[#264638] hover:bg-[#264638] hover:text-white sm:text-2xl"
             >
               지원 안내
             </TimedAnchorLink>
 
-            <div className="mt-12 grid max-w-[760px] grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4 sm:gap-x-10">
+            <div className="mt-12 grid max-w-[684px] grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4 sm:gap-x-10">
               {STATS.map((stat) => (
                 <div key={stat.label}>
-                  <p className="text-4xl leading-none font-medium sm:text-[56px] lg:text-[64px]">
+                  <p className="text-4xl leading-none font-medium sm:text-[50px] lg:text-[58px]">
                     {stat.value}
                   </p>
                   <p className="mt-4 text-sm font-medium sm:text-xl">
@@ -155,22 +155,22 @@ export default function Home() {
           </div>
 
           <div className="pt-20 text-center sm:pt-28">
-            <h2 className="font-cnu-display text-4xl font-bold text-[#020618] sm:text-5xl lg:text-[60px] lg:leading-[72px]">
+            <h2 className="font-cnu-display text-4xl font-bold text-[#020618] sm:text-5xl lg:text-[54px] lg:leading-[65px]">
               CNU는 어떤 곳인가요?
             </h2>
-            <p className="mx-auto mt-7 max-w-[900px] text-base leading-relaxed text-[#62748e] sm:text-2xl sm:leading-[1.4]">
+            <p className="mx-auto mt-7 max-w-[810px] text-base leading-relaxed text-[#62748e] sm:text-2xl sm:leading-[1.4]">
               CNU는 웹 개발과 소프트웨어 시스템 기술을 중심으로 활동하는 학회입니다.
               <br className="hidden sm:block" /> 스터디와 프로젝트를 통해 실전 역량을
               키우고, 함께 협업하며 성장하는 경험을 제공합니다.
             </p>
 
-            <div className="mx-auto mt-16 grid max-w-[1024px] gap-6 text-left md:grid-cols-3">
+            <div className="mx-auto mt-16 grid max-w-[922px] gap-6 text-left md:grid-cols-3">
               {FEATURES.map(({ title, description, Icon }) => (
                 <div
                   key={title}
-                  className="flex min-h-[197px] flex-col justify-end rounded-[14px] border border-slate-200/50 bg-white p-6 shadow-sm"
+                  className="flex min-h-[177px] flex-col justify-end rounded-[13px] border border-slate-200/50 bg-white p-6 shadow-sm"
                 >
-                  <div className="mb-4 flex size-12 items-center justify-center rounded-[10px] bg-[#0f172b]/10">
+                  <div className="mb-4 flex size-12 items-center justify-center rounded-[9px] bg-[#0f172b]/10">
                     <Icon className="size-6 text-[#020618]" />
                   </div>
                   <h3 className="text-xl font-bold text-[#020618]">{title}</h3>
@@ -180,20 +180,20 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="pt-28 pb-24 sm:pt-36 sm:pb-[132px]">
-            <h2 className="mx-auto w-[90%] max-w-[1161px] text-4xl font-semibold sm:text-5xl">
+          <div className="pt-28 pb-24 sm:pt-36 sm:pb-[119px]">
+            <h2 className="mx-auto w-[90%] max-w-[1045px] text-4xl font-semibold sm:text-5xl">
               학회 소식
             </h2>
-            <div className="mx-auto mt-10 w-[90%] max-w-[1161px] overflow-hidden rounded-[29px] bg-white/50 shadow-[0_1px_81px_rgba(0,0,0,0.25)] backdrop-blur-xl">
+            <div className="mx-auto mt-10 w-[90%] max-w-[1045px] overflow-hidden rounded-[26px] bg-white/50 shadow-[0_1px_73px_rgba(0,0,0,0.25)] backdrop-blur-xl">
               {NEWS_ITEMS.map((item) => (
                 <div
                   key={item.title}
-                  className="grid min-h-[86px] grid-cols-[65px_minmax(0,1fr)] items-center gap-3.5 border-b border-[#d8d8d8] px-[18px] last:border-b-0 sm:min-h-[99px] sm:grid-cols-[90px_minmax(0,1fr)_198px] sm:gap-8 sm:px-[45px]"
+                  className="grid min-h-[77px] grid-cols-[59px_minmax(0,1fr)] items-center gap-3.5 border-b border-[#d8d8d8] px-4 last:border-b-0 sm:min-h-[89px] sm:grid-cols-[81px_minmax(0,1fr)_178px] sm:gap-8 sm:px-[41px]"
                 >
-                  <span className="flex h-9 items-center justify-center rounded-full bg-[#37825d] text-[13px] text-white sm:h-[41px] sm:text-lg">
+                  <span className="flex h-9 items-center justify-center rounded-full bg-[#37825d] text-xs text-white sm:h-[37px] sm:text-lg">
                     {item.tag}
                   </span>
-                  <span className="truncate text-[15px] sm:text-xl">{item.title}</span>
+                  <span className="truncate text-sm sm:text-xl">{item.title}</span>
                   <span className="hidden text-center text-xl text-[#929191] sm:block">
                     {item.date}
                   </span>
@@ -206,11 +206,11 @@ export default function Home() {
 
       <Link
         href="/portfolio"
-        className="group relative block h-[300px] overflow-hidden border-b border-[#e5e5e5] bg-white/30 transition-colors duration-300 hover:bg-[#14231b] sm:h-[500px]"
+        className="group relative block h-[270px] overflow-hidden border-b border-[#e5e5e5] bg-white/30 transition-colors duration-300 hover:bg-[#14231b] sm:h-[450px]"
       >
-        <div className="relative mx-auto h-full w-full max-w-[1180px] px-5">
+        <div className="relative mx-auto h-full w-full max-w-[1062px] px-5">
           <div className="absolute top-1/2 left-5 -translate-y-1/2 sm:left-0">
-            <h2 className="font-cnu-display text-4xl font-bold tracking-[-0.5px] transition-colors group-hover:text-white sm:text-[68px] sm:leading-[60px]">
+            <h2 className="font-cnu-display text-4xl font-bold tracking-[-0.45px] transition-colors group-hover:text-white sm:text-[61px] sm:leading-[54px]">
               지금까지의 작업
             </h2>
             <p className="mt-4 text-base font-bold transition-colors group-hover:text-white sm:text-2xl">
@@ -218,7 +218,7 @@ export default function Home() {
             </p>
           </div>
           <ArrowRight className="absolute top-1/2 right-5 size-8 -translate-y-1/2 text-[#2d9c64] transition-colors group-hover:text-white sm:right-0 sm:size-10" />
-          <span className="font-cnu-display absolute right-5 bottom-5 text-[72px] leading-none font-bold tracking-[-0.5px] text-[#e0e0e0] transition-colors group-hover:text-white sm:right-0 sm:bottom-4 sm:text-[180px]">
+          <span className="font-cnu-display absolute right-5 bottom-5 text-[65px] leading-none font-bold tracking-[-0.45px] text-[#e0e0e0] transition-colors group-hover:text-white sm:right-0 sm:bottom-4 sm:text-[162px]">
             portfolio
           </span>
         </div>
@@ -226,11 +226,11 @@ export default function Home() {
 
       <Link
         href="/blog"
-        className="group relative block h-[300px] overflow-hidden border-b border-[#e5e5e5] bg-white/30 transition-colors duration-300 hover:bg-[#14231b] sm:h-[500px]"
+        className="group relative block h-[270px] overflow-hidden border-b border-[#e5e5e5] bg-white/30 transition-colors duration-300 hover:bg-[#14231b] sm:h-[450px]"
       >
-        <div className="relative mx-auto h-full w-full max-w-[1180px] px-5">
+        <div className="relative mx-auto h-full w-full max-w-[1062px] px-5">
           <div className="absolute top-1/2 left-5 -translate-y-1/2 sm:left-0">
-            <h2 className="font-cnu-display text-4xl font-bold tracking-[-0.5px] transition-colors group-hover:text-white sm:text-[68px] sm:leading-[60px]">
+            <h2 className="font-cnu-display text-4xl font-bold tracking-[-0.45px] transition-colors group-hover:text-white sm:text-[61px] sm:leading-[54px]">
               남겨온 이야기
             </h2>
             <p className="mt-4 text-base font-bold transition-colors group-hover:text-white sm:text-2xl">
@@ -238,7 +238,7 @@ export default function Home() {
             </p>
           </div>
           <ArrowRight className="absolute top-1/2 right-5 size-8 -translate-y-1/2 text-[#2d9c64] transition-colors group-hover:text-white sm:right-0 sm:size-10" />
-          <span className="font-cnu-display absolute right-5 bottom-5 text-[88px] leading-none font-bold tracking-[-0.5px] text-[#e0e0e0] transition-colors group-hover:text-white sm:right-0 sm:bottom-4 sm:text-[180px]">
+          <span className="font-cnu-display absolute right-5 bottom-5 text-[79px] leading-none font-bold tracking-[-0.45px] text-[#e0e0e0] transition-colors group-hover:text-white sm:right-0 sm:bottom-4 sm:text-[162px]">
             blog
           </span>
         </div>
@@ -246,7 +246,7 @@ export default function Home() {
 
       <section
         id="recruit"
-        className="flex min-h-[650px] scroll-mt-16 items-center justify-center bg-[#14231b] py-20 sm:min-h-[800px]"
+        className="flex min-h-[585px] scroll-mt-16 items-center justify-center bg-[#14231b] py-20 sm:min-h-[720px]"
       >
         <div className="w-full">
           <Suspense fallback={<RecruitmentCTASkeleton />}>
@@ -257,10 +257,10 @@ export default function Home() {
 
       <section
         id="contact"
-        className="scroll-mt-16 px-5 py-16 sm:min-h-[1500px] sm:px-8 sm:pt-[59px]"
+        className="scroll-mt-16 px-5 py-16 sm:min-h-[1350px] sm:px-8 sm:pt-[53px]"
       >
-        <div className="mx-auto w-full max-w-[1180px]">
-          <h2 className="font-cnu-display text-6xl leading-none font-bold tracking-[0.5px] text-[#020618] sm:text-[88px] sm:leading-[96px]">
+        <div className="mx-auto w-full max-w-[1062px]">
+          <h2 className="font-cnu-display text-6xl leading-none font-bold tracking-[0.45px] text-[#020618] sm:text-[79px] sm:leading-[86px]">
             Contact
           </h2>
           <p className="mt-8 text-base font-medium leading-8 text-[#0b0c0c] sm:text-2xl">
@@ -271,7 +271,7 @@ export default function Home() {
           </p>
           <a
             href="mailto:admin@cnu.team"
-            className="mt-10 flex h-[66px] w-[260px] items-center justify-center rounded-full border border-black bg-white text-lg font-medium transition-colors hover:bg-[#1f3f2e] hover:text-white sm:w-[318px] sm:text-2xl"
+            className="mt-10 flex h-[59px] w-[234px] items-center justify-center rounded-full border border-black bg-white text-lg font-medium transition-colors hover:bg-[#1f3f2e] hover:text-white sm:w-[286px] sm:text-2xl"
           >
             메일로 문의하기
           </a>
@@ -280,12 +280,12 @@ export default function Home() {
           <p className="mt-5 text-base font-medium leading-8 sm:text-2xl">
             CNU의 랩실 R912는 서강대학교 리치과학관 9층에 위치하고 있습니다.
           </p>
-          <div className="relative mx-auto mt-5 aspect-[885/679] w-full max-w-[885px] overflow-hidden">
+          <div className="relative mx-auto mt-5 aspect-[885/679] w-full max-w-[797px] overflow-hidden">
             <Image
               src="/map.png"
               alt="CNU 랩실 위치 지도"
               fill
-              sizes="(max-width: 900px) 100vw, 885px"
+              sizes="(max-width: 900px) 100vw, 797px"
               className="object-cover"
             />
           </div>

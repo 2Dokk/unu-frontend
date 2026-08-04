@@ -42,7 +42,7 @@ export default function BlogPage() {
         {isAuthenticated && (
           <Button
             size="sm"
-            className="shrink-0"
+            className="mt-8"
             onClick={() => router.push("/blog/create")}
           >
             글 작성

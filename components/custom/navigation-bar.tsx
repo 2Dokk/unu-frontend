@@ -32,13 +32,13 @@ export function NavigationBar() {
   }, []);
 
   const rightContent = () => {
-    if (isLoading) return <div className="h-16 w-20 sm:w-[148px]" />;
+    if (isLoading) return <div className="h-16 w-20 sm:w-[133px]" />;
 
     if (userRole === "GUEST") {
       return (
         <Link
           href="/login"
-          className="font-cnu-body flex h-16 items-center justify-center px-4 text-base text-[#999999] transition-colors hover:bg-[rgba(225,238,224,0.33)] hover:text-black sm:w-[148px] sm:px-0 sm:text-[19.8px]"
+          className="font-cnu-body flex h-16 items-center justify-center px-4 text-base text-[#999999] transition-colors hover:bg-[rgba(225,238,224,0.33)] hover:text-black sm:w-[133px] sm:px-0 sm:text-[17.8px]"
         >
           로그인
         </Link>
@@ -47,11 +47,11 @@ export function NavigationBar() {
 
     return (
       <div className="flex h-16 items-center gap-2 pr-3 md:gap-4 md:pr-6">
-        {currentQuarter && (
+        {/* {currentQuarter && (
           <span className="font-cnu-body hidden text-sm font-medium text-[#777777] sm:block">
-            {currentQuarter.year} {currentQuarter.season.toUpperCase()}
+           {currentQuarter.year} {currentQuarter.season.toUpperCase()}
           </span>
-        )}
+        )} 없어도 될듯 해서 뺍니다 */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -82,7 +82,7 @@ export function NavigationBar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 w-full shrink-0 items-center border-b border-black/5 bg-white/95 pl-4 backdrop-blur md:pl-[29px]">
+    <header className="sticky top-0 z-50 flex h-16 w-full shrink-0 items-center border-b border-black/5 bg-white/95 pl-4 backdrop-blur md:pl-[26px]">
       {!isLoading && userRole !== "GUEST" && (
         <Button
           variant="ghost"
@@ -99,13 +99,13 @@ export function NavigationBar() {
         href="/"
         targetId="home-top"
         duration={900}
-        className="relative size-[35px] shrink-0 overflow-hidden rounded-[9px] transition-opacity hover:opacity-80"
+        className="relative size-8 shrink-0 overflow-hidden rounded-lg transition-opacity hover:opacity-80"
       >
         <Image
           src="/cnu-header-logo.png"
           alt="CNU"
           fill
-          sizes="35px"
+          sizes="32px"
           className="object-cover"
           priority
         />

@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
 
 const NAV_ITEMS = [
-  { label: "활동", href: "/portfolio", width: "w-[140px]" },
-  { label: "블로그", href: "/blog", width: "w-[148px]" },
+  { label: "활동", href: "/portfolio", width: "w-[126px]" },
+  { label: "블로그", href: "/blog", width: "w-[133px]" },
   {
     label: "문의",
     href: "/#contact",
-    width: "w-[140px]",
+    width: "w-[126px]",
     targetId: "contact",
   },
 ];
@@ -25,7 +25,7 @@ export function PublicNavLinks() {
         const route = href.split("#")[0] || "/";
         const isActive = route !== "/" && pathname.startsWith(route);
         const className = cn(
-          "font-cnu-body flex h-16 items-center justify-center text-[19.8px] font-normal tracking-[0.2px] transition-colors",
+          "font-cnu-body flex h-16 items-center justify-center text-[17.8px] font-normal tracking-[0.18px] transition-colors",
           "hover:bg-[rgba(225,238,224,0.33)] hover:text-black",
           width,
           isActive
