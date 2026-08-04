@@ -194,12 +194,14 @@ export default function BlogCreatePage() {
       <div className="my-6 border-t" />
 
       {/* Body editor */}
-      <NotionEditor
-        value={form.description}
-        onChange={(v) => set("description", v)}
-        onImageUpload={uploadImage}
-        onImageUploaded={handleImageUploaded}
-      />
+      <div className="[&_.ProseMirror]:min-h-[60vh]">
+        <NotionEditor
+          value={form.description}
+          onChange={(v) => set("description", v)}
+          onImageUpload={uploadImage}
+          onImageUploaded={handleImageUploaded}
+        />
+      </div>
     </form>
   );
 }

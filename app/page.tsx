@@ -1,22 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowRight, Code2, Rocket, Users } from "lucide-react";
 import { formatDate } from "@/lib/utils/date-utils";
-import {
-  ArrowRight,
-  Code2,
-  Users,
-  Rocket,
-  Mail,
-  MapPin,
-} from "lucide-react";
 import { getActiveRecruitment } from "@/lib/api/recruitment";
 import { getCurrentQuarter } from "@/lib/api/quarter";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
+import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
 
 const STATS = [
   { value: "240+", label: "누적 학회원" },
@@ -25,15 +15,21 @@ const STATS = [
   { value: "2021", label: "시작년도" },
 ];
 
+const FEATURES = [
+  { title: "Study", description: "웹과 시스템 중심 스터디", Icon: Code2 },
+  { title: "Team Projects", description: "실전 프로젝트 경험", Icon: Rocket },
+  { title: "Community", description: "개발자 네트워크와 협업 문화", Icon: Users },
+];
+
 const NEWS_ITEMS = [
-  { tag: "모집", title: "신입 학회원 모집 ~ 9.1", date: "2026.07.22" },
+  { tag: "활동", title: "[08.29] CNU 선배와의 만남 신청 모집", date: "2026.08.18" },
   {
     tag: "활동",
-    title: "OO프로젝트 결과물 활동 게시판 업로드",
-    date: "2026.07.22",
+    title: "[07.13 ~] 26 Summer 활동 시작 ",
+    date: "2026.07.13",
   },
-  { tag: "행사", title: "06.24 종강총회", date: "2026.07.22" },
-  { tag: "안내", title: "공모전 안내", date: "2026.07.22" },
+  { tag: "모집", title: "26 Summer 신입 학회원 모집 [~ 06.30]", date: "2026.06.25" },
+  { tag: "행사", title: "[06.24] 26 Spring 종강총회", date: "2026.06.24" }
 ];
 
 function calculateDDay(endDate: string): number {
@@ -41,9 +37,7 @@ function calculateDDay(endDate: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
-  const diffTime = end.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  return Math.ceil((end.getTime() - today.getTime()) / 86_400_000);
 }
 
 function formatQuarterLabel(quarter: QuarterResponse): string {
@@ -64,31 +58,26 @@ async function RecruitmentCTA() {
     : null;
 
   return (
-    <div className="space-y-6 text-center">
-      <Badge className="border border-emerald-400/30 bg-emerald-500/10 px-4 py-1.5 text-sm font-medium text-emerald-300 hover:bg-emerald-500/10">
+    <div className="font-cnu-body flex flex-col items-center px-5 text-center text-white">
+      <div className="flex min-h-[50px] w-full max-w-[650px] items-center justify-center rounded-full border border-[#8b8a8a] px-5 text-sm sm:text-xl">
         {activeRecruitment
-          ? "현재 모집 중"
+          ? `현재 모집 중${dDay !== null && dDay >= 0 ? ` · D-${dDay}` : ""}`
           : quarterLabel
             ? `지금은 모집 기간이 아니에요 · 다음 모집 ${quarterLabel}`
             : "지금은 모집 기간이 아니에요 · 다음 모집 준비 중"}
-      </Badge>
+      </div>
 
-      <h2 className="text-3xl md:text-5xl font-bold leading-tight text-white">
+      <h2 className="font-cnu-display mt-12 text-[44px] leading-[1.06] font-bold sm:text-6xl lg:text-[92px] lg:leading-[96px]">
         함께할 분들을
         <br />
         기다리고 있어요.
       </h2>
 
-      <p className="text-base text-emerald-100/70 md:text-lg">
+      <p className="mt-8 text-base leading-8 sm:text-2xl">
         {activeRecruitment ? (
           <>
             {formatDate(activeRecruitment.startAt)} -{" "}
             {formatDate(activeRecruitment.endAt)} 지원을 받고 있습니다.
-            {dDay !== null && dDay >= 0 && (
-              <span className="ml-2 font-medium text-emerald-300">
-                D-{dDay}
-              </span>
-            )}
           </>
         ) : quarterLabel ? (
           `${quarterLabel} 분기 CNU 모집이 곧 시작될 예정입니다.`
@@ -97,245 +86,208 @@ async function RecruitmentCTA() {
         )}
       </p>
 
-      <Link href="/apply">
-        <Button
-          size="lg"
-          className="gap-2 bg-white px-8 text-base text-emerald-900 hover:bg-emerald-50"
-        >
-          {activeRecruitment ? "지원하러 가기" : "모집 공고 확인하기"}
-          <ArrowRight className="h-4 w-4" />
-        </Button>
+      <Link
+        href="/apply"
+        className="mt-10 flex h-[50px] w-full max-w-[434px] items-center justify-center rounded-full bg-white px-6 text-lg font-medium text-black transition-colors hover:bg-[#264638] hover:text-white sm:text-2xl"
+      >
+        {activeRecruitment ? "지원하러 가기" : "모집 공고 확인하기"}
       </Link>
     </div>
   );
 }
 
 function RecruitmentCTASkeleton() {
-  return <Skeleton className="mx-auto h-10 w-48 rounded-md bg-white/10" />;
+  return (
+    <div className="mx-auto h-[50px] w-full max-w-[650px] animate-pulse rounded-full bg-white/10" />
+  );
 }
 
 export default function Home() {
   return (
-    <div className="flex flex-col">
-      {/* Section 1: Hero */}
-      <section className="px-4 pb-16 pt-24 md:pb-24 md:pt-32">
-        <div className="mx-auto w-full max-w-5xl space-y-10 text-center">
-          <div className="space-y-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 md:text-sm">
-              Web Development &amp; Software System Community
-            </p>
+    <div
+      id="home-top"
+      className="font-cnu-body overflow-x-hidden bg-white text-black"
+    >
+      <section className="relative overflow-hidden border-b border-[#dddddd]">
+        <div className="pointer-events-none absolute -top-20 -left-44 h-[760px] w-[820px] opacity-80 sm:-left-24">
+          <Image
+            src="/home-hero-glow.svg"
+            alt=""
+            fill
+            sizes="820px"
+            className="object-contain"
+            priority
+          />
+        </div>
 
-            <h1 className="text-6xl font-bold tracking-tight md:text-8xl">
+        <div className="relative mx-auto w-full max-w-[1354px] px-5 sm:px-8">
+          <div className="min-h-[560px] pt-12 sm:pt-16 2xl:pl-[55px]">
+            <p className="font-cnu-display text-sm font-bold text-[#2d9c64] sm:text-2xl">
+              WEB DEVELOPMENT &amp; SOFTWARE SYSTEM COMMUNITY
+            </p>
+            <h1 className="font-cnu-display mt-2 text-7xl leading-none font-bold tracking-[0.5px] sm:text-8xl lg:text-[128px] lg:leading-[140px]">
               CNU
             </h1>
-
-            <p className="mx-auto max-w-2xl text-lg text-muted-foreground md:text-xl">
-              웹과 시스템을 중심으로 함께 성장하는 컴퓨터학회입니다.
+            <p className="mt-2 max-w-[670px] text-base leading-8 text-[#999999] sm:text-2xl sm:leading-[80px]">
+              <span className="text-[#2d9c64]">웹과 시스템</span>을 중심으로 함께
+              성장하는 서강대학교 컴퓨터공학과 학회
             </p>
+            <TimedAnchorLink
+              targetId="recruit"
+              duration={900}
+              className="mt-4 flex h-[50px] w-[200px] items-center justify-center rounded-full border border-[#c9c9c9] bg-white text-lg font-medium transition-colors hover:border-[#264638] hover:bg-[#264638] hover:text-white sm:text-2xl"
+            >
+              지원 안내
+            </TimedAnchorLink>
 
-            <Link href="/apply">
-              <Button variant="outline" className="rounded-full px-6">
-                지원 안내
-              </Button>
-            </Link>
-          </div>
-
-          <div className="mx-auto grid max-w-2xl grid-cols-2 gap-8 pt-4 md:grid-cols-4">
-            {STATS.map((stat) => (
-              <div key={stat.label} className="space-y-1">
-                <p className="text-3xl font-bold md:text-4xl">
-                  {stat.value}
-                </p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Section 2: About CNU */}
-      <section className="bg-muted/30 px-4 py-20 md:py-32">
-        <div className="mx-auto w-full max-w-5xl space-y-16">
-          {/* Title and description */}
-          <div className="mx-auto max-w-3xl space-y-6 text-center">
-            <h2 className="text-3xl font-bold md:text-4xl">
-              CNU는 어떤 곳인가요?
-            </h2>
-            <p className="text-lg leading-relaxed text-muted-foreground">
-              CNU는 웹 개발과 소프트웨어 시스템 기술을 중심으로 활동하는
-              학회입니다. 스터디와 프로젝트를 통해 실전 역량을 키우고, 함께
-              협업하며 성장하는 경험을 제공합니다.
-            </p>
-          </div>
-
-          {/* Feature blocks */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {/* Feature 1 */}
-            <Card className="border-border/50 transition-colors hover:border-border">
-              <CardContent className="space-y-4 pt-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/10">
-                  <Code2 className="h-6 w-6 text-emerald-600" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold">Study</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    웹과 시스템 중심 스터디
+            <div className="mt-12 grid max-w-[760px] grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4 sm:gap-x-10">
+              {STATS.map((stat) => (
+                <div key={stat.label}>
+                  <p className="text-4xl leading-none font-medium sm:text-[56px] lg:text-[64px]">
+                    {stat.value}
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Feature 2 */}
-            <Card className="border-border/50 transition-colors hover:border-border">
-              <CardContent className="space-y-4 pt-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/10">
-                  <Rocket className="h-6 w-6 text-emerald-600" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold">Team Projects</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    실전 프로젝트 경험
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Feature 3 */}
-            <Card className="border-border/50 transition-colors hover:border-border">
-              <CardContent className="space-y-4 pt-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/10">
-                  <Users className="h-6 w-6 text-emerald-600" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold">Community</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    개발자 네트워크와 협업 문화
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Section 3: 학회 소식 */}
-      <section className="px-4 py-20 md:py-32">
-        <div className="mx-auto w-full max-w-5xl space-y-8">
-          <h2 className="text-2xl font-bold md:text-3xl">학회 소식</h2>
-
-          <Card className="border-border/50 py-0">
-            <CardContent className="divide-y divide-border/50 p-0">
-              {NEWS_ITEMS.map((item) => (
-                <div
-                  key={item.title}
-                  className="flex items-center gap-4 px-6 py-4"
-                >
-                  <Badge className="shrink-0 bg-emerald-600 text-white hover:bg-emerald-600">
-                    {item.tag}
-                  </Badge>
-                  <p className="flex-1 truncate text-sm md:text-base">
-                    {item.title}
-                  </p>
-                  <p className="shrink-0 text-sm text-muted-foreground">
-                    {item.date}
+                  <p className="mt-4 text-sm font-medium sm:text-xl">
+                    {stat.label}
                   </p>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          <div className="pt-20 text-center sm:pt-28">
+            <h2 className="font-cnu-display text-4xl font-bold text-[#020618] sm:text-5xl lg:text-[60px] lg:leading-[72px]">
+              CNU는 어떤 곳인가요?
+            </h2>
+            <p className="mx-auto mt-7 max-w-[900px] text-base leading-relaxed text-[#62748e] sm:text-2xl sm:leading-[1.4]">
+              CNU는 웹 개발과 소프트웨어 시스템 기술을 중심으로 활동하는 학회입니다.
+              <br className="hidden sm:block" /> 스터디와 프로젝트를 통해 실전 역량을
+              키우고, 함께 협업하며 성장하는 경험을 제공합니다.
+            </p>
+
+            <div className="mx-auto mt-16 grid max-w-[1024px] gap-6 text-left md:grid-cols-3">
+              {FEATURES.map(({ title, description, Icon }) => (
+                <div
+                  key={title}
+                  className="flex min-h-[197px] flex-col justify-end rounded-[14px] border border-slate-200/50 bg-white p-6 shadow-sm"
+                >
+                  <div className="mb-4 flex size-12 items-center justify-center rounded-[10px] bg-[#0f172b]/10">
+                    <Icon className="size-6 text-[#020618]" />
+                  </div>
+                  <h3 className="text-xl font-bold text-[#020618]">{title}</h3>
+                  <p className="mt-2 text-base text-[#62748e]">{description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-28 pb-24 sm:pt-36 sm:pb-[132px]">
+            <h2 className="mx-auto w-[90%] max-w-[1161px] text-4xl font-semibold sm:text-5xl">
+              학회 소식
+            </h2>
+            <div className="mx-auto mt-10 w-[90%] max-w-[1161px] overflow-hidden rounded-[29px] bg-white/50 shadow-[0_1px_81px_rgba(0,0,0,0.25)] backdrop-blur-xl">
+              {NEWS_ITEMS.map((item) => (
+                <div
+                  key={item.title}
+                  className="grid min-h-[86px] grid-cols-[65px_minmax(0,1fr)] items-center gap-3.5 border-b border-[#d8d8d8] px-[18px] last:border-b-0 sm:min-h-[99px] sm:grid-cols-[90px_minmax(0,1fr)_198px] sm:gap-8 sm:px-[45px]"
+                >
+                  <span className="flex h-9 items-center justify-center rounded-full bg-[#37825d] text-[13px] text-white sm:h-[41px] sm:text-lg">
+                    {item.tag}
+                  </span>
+                  <span className="truncate text-[15px] sm:text-xl">{item.title}</span>
+                  <span className="hidden text-center text-xl text-[#929191] sm:block">
+                    {item.date}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Section 4: Portfolio teaser */}
       <Link
         href="/portfolio"
-        className="group block border-t border-border px-4 py-16 transition-colors hover:bg-muted/30 md:py-20"
+        className="group relative block h-[300px] overflow-hidden border-b border-[#e5e5e5] bg-white/30 transition-colors duration-300 hover:bg-[#14231b] sm:h-[500px]"
       >
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold md:text-3xl">
-                지금까지의 작업
-              </h2>
-              <ArrowRight className="h-5 w-5 text-emerald-600 transition-transform group-hover:translate-x-1" />
-            </div>
-            <p className="text-muted-foreground">
+        <div className="relative mx-auto h-full w-full max-w-[1180px] px-5">
+          <div className="absolute top-1/2 left-5 -translate-y-1/2 sm:left-0">
+            <h2 className="font-cnu-display text-4xl font-bold tracking-[-0.5px] transition-colors group-hover:text-white sm:text-[68px] sm:leading-[60px]">
+              지금까지의 작업
+            </h2>
+            <p className="mt-4 text-base font-bold transition-colors group-hover:text-white sm:text-2xl">
               CNU가 만들어온 활동을 소개합니다.
             </p>
           </div>
-          <span className="hidden select-none text-5xl font-bold text-muted-foreground/20 sm:block md:text-7xl">
+          <ArrowRight className="absolute top-1/2 right-5 size-8 -translate-y-1/2 text-[#2d9c64] transition-colors group-hover:text-white sm:right-0 sm:size-10" />
+          <span className="font-cnu-display absolute right-5 bottom-5 text-[72px] leading-none font-bold tracking-[-0.5px] text-[#e0e0e0] transition-colors group-hover:text-white sm:right-0 sm:bottom-4 sm:text-[180px]">
             portfolio
           </span>
         </div>
       </Link>
 
-      {/* Section 5: Blog teaser */}
       <Link
         href="/blog"
-        className="group block border-t border-border px-4 py-16 transition-colors hover:bg-muted/30 md:py-20"
+        className="group relative block h-[300px] overflow-hidden border-b border-[#e5e5e5] bg-white/30 transition-colors duration-300 hover:bg-[#14231b] sm:h-[500px]"
       >
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold md:text-3xl">
-                남겨온 이야기
-              </h2>
-              <ArrowRight className="h-5 w-5 text-emerald-600 transition-transform group-hover:translate-x-1" />
-            </div>
-            <p className="text-muted-foreground">
+        <div className="relative mx-auto h-full w-full max-w-[1180px] px-5">
+          <div className="absolute top-1/2 left-5 -translate-y-1/2 sm:left-0">
+            <h2 className="font-cnu-display text-4xl font-bold tracking-[-0.5px] transition-colors group-hover:text-white sm:text-[68px] sm:leading-[60px]">
+              남겨온 이야기
+            </h2>
+            <p className="mt-4 text-base font-bold transition-colors group-hover:text-white sm:text-2xl">
               기술과 경험, 그리고 생각을 나눕니다.
             </p>
           </div>
-          <span className="hidden select-none text-5xl font-bold text-muted-foreground/20 sm:block md:text-7xl">
+          <ArrowRight className="absolute top-1/2 right-5 size-8 -translate-y-1/2 text-[#2d9c64] transition-colors group-hover:text-white sm:right-0 sm:size-10" />
+          <span className="font-cnu-display absolute right-5 bottom-5 text-[88px] leading-none font-bold tracking-[-0.5px] text-[#e0e0e0] transition-colors group-hover:text-white sm:right-0 sm:bottom-4 sm:text-[180px]">
             blog
           </span>
         </div>
       </Link>
 
-      {/* Section 6: Recruitment CTA */}
-      <section className="border-t border-border bg-[#0b1f16] px-4 py-20 md:py-28">
-        <div className="mx-auto w-full max-w-3xl">
+      <section
+        id="recruit"
+        className="flex min-h-[650px] scroll-mt-16 items-center justify-center bg-[#14231b] py-20 sm:min-h-[800px]"
+      >
+        <div className="w-full">
           <Suspense fallback={<RecruitmentCTASkeleton />}>
             <RecruitmentCTA />
           </Suspense>
         </div>
       </section>
 
-      {/* Section 7: Contact */}
-      <section className="px-4 py-20 md:py-32">
-        <div className="mx-auto w-full max-w-5xl space-y-16">
-          <div className="space-y-5">
-            <h2 className="text-3xl font-bold md:text-4xl">Contact</h2>
-            <p className="leading-relaxed text-muted-foreground">
-              CNU의 모든 공식 문의는 이메일을 통해 받고 있습니다.
-              <br />
-              활동, 모집, 프로젝트, 협업과 관련해 궁금한 점이 있다면
-              admin@cnu.team으로 연락해 주세요.
-            </p>
-            <a href="mailto:admin@cnu.team">
-              <Button variant="outline" className="gap-2 rounded-full">
-                <Mail className="h-4 w-4" />
-                메일로 문의하기
-              </Button>
-            </a>
-          </div>
+      <section
+        id="contact"
+        className="scroll-mt-16 px-5 py-16 sm:min-h-[1500px] sm:px-8 sm:pt-[59px]"
+      >
+        <div className="mx-auto w-full max-w-[1180px]">
+          <h2 className="font-cnu-display text-6xl leading-none font-bold tracking-[0.5px] text-[#020618] sm:text-[88px] sm:leading-[96px]">
+            Contact
+          </h2>
+          <p className="mt-8 text-base font-medium leading-8 text-[#0b0c0c] sm:text-2xl">
+            CNU의 모든 공식 문의는 이메일을 통해 받고 있습니다.
+            <br />
+            활동, 모집, 프로젝트, 협업과 관련해 궁금한 점이 있다면
+            admin@cnu.team으로 연락해 주세요.
+          </p>
+          <a
+            href="mailto:admin@cnu.team"
+            className="mt-10 flex h-[66px] w-[260px] items-center justify-center rounded-full border border-black bg-white text-lg font-medium transition-colors hover:bg-[#1f3f2e] hover:text-white sm:w-[318px] sm:text-2xl"
+          >
+            메일로 문의하기
+          </a>
 
-          <div className="space-y-4">
-            <h3 className="flex items-center gap-2 text-xl font-semibold">
-              <MapPin className="h-5 w-5 text-emerald-600" />
-              랩실 위치
-            </h3>
-            <p className="text-muted-foreground">
-              CNU의 랩실은 서강대학교 리치과학관에 위치하고 있습니다.
-            </p>
-            <div className="relative h-64 overflow-hidden rounded-lg border border-border/50 md:h-80">
-              <Image
-                src="/map.png"
-                alt="CNU 랩실 위치 지도"
-                fill
-                className="object-cover"
-              />
-            </div>
+          <h3 className="mt-11 text-3xl font-bold">랩실 위치</h3>
+          <p className="mt-5 text-base font-medium leading-8 sm:text-2xl">
+            CNU의 랩실 R912는 서강대학교 리치과학관 9층에 위치하고 있습니다.
+          </p>
+          <div className="relative mx-auto mt-5 aspect-[885/679] w-full max-w-[885px] overflow-hidden">
+            <Image
+              src="/map.png"
+              alt="CNU 랩실 위치 지도"
+              fill
+              sizes="(max-width: 900px) 100vw, 885px"
+              className="object-cover"
+            />
           </div>
         </div>
       </section>

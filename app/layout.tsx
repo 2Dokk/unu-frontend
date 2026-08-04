@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Sans, Inter } from "next/font/google";
 import "./globals.css";
 import { NavigationBar } from "@/components/custom/navigation-bar";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
@@ -13,6 +13,16 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+const instrumentSans = Instrument_Sans({
+  variable: "--font-instrument-sans",
   subsets: ["latin"],
 });
 
@@ -32,14 +42,14 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${instrumentSans.variable} antialiased`}
       >
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
             <SidebarProvider>
-            <NavigationBar />
-            {children}
-          </SidebarProvider>
+              <NavigationBar />
+              {children}
+            </SidebarProvider>
           </div>
           <Toaster />
         </AuthProvider>

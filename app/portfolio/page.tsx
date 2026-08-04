@@ -28,12 +28,12 @@ export default function PortfolioPage() {
     <main className="mx-auto w-full max-w-4xl px-6 py-8 space-y-10">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-4xl font-bold mb-1">
+          <h1 className="font-cnu-display mb-3 text-6xl leading-[0.92] font-bold sm:text-[82px]">
             Our
             <br />
-            Portfolio.
+            Portfolio
           </h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-xl">
             CNU가 만들어온 활동을 소개합니다.
           </p>
         </div>

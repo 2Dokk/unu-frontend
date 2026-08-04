@@ -1,27 +1,10 @@
-/**
- * NavigationBar Component
- *
- * A role-aware navigation bar that adapts content based on user authentication state.
- *
- * Features:
- * - Text-based logo: "ItNU | IT and You"
- * - Logo links to different pages based on user role:
- *   - Anonymous: /apply (public recruitment page)
- *   - Member: /activities (member activities)
- *   - Admin: /manage (admin dashboard)
- *
- * Right-side content changes based on user role:
- * - Anonymous: Shows "모집 공고" and "로그인" buttons
- * - Member: Shows current quarter and profile dropdown with "내 페이지" and "로그아웃"
- * - Admin: Shows ADMIN badge and profile dropdown with admin-specific options
- */
-
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { ChevronDown, LogOut, User, Home, Shield, Menu } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, Home, LogOut, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -30,78 +13,67 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { getCurrentQuarter } from "@/lib/api/quarter";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useSidebar } from "@/lib/contexts/SidebarContext";
 import { PublicNavLinks } from "@/components/custom/public-nav-links";
+import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
 
 export function NavigationBar() {
   const router = useRouter();
-  const { userRole, logout: handleLogout, isLoading } = useAuth();
+  const { userRole, logout, isLoading } = useAuth();
   const { setIsOpen } = useSidebar();
   const [currentQuarter, setCurrentQuarter] =
     React.useState<QuarterResponse | null>(null);
 
   React.useEffect(() => {
-    getCurrentQuarter()
-      .then(setCurrentQuarter)
-      .catch((error) => {
-        console.error("Failed to fetch current quarter:", error);
-      });
+    getCurrentQuarter().then(setCurrentQuarter).catch(() => undefined);
   }, []);
 
-  const renderRightContent = () => {
-    if (isLoading) {
-      return null; // Avoid hydration mismatch
-    }
+  const rightContent = () => {
+    if (isLoading) return <div className="h-16 w-20 sm:w-[148px]" />;
 
     if (userRole === "GUEST") {
       return (
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/apply")}
-          >
-            모집 공고
-          </Button>
-          <Button size="sm" onClick={() => router.push("/login")}>
-            로그인
-          </Button>
-        </div>
+        <Link
+          href="/login"
+          className="font-cnu-body flex h-16 items-center justify-center px-4 text-base text-[#999999] transition-colors hover:bg-[rgba(225,238,224,0.33)] hover:text-black sm:w-[148px] sm:px-0 sm:text-[19.8px]"
+        >
+          로그인
+        </Link>
       );
     }
 
-    // MEMBER
     return (
-      <div className="flex items-center gap-4">
+      <div className="flex h-16 items-center gap-2 pr-3 md:gap-4 md:pr-6">
         {currentQuarter && (
-          <div className="hidden sm:block text-sm font-medium text-muted-foreground">
+          <span className="font-cnu-body hidden text-sm font-medium text-[#777777] sm:block">
             {currentQuarter.year} {currentQuarter.season.toUpperCase()}
-          </div>
+          </span>
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <User className="h-4 w-4" />
-              프로필
-              <ChevronDown className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="font-cnu-body gap-2 rounded-none text-[#777777] hover:bg-[rgba(225,238,224,0.33)] hover:text-black"
+            >
+              <User className="size-4" />
+              <span className="hidden sm:inline">프로필</span>
+              <ChevronDown className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={() => router.push("/home")}>
-              <Home className="mr-2 h-4 w-4" />홈
+              <Home className="mr-2 size-4" />홈
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push("/profile")}>
-              <User className="mr-2 h-4 w-4" />
-              프로필
+              <User className="mr-2 size-4" />프로필
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              로그아웃
+            <DropdownMenuItem onClick={logout}>
+              <LogOut className="mr-2 size-4" />로그아웃
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -110,33 +82,40 @@ export function NavigationBar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex w-full h-16 items-center justify-between border-b px-4 md:px-6 bg-background">
-      <div className="flex items-center gap-2">
-        {/* Mobile hamburger — only for logged-in users */}
-        {userRole !== "GUEST" && !isLoading && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setIsOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-        )}
-        {/* Logo */}
-        <Link
-          href="/"
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+    <header className="sticky top-0 z-50 flex h-16 w-full shrink-0 items-center border-b border-black/5 bg-white/95 pl-4 backdrop-blur md:pl-[29px]">
+      {!isLoading && userRole !== "GUEST" && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="mr-2 md:hidden"
+          onClick={() => setIsOpen(true)}
+          aria-label="메뉴 열기"
         >
-          <span className="text-xl font-bold tracking-tight">CNU&U</span>
-        </Link>
+          <Menu className="size-5" />
+        </Button>
+      )}
+
+      <TimedAnchorLink
+        href="/"
+        targetId="home-top"
+        duration={900}
+        className="relative size-[35px] shrink-0 overflow-hidden rounded-[9px] transition-opacity hover:opacity-80"
+      >
+        <Image
+          src="/cnu-header-logo.png"
+          alt="CNU"
+          fill
+          sizes="35px"
+          className="object-cover"
+          priority
+        />
+        <span className="sr-only">CNU 홈</span>
+      </TimedAnchorLink>
+
+      <div className="ml-auto flex h-16 items-stretch">
+        <PublicNavLinks />
+        {rightContent()}
       </div>
-
-      {/* Center Nav */}
-      <PublicNavLinks />
-
-      {/* Right Content */}
-      {renderRightContent()}
     </header>
   );
 }

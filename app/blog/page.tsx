@@ -35,7 +35,9 @@ export default function BlogPage() {
     <main className="mx-auto w-full max-w-4xl px-6 py-8 space-y-10">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold mb-1">Blog.</h1>
+          <h1 className="font-cnu-display mb-3 text-6xl leading-none font-bold sm:text-7xl">
+            Blog
+          </h1>
         </div>
         {isAuthenticated && (
           <Button
