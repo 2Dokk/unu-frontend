@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,7 +66,19 @@ const LoginPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2 text-center">
-          <CardTitle className="text-2xl font-bold">CNU&U</CardTitle>
+          <CardTitle className="flex items-center justify-center gap-2 text-2xl font-bold">
+            <span className="relative size-8 overflow-hidden rounded-lg">
+              <Image
+                src="/cnu-header-logo.png"
+                alt=""
+                fill
+                sizes="32px"
+                className="object-cover"
+                priority
+              />
+            </span>
+            CNU
+          </CardTitle>
           <CardDescription>
             학회 운영 및 활동 관리를 위한 내부 시스템입니다.
           </CardDescription>
@@ -103,7 +116,7 @@ const LoginPage = () => {
               <Field>
                 <Button
                   type="submit"
-                  className="w-full h-11"
+                  className="h-11 w-full bg-[#264638] text-white hover:bg-[#1f382d]"
                   disabled={loading}
                 >
                   {loading ? "로그인 중..." : "로그인"}

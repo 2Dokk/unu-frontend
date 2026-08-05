@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Sans, Inter } from "next/font/google";
 import "./globals.css";
 import { NavigationBar } from "@/components/custom/navigation-bar";
+import { SiteFooter } from "@/components/custom/site-footer";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { SidebarProvider } from "@/lib/contexts/SidebarContext";
 import { Toaster } from "@/components/ui/sonner";
@@ -49,6 +50,7 @@ export default function RootLayout({
             <SidebarProvider>
               <NavigationBar />
               {children}
+              <SiteFooter />
             </SidebarProvider>
           </div>
           <Toaster />

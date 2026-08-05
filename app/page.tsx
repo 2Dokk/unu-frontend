@@ -22,7 +22,7 @@ const FEATURES = [
 ];
 
 const NEWS_ITEMS = [
-  { tag: "활동", title: "[08.29] CNU 선배와의 만남", date: "2026.08.18" },
+  { tag: "행사", title: "[08.29] CNU 선배와의 만남", date: "2026.08.18" },
   {
     tag: "활동",
     title: "[07.13 ~] 26 Summer 활동 시작 ",
@@ -122,10 +122,10 @@ export default function Home() {
 
         <div className="relative mx-auto w-full max-w-[1219px] px-5 sm:px-8">
           <div className="min-h-[504px] pt-12 sm:pt-16 2xl:pl-[50px]">
-            <p className="font-cnu-display text-sm font-bold text-[#2d9c64] sm:text-2xl">
+            <p className="font-cnu-body text-sm font-semibold text-[#2d9c64] sm:text-2xl">
               WEB DEVELOPMENT &amp; SOFTWARE SYSTEM COMMUNITY
             </p>
-            <h1 className="font-cnu-display mt-2 text-7xl leading-none font-bold tracking-[0.45px] sm:text-8xl lg:text-[115px] lg:leading-[126px]">
+            <h1 className="font-cnu-body mt-2 text-7xl leading-none font-bold tracking-[0.45px] sm:text-8xl lg:text-[115px] lg:leading-[126px]">
               CNU
             </h1>
             <p className="mt-2 max-w-[603px] text-base leading-8 text-[#999999] sm:text-2xl sm:leading-[72px]">
@@ -155,7 +155,7 @@ export default function Home() {
           </div>
 
           <div className="pt-20 text-center sm:pt-28">
-            <h2 className="font-cnu-display text-4xl font-bold text-[#020618] sm:text-5xl lg:text-[54px] lg:leading-[65px]">
+            <h2 className="font-cnu-body text-4xl font-bold text-[#020618] sm:text-5xl lg:text-[54px] lg:leading-[65px]">
               CNU는 어떤 곳인가요?
             </h2>
             <p className="mx-auto mt-7 max-w-[810px] text-base leading-relaxed text-[#62748e] sm:text-2xl sm:leading-[1.4]">
@@ -267,7 +267,7 @@ export default function Home() {
             CNU의 모든 공식 문의는 이메일을 통해 받고 있습니다.
             <br />
             활동, 모집, 프로젝트, 협업과 관련해 궁금한 점이 있다면
-            admin@cnu.team으로 연락해 주세요.
+            admin@cnu.team으로 전달해 주세요.
           </p>
           <a
             href="mailto:admin@cnu.team"
@@ -280,6 +280,7 @@ export default function Home() {
           <p className="mt-5 text-base font-medium leading-8 sm:text-2xl">
             CNU의 랩실 R912는 서강대학교 리치과학관 9층에 위치하고 있습니다.
           </p>
+          <br></br>
           <div className="relative mx-auto mt-5 aspect-[885/679] w-full max-w-[797px] overflow-hidden">
             <Image
               src="/map.png"
