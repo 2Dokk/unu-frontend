@@ -20,6 +20,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import ImageExtension from "@tiptap/extension-image";
 import Suggestion from "@tiptap/suggestion";
 import { marked } from "marked";
+import { toast } from "sonner";
 import {
   Bold,
   Italic,
@@ -477,6 +478,8 @@ export function NotionEditor({
       const { id, url } = await propsRef.current.onImageUpload(file);
       propsRef.current.onImageUploaded?.(id, url);
       editorRef.current?.chain().focus().setImage({ src: url }).run();
+    } catch {
+      toast.error("이미지 업로드에 실패했습니다. 다시 시도해 주세요.");
     } finally {
       setUploading(false);
     }
