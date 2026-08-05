@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
@@ -71,6 +72,7 @@ export default function BlogDetailPage() {
     month: "long",
     day: "numeric",
   });
+  const githubId = post.createdBy?.githubId?.trim();
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8 space-y-6">
@@ -131,6 +133,23 @@ export default function BlogDetailPage() {
             </div>
             <p className="text-xs text-muted-foreground">{date}</p>
           </div>
+          {githubId && (
+            <a
+              href={`https://github.com/${encodeURIComponent(githubId)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="ml-auto flex size-9 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`${post.createdBy?.name || githubId}의 GitHub 프로필 열기`}
+              title={`@${githubId}`}
+            >
+              <Image
+                src="/github-icon.svg"
+                alt=""
+                width={28}
+                height={28}
+              />
+            </a>
+          )}
         </div>
       </div>
 

@@ -6,6 +6,7 @@ export interface AuditorDto {
   name: string;
   username: string;
   studentId: string;
+  githubId?: string | null;
 }
 
 export interface LoginRequest {
