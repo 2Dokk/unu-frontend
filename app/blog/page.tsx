@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getBlogPosts } from "@/lib/api/blog";
+import { getBlogPosts, getCachedBlogPosts } from "@/lib/api/blog";
 import { BlogPost, BlogCategory } from "@/lib/interfaces/blog";
 import { BlogCard } from "@/components/custom/blog/blog-card";
 import { FeaturedBlogPost } from "@/components/custom/blog/featured-blog-post";
@@ -21,8 +21,10 @@ const FILTERS: { value: Filter; label: string }[] = [
 export default function BlogPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<BlogPost[]>(
+    () => getCachedBlogPosts()?.posts ?? [],
+  );
+  const [loading, setLoading] = useState(() => !getCachedBlogPosts());
   const [active, setActive] = useState<Filter>("all");
   const [featuredPost, ...remainingPosts] = posts;
 
@@ -44,7 +46,9 @@ export default function BlogPage() {
 
   const handleFilterChange = (value: Filter) => {
     if (value === active) return;
-    setLoading(true);
+    const cached = getCachedBlogPosts(value === "all" ? undefined : value);
+    setPosts(cached?.posts ?? []);
+    setLoading(!cached);
     setActive(value);
   };
 

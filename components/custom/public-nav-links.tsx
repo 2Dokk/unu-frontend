@@ -4,10 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
+import { getBlogPosts } from "@/lib/api/blog";
+import { getPortfolios } from "@/lib/api/portfolio";
 
 const NAV_ITEMS = [
-  { label: "활동", href: "/portfolio", width: "w-[126px]" },
-  { label: "블로그", href: "/blog", width: "w-[133px]" },
+  {
+    label: "활동",
+    href: "/portfolio",
+    width: "w-[126px]",
+    preload: getPortfolios,
+  },
+  {
+    label: "블로그",
+    href: "/blog",
+    width: "w-[133px]",
+    preload: getBlogPosts,
+  },
   {
     label: "문의",
     href: "/#contact",
@@ -21,7 +33,7 @@ export function PublicNavLinks() {
 
   return (
     <nav className="hidden h-16 items-stretch lg:flex" aria-label="공개 메뉴">
-      {NAV_ITEMS.map(({ label, href, width, targetId }) => {
+      {NAV_ITEMS.map(({ label, href, width, targetId, preload }) => {
         const route = href.split("#")[0] || "/";
         const isActive = route !== "/" && pathname.startsWith(route);
         const className = cn(
@@ -52,6 +64,8 @@ export function PublicNavLinks() {
             key={href}
             href={href}
             className={className}
+            onMouseEnter={() => void preload?.().catch(() => undefined)}
+            onFocus={() => void preload?.().catch(() => undefined)}
           >
             {label}
           </Link>

@@ -1,12 +1,17 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { MarkdownPreview } from "@/components/custom/markdown-editor";
 import { DefaultBlogThumbnail } from "@/components/custom/blog/default-blog-thumbnail";
 import { Button } from "@/components/ui/button";
-import { getBlogPostById, deleteBlogPost } from "@/lib/api/blog";
+import {
+  getBlogPostById,
+  getCachedBlogPostById,
+  deleteBlogPost,
+} from "@/lib/api/blog";
 import { BlogPost } from "@/lib/interfaces/blog";
 import { useAuth } from "@/lib/contexts/AuthContext";
 
@@ -14,10 +19,18 @@ export default function BlogDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { userId, hasRole } = useAuth();
-  const [post, setPost] = useState<BlogPost | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [post, setPost] = useState<BlogPost | null>(
+    () => getCachedBlogPostById(id) ?? null,
+  );
+  const [loading, setLoading] = useState(
+    () => !getCachedBlogPostById(id),
+  );
 
   useEffect(() => {
+    const cached = getCachedBlogPostById(id);
+    setPost(cached ?? null);
+    setLoading(!cached);
+
     getBlogPostById(id)
       .then(setPost)
       .finally(() => setLoading(false));
@@ -59,6 +72,7 @@ export default function BlogDetailPage() {
     month: "long",
     day: "numeric",
   });
+  const githubId = post.createdBy?.githubId?.trim();
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8 space-y-6">
@@ -119,6 +133,23 @@ export default function BlogDetailPage() {
             </div>
             <p className="text-xs text-muted-foreground">{date}</p>
           </div>
+          {githubId && (
+            <a
+              href={`https://github.com/${encodeURIComponent(githubId)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="ml-auto flex size-9 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`${post.createdBy?.name || githubId}의 GitHub 프로필 열기`}
+              title={`@${githubId}`}
+            >
+              <Image
+                src="/github-icon.svg"
+                alt=""
+                width={28}
+                height={28}
+              />
+            </a>
+          )}
         </div>
       </div>
 

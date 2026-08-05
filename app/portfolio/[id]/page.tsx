@@ -6,6 +6,7 @@ import { ArrowLeft, Pencil, Pin, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   getPortfolioById,
+  getCachedPortfolioById,
   deletePortfolio,
   setPortfolioPinned,
 } from "@/lib/api/portfolio";
@@ -18,10 +19,18 @@ export default function PortfolioDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { userId, hasRole } = useAuth();
-  const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(
+    () => getCachedPortfolioById(id) ?? null,
+  );
+  const [loading, setLoading] = useState(
+    () => !getCachedPortfolioById(id),
+  );
 
   useEffect(() => {
+    const cached = getCachedPortfolioById(id);
+    setPortfolio(cached ?? null);
+    setLoading(!cached);
+
     getPortfolioById(id)
       .then(setPortfolio)
       .finally(() => setLoading(false));
