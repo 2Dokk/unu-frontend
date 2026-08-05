@@ -181,7 +181,10 @@ export default function PortfolioDetailPage() {
       </div>
 
       <article>
-        <MarkdownPreview content={portfolio.description} />
+        <MarkdownPreview
+          content={portfolio.description}
+          hiddenImageUrl={portfolio.thumbnailUrl || undefined}
+        />
       </article>
     </main>
   );

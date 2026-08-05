@@ -147,10 +147,10 @@ const ActivityPage = () => {
         setQuarters(quartersData);
         if (quartersData.length > 0) {
           const defaultId =
-            currentQuarter?.id ?? quartersData[quartersData.length - 1].id;
+            currentQuarter?.id ?? quartersData[0].id;
           setSelectedQuarterId(defaultId);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Failed to fetch initial data:", error);
         toast.error(
           "데이터를 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.",
@@ -173,7 +173,7 @@ const ActivityPage = () => {
           quarterId: selectedQuarterId,
         });
         setActivities(data);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Failed to fetch activities:", error);
         toast.error(
           "활동 데이터를 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.",

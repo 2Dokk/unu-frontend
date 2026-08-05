@@ -66,7 +66,12 @@ const VIEW_MODES: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
 // ---------------------------------------------------------------------------
 // MarkdownPreview (shared between this and detail pages)
 // ---------------------------------------------------------------------------
-export function MarkdownPreview({ content }: { content: string }) {
+interface MarkdownPreviewProps {
+  content: string;
+  hiddenImageUrl?: string;
+}
+
+export function MarkdownPreview({ content, hiddenImageUrl }: MarkdownPreviewProps) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
@@ -74,7 +79,18 @@ export function MarkdownPreview({ content }: { content: string }) {
         h1: ({ children }) => <h1 className="text-2xl font-bold mt-8 mb-3">{children}</h1>,
         h2: ({ children }) => <h2 className="text-xl font-bold mt-6 mb-2">{children}</h2>,
         h3: ({ children }) => <h3 className="text-base font-semibold mt-4 mb-1">{children}</h3>,
-        p: ({ children }) => <p className="leading-7 mb-3">{children}</p>,
+        p: ({ children, node }) => {
+          const onlyHiddenImage =
+            !!hiddenImageUrl &&
+            node?.children.length === 1 &&
+            node.children[0].type === "element" &&
+            node.children[0].tagName === "img" &&
+            node.children[0].properties.src === hiddenImageUrl;
+
+          return onlyHiddenImage ? null : (
+            <p className="whitespace-pre-wrap break-words leading-7 mb-3">{children}</p>
+          );
+        },
         ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 mb-3">{children}</ul>,
         ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 mb-3">{children}</ol>,
         li: ({ children }) => <li className="leading-7">{children}</li>,
@@ -93,7 +109,7 @@ export function MarkdownPreview({ content }: { content: string }) {
           <blockquote className="border-l-4 border-border pl-4 text-muted-foreground italic my-3">{children}</blockquote>
         ),
         img: ({ src, alt }) =>
-          src ? (
+          src && src !== hiddenImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={src} alt={alt ?? ""} className="max-w-full rounded-lg my-3" />
           ) : null,

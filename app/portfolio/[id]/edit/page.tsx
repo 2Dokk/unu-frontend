@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ImageIcon } from "lucide-react";
+import { isAxiosError } from "axios";
 import { Button } from "@/components/ui/button";
 import { NotionEditor } from "@/components/custom/blog/notion-editor";
 import { UploadedImagePicker } from "@/components/custom/uploaded-image-picker";
@@ -12,6 +13,7 @@ import { getPortfolioById, updatePortfolio } from "@/lib/api/portfolio";
 import { uploadImage, deleteImage } from "@/lib/api/image";
 import { ContributorInfo } from "@/lib/interfaces/portfolio";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function PortfolioEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,9 +57,10 @@ export default function PortfolioEditPage() {
   }, [id]);
 
   useEffect(() => {
+    const sessionIds = sessionIdsRef.current;
     return () => {
       if (submittedRef.current) return;
-      sessionIdsRef.current.forEach((imgId) =>
+      sessionIds.forEach((imgId) =>
         deleteImage(imgId).catch(() => {}),
       );
     };
@@ -77,7 +80,16 @@ export default function PortfolioEditPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
+      toast.error("프로젝트 이름을 입력해 주세요.");
       titleRef.current?.focus();
+      return;
+    }
+    if (!startQuarterId) {
+      toast.error("시작 분기를 선택해 주세요.");
+      return;
+    }
+    if (!isOngoing && !endQuarterId) {
+      toast.error("종료 분기를 선택하거나 진행 중으로 표시해 주세요.");
       return;
     }
     submittedRef.current = true;
@@ -94,8 +106,22 @@ export default function PortfolioEditPage() {
           role: c.role,
         })),
       });
+      toast.success("수정되었습니다.");
       router.push(`/portfolio/${id}`);
-    } catch {
+    } catch (error: unknown) {
+      const responseData: unknown = isAxiosError(error)
+        ? error.response?.data
+        : undefined;
+      const message =
+        typeof responseData === "string"
+          ? responseData
+          : responseData &&
+              typeof responseData === "object" &&
+              "message" in responseData &&
+              typeof responseData.message === "string"
+            ? responseData.message
+            : undefined;
+      toast.error(message || "저장에 실패했습니다. 다시 시도해 주세요.");
       submittedRef.current = false;
       setSubmitting(false);
     }

@@ -172,7 +172,10 @@ export default function BlogDetailPage() {
       )}
 
       <article className="prose-sm sm:prose max-w-none! [&_*]:!text-black">
-        <MarkdownPreview content={post.description} />
+        <MarkdownPreview
+          content={post.description}
+          hiddenImageUrl={post.thumbnailUrl || undefined}
+        />
       </article>
     </main>
   );
