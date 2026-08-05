@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getPortfolios } from "@/lib/api/portfolio";
+import { getCachedPortfolios, getPortfolios } from "@/lib/api/portfolio";
 import { PortfolioResponse } from "@/lib/interfaces/portfolio";
 import { PortfolioSlider } from "@/components/custom/portfolio/portfolio-slider";
 import { PortfolioRecentCard } from "@/components/custom/portfolio/portfolio-recent-card";
@@ -12,8 +12,10 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 export default function PortfolioPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const [portfolios, setPortfolios] = useState<PortfolioResponse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [portfolios, setPortfolios] = useState<PortfolioResponse[]>(
+    () => getCachedPortfolios()?.portfolios ?? [],
+  );
+  const [loading, setLoading] = useState(() => !getCachedPortfolios());
 
   useEffect(() => {
     getPortfolios()

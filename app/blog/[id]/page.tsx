@@ -6,7 +6,11 @@ import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { MarkdownPreview } from "@/components/custom/markdown-editor";
 import { DefaultBlogThumbnail } from "@/components/custom/blog/default-blog-thumbnail";
 import { Button } from "@/components/ui/button";
-import { getBlogPostById, deleteBlogPost } from "@/lib/api/blog";
+import {
+  getBlogPostById,
+  getCachedBlogPostById,
+  deleteBlogPost,
+} from "@/lib/api/blog";
 import { BlogPost } from "@/lib/interfaces/blog";
 import { useAuth } from "@/lib/contexts/AuthContext";
 
@@ -14,10 +18,18 @@ export default function BlogDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { userId, hasRole } = useAuth();
-  const [post, setPost] = useState<BlogPost | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [post, setPost] = useState<BlogPost | null>(
+    () => getCachedBlogPostById(id) ?? null,
+  );
+  const [loading, setLoading] = useState(
+    () => !getCachedBlogPostById(id),
+  );
 
   useEffect(() => {
+    const cached = getCachedBlogPostById(id);
+    setPost(cached ?? null);
+    setLoading(!cached);
+
     getBlogPostById(id)
       .then(setPost)
       .finally(() => setLoading(false));
