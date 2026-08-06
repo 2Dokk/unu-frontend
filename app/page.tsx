@@ -141,15 +141,20 @@ export default function Home() {
                 지원 안내
               </TimedAnchorLink>
 
-              <div className="mt-12 grid max-w-[684px] grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4 sm:gap-x-10">
+              <div className="mt-12 grid w-full max-w-[720px] grid-cols-2 gap-y-10 sm:grid-cols-4">
                 {STATS.map((stat) => (
-                  <div key={stat.label}>
-                    <p className="text-4xl leading-none font-medium sm:text-[50px] lg:text-[58px]">
-                      {stat.value}
-                    </p>
-                    <p className="mt-4 text-sm font-medium sm:text-xl">
-                      {stat.label}
-                    </p>
+                  <div
+                    key={stat.label}
+                    className="min-h-[66px] min-w-0 sm:min-h-[100px]"
+                  >
+                    <div className="relative mx-auto w-fit">
+                      <p className="text-4xl leading-none font-medium sm:text-[50px] lg:text-[58px]">
+                        {stat.value}
+                      </p>
+                      <p className="absolute top-full left-0 mt-4 whitespace-nowrap text-sm font-medium sm:text-xl">
+                        {stat.label}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
