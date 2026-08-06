@@ -112,7 +112,7 @@ export default function Home() {
         <div className="relative h-[510px] overflow-hidden bg-[#14231b] lg:h-[clamp(510px,29.48vw,566px)]">
           <div className="pointer-events-none absolute inset-0">
             <Image
-              src="/home-hero-figma.png"
+              src="/home-hero-figma-v2.png"
               alt=""
               fill
               sizes="100vw"
