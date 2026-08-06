@@ -38,11 +38,11 @@ export function PublicNavLinks() {
         const isActive = route !== "/" && pathname.startsWith(route);
         const className = cn(
           "font-cnu-body flex h-16 items-center justify-center text-[17.8px] font-normal tracking-[0.18px] transition-colors",
-          "hover:bg-[rgba(225,238,224,0.33)] hover:text-black",
+          "hover:bg-white/10 hover:text-white",
           width,
           isActive
-            ? "bg-[rgba(225,238,224,0.33)] text-black"
-            : "text-[#999999]",
+            ? "bg-white/10 text-white"
+            : "text-white/80",
         );
 
         if (targetId) {

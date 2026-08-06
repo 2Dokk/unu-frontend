@@ -108,53 +108,62 @@ export default function Home() {
       id="home-top"
       className="font-cnu-body overflow-x-hidden bg-white text-black"
     >
-      <section className="relative overflow-hidden border-b border-[#dddddd]">
-        <div className="pointer-events-none absolute -top-20 -left-40 h-[684px] w-[738px] opacity-80 sm:-left-20">
-          <Image
-            src="/home-hero-glow.svg"
-            alt=""
-            fill
-            sizes="738px"
-            className="object-contain"
-            priority
-          />
-        </div>
-
-        <div className="relative mx-auto w-full max-w-[1219px] px-5 sm:px-8">
-          <div className="min-h-[504px] pt-12 sm:pt-16 2xl:pl-[50px]">
-            <p className="font-cnu-body text-sm font-semibold text-[#2d9c64] sm:text-2xl">
-              WEB DEVELOPMENT &amp; SOFTWARE SYSTEM COMMUNITY
-            </p>
-            <h1 className="font-cnu-body mt-2 text-7xl leading-none font-bold tracking-[0.45px] sm:text-8xl lg:text-[115px] lg:leading-[126px]">
-              CNU
-            </h1>
-            <p className="mt-2 max-w-[603px] text-base leading-8 text-[#999999] sm:text-2xl sm:leading-[72px]">
-              <span className="text-[#2d9c64]">웹과 시스템</span>을 중심으로 함께
-              성장하는 서강대학교 컴퓨터공학과 학회
-            </p>
-            <TimedAnchorLink
-              targetId="recruit"
-              duration={900}
-              className="mt-4 flex h-[45px] w-[180px] items-center justify-center rounded-full border border-[#c9c9c9] bg-white text-lg font-medium transition-colors hover:border-[#264638] hover:bg-[#264638] hover:text-white sm:text-2xl"
-            >
-              지원 안내
-            </TimedAnchorLink>
-
-            <div className="mt-12 grid max-w-[684px] grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4 sm:gap-x-10">
-              {STATS.map((stat) => (
-                <div key={stat.label}>
-                  <p className="text-4xl leading-none font-medium sm:text-[50px] lg:text-[58px]">
-                    {stat.value}
-                  </p>
-                  <p className="mt-4 text-sm font-medium sm:text-xl">
-                    {stat.label}
-                  </p>
-                </div>
-              ))}
-            </div>
+      <section className="border-b border-[#dddddd]">
+        <div className="relative h-[510px] overflow-hidden bg-[#14231b] lg:h-[clamp(510px,29.48vw,566px)]">
+          <div className="pointer-events-none absolute inset-0">
+            <Image
+              src="/home-hero-figma.png"
+              alt=""
+              fill
+              sizes="100vw"
+              className="object-cover object-center"
+              priority
+            />
           </div>
 
-          <div className="pt-20 text-center sm:pt-28">
+          <div className="relative mx-auto h-full w-full max-w-[1219px] px-5 text-white sm:px-8 2xl:max-w-[1236px] 2xl:px-0">
+            <div className="h-full pt-12 sm:pt-16">
+              <p className="font-cnu-body text-sm font-semibold text-[#80c3a1] sm:text-2xl">
+                WEB DEVELOPMENT &amp; SOFTWARE SYSTEM COMMUNITY
+              </p>
+              <h1 className="font-cnu-body mt-2 text-7xl leading-none font-bold tracking-[0.45px] sm:text-8xl lg:text-[115px] lg:leading-[126px]">
+                CNU
+              </h1>
+              <p className="mt-2 max-w-[603px] text-base leading-8 text-white sm:text-2xl sm:leading-[72px]">
+                <span className="text-[#2d9c64]">웹과 시스템</span>을 중심으로 함께
+                성장하는 서강대학교 컴퓨터공학과 학회
+              </p>
+              <TimedAnchorLink
+                targetId="recruit"
+                duration={900}
+                className="mt-4 flex h-[45px] w-[180px] items-center justify-center rounded-full border border-[#c9c9c9] bg-white text-lg font-medium text-black transition-colors hover:border-[#264638] hover:bg-[#264638] hover:text-white sm:text-2xl"
+              >
+                지원 안내
+              </TimedAnchorLink>
+
+              <div className="mt-12 grid w-full max-w-[720px] grid-cols-2 gap-y-10 sm:grid-cols-4">
+                {STATS.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="min-h-[66px] min-w-0 sm:min-h-[100px]"
+                  >
+                    <div className="relative mx-auto w-fit">
+                      <p className="text-4xl leading-none font-medium sm:text-[50px] lg:text-[58px]">
+                        {stat.value}
+                      </p>
+                      <p className="absolute top-full left-0 mt-4 whitespace-nowrap text-sm font-medium sm:text-xl">
+                        {stat.label}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto w-full max-w-[1219px] px-5 sm:px-8">
+          <div className="pt-20 text-center">
             <h2 className="font-cnu-body text-4xl font-bold text-[#020618] sm:text-5xl lg:text-[54px] lg:leading-[65px]">
               CNU는 어떤 곳인가요?
             </h2>
