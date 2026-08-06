@@ -192,7 +192,7 @@ export default function ApplyPage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="container mx-auto max-w-5xl w-7xl py-12 px-4">
+      <div className="container mx-auto w-full max-w-5xl px-4 py-12">
         {/* Back Button */}
         <Button
           variant="ghost"
@@ -206,8 +206,8 @@ export default function ApplyPage() {
         <div className="space-y-8">
           {/* SECTION 1: Header */}
           <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <h1 className="text-3xl sm:text-4xl font-bold flex-1">
+            <div className="flex min-w-0 items-start gap-3">
+              <h1 className="min-w-0 flex-1 break-words text-3xl font-bold sm:text-4xl">
                 {recruitment.title}
               </h1>
               {getStatusBadge()}
@@ -247,7 +247,7 @@ export default function ApplyPage() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">모집 안내</h2>
             {recruitment.description ? (
-              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-foreground/90 leading-relaxed">
+              <div className="prose prose-sm max-w-none break-words whitespace-pre-wrap text-foreground/90 leading-relaxed">
                 {recruitment.description}
               </div>
             ) : (

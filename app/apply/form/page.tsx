@@ -355,8 +355,10 @@ export default function ApplicationFormPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Header */}
         <div className="space-y-3">
-          <div className="flex items-start justify-between gap-4">
-            <h1 className="text-3xl font-bold flex-1">{recruitment.title}</h1>
+          <div className="flex min-w-0 items-start justify-between gap-4">
+            <h1 className="min-w-0 flex-1 break-words text-3xl font-bold">
+              {recruitment.title}
+            </h1>
             <Badge
               className={
                 status === "모집중"

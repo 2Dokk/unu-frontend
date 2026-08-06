@@ -291,7 +291,7 @@ export default function ApplicationDetailPage() {
           <CardTitle>기본 정보</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 break-words md:grid-cols-2">
             <div>
               <p className="text-sm text-muted-foreground">이름</p>
               <p className="font-medium">{application.name}</p>
@@ -477,7 +477,7 @@ export default function ApplicationDetailPage() {
                           ))}
                         </ul>
                       ) : (
-                        <p className="whitespace-pre-wrap leading-relaxed">
+                        <p className="break-words whitespace-pre-wrap leading-relaxed">
                           {typeof answer === "string"
                             ? answer
                             : JSON.stringify(answer, null, 2)}

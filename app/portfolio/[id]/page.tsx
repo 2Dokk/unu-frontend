@@ -90,9 +90,10 @@ export default function PortfolioDetailPage() {
           size="sm"
           className="gap-1 text-muted-foreground"
           onClick={() => router.push("/portfolio")}
+          aria-label="포트폴리오 목록으로"
         >
           <ArrowLeft className="h-4 w-4" />
-          목록으로
+          <span className="hidden sm:inline">목록으로</span>
         </Button>
 
         <div className="flex items-center gap-1">
@@ -102,11 +103,15 @@ export default function PortfolioDetailPage() {
               size="sm"
               className="gap-1"
               onClick={handleTogglePin}
+              aria-label={portfolio.pinned ? "고정 해제" : "포트폴리오 고정"}
+              title={portfolio.pinned ? "고정 해제" : "포트폴리오 고정"}
             >
               <Pin
                 className={cn("h-4 w-4", portfolio.pinned && "fill-current")}
               />
-              {portfolio.pinned ? "고정됨" : "고정"}
+              <span className="hidden sm:inline">
+                {portfolio.pinned ? "고정됨" : "고정"}
+              </span>
             </Button>
           )}
           {canEdit && (
@@ -115,9 +120,11 @@ export default function PortfolioDetailPage() {
               size="sm"
               className="gap-1"
               onClick={() => router.push(`/portfolio/${id}/edit`)}
+              aria-label="포트폴리오 수정"
+              title="포트폴리오 수정"
             >
               <Pencil className="h-4 w-4" />
-              수정
+              <span className="hidden sm:inline">수정</span>
             </Button>
           )}
           {canDelete && (
@@ -126,23 +133,25 @@ export default function PortfolioDetailPage() {
               size="sm"
               className="gap-1 text-destructive hover:text-destructive"
               onClick={handleDelete}
+              aria-label="포트폴리오 삭제"
+              title="포트폴리오 삭제"
             >
               <Trash2 className="h-4 w-4" />
-              삭제
+              <span className="hidden sm:inline">삭제</span>
             </Button>
           )}
         </div>
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex items-center rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background">
             {period}
           </span>
           <span className="text-sm text-muted-foreground">{createdDate}</span>
         </div>
 
-        <h1 className="text-4xl font-bold">{portfolio.title}</h1>
+        <h1 className="break-words text-4xl font-bold">{portfolio.title}</h1>
 
         {portfolio.contributors.length > 0 && (
           <div className="flex flex-wrap gap-4">

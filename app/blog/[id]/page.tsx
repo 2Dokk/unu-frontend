@@ -141,9 +141,13 @@ export default function BlogDetailPage() {
         <span className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
           {post.category === "tech" ? "Tech" : "Essay"}
         </span>
-        <h1 className="text-2xl sm:text-3xl font-bold leading-tight">{post.title}</h1>
+        <h1 className="break-words text-2xl font-bold leading-tight sm:text-3xl">
+          {post.title}
+        </h1>
         {post.subtitle && (
-          <p className="text-base sm:text-lg text-muted-foreground">{post.subtitle}</p>
+          <p className="break-words text-base text-muted-foreground sm:text-lg">
+            {post.subtitle}
+          </p>
         )}
         <div className="flex items-center gap-3 pt-2">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">

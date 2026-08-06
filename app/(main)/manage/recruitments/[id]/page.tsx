@@ -152,7 +152,7 @@ export default function RecruitmentDetailPage() {
               {/* Title + Description */}
               <div className="mb-6 space-y-2">
                 <Skeleton className="h-5 w-56" />
-                <Skeleton className="h-4 w-80" />
+                <Skeleton className="h-4 w-full max-w-80" />
               </div>
               <Skeleton className="h-px w-full mb-0" />
               {/* Info Rows */}
