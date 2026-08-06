@@ -7,6 +7,7 @@ import { getActiveRecruitment } from "@/lib/api/recruitment";
 import { getCurrentQuarter } from "@/lib/api/quarter";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
+import { ScrollReveal } from "@/components/custom/scroll-reveal";
 
 const STATS = [
   { value: "240+", label: "누적 학회원" },
@@ -109,15 +110,16 @@ export default function Home() {
       className="font-cnu-body overflow-x-hidden bg-white text-black"
     >
       <section className="border-b border-[#dddddd]">
-        <div className="relative h-[510px] overflow-hidden bg-[#14231b] lg:h-[clamp(510px,29.48vw,566px)]">
+        <div className="relative h-[510px] overflow-hidden bg-[#14231b] lg:h-[clamp(510px,30.36vw,583px)]">
           <div className="pointer-events-none absolute inset-0">
             <Image
-              src="/home-hero-figma.png"
+              src="/home-hero-figma-v2.png"
               alt=""
               fill
               sizes="100vw"
               className="object-cover object-center"
               priority
+              unoptimized
             />
           </div>
 
@@ -164,51 +166,58 @@ export default function Home() {
 
         <div className="mx-auto w-full max-w-[1219px] px-5 sm:px-8">
           <div className="pt-20 text-center">
-            <h2 className="font-cnu-body text-4xl font-bold text-[#020618] sm:text-5xl lg:text-[54px] lg:leading-[65px]">
-              CNU는 어떤 곳인가요?
-            </h2>
-            <p className="mx-auto mt-7 max-w-[810px] text-base leading-relaxed text-[#62748e] sm:text-2xl sm:leading-[1.4]">
-              CNU는 웹 개발과 소프트웨어 시스템 기술을 중심으로 활동하는 학회입니다.
-              <br className="hidden sm:block" /> 스터디와 프로젝트를 통해 실전 역량을
-              키우고, 함께 협업하며 성장하는 경험을 제공합니다.
-            </p>
+            <ScrollReveal>
+              <h2 className="font-cnu-body text-4xl font-bold text-[#020618] sm:text-5xl lg:text-[54px] lg:leading-[65px]">
+                CNU는 어떤 곳인가요?
+              </h2>
+              <p className="mx-auto mt-7 max-w-[810px] text-base leading-relaxed text-[#62748e] sm:text-2xl sm:leading-[1.4]">
+                CNU는 웹 개발과 소프트웨어 시스템 기술을 중심으로 활동하는 학회입니다.
+                <br className="hidden sm:block" /> 스터디와 프로젝트를 통해 실전 역량을
+                키우고, 함께 협업하며 성장하는 경험을 제공합니다.
+              </p>
+            </ScrollReveal>
 
             <div className="mx-auto mt-16 grid max-w-[922px] gap-6 text-left md:grid-cols-3">
-              {FEATURES.map(({ title, description, Icon }) => (
-                <div
+              {FEATURES.map(({ title, description, Icon }, index) => (
+                <ScrollReveal
                   key={title}
-                  className="flex min-h-[177px] flex-col justify-end rounded-[13px] border border-slate-200/50 bg-white p-6 shadow-sm"
+                  delay={index * 100}
+                  className="h-full"
                 >
-                  <div className="mb-4 flex size-12 items-center justify-center rounded-[9px] bg-[#0f172b]/10">
-                    <Icon className="size-6 text-[#020618]" />
+                  <div className="flex min-h-[177px] h-full flex-col justify-end rounded-[13px] border border-slate-200/50 bg-white p-6 shadow-sm">
+                    <div className="mb-4 flex size-12 items-center justify-center rounded-[9px] bg-[#0f172b]/10">
+                      <Icon className="size-6 text-[#020618]" />
+                    </div>
+                    <h3 className="text-xl font-bold text-[#020618]">{title}</h3>
+                    <p className="mt-2 text-base text-[#62748e]">{description}</p>
                   </div>
-                  <h3 className="text-xl font-bold text-[#020618]">{title}</h3>
-                  <p className="mt-2 text-base text-[#62748e]">{description}</p>
-                </div>
+                </ScrollReveal>
               ))}
             </div>
           </div>
 
           <div className="pt-28 pb-24 sm:pt-36 sm:pb-[119px]">
-            <h2 className="mx-auto w-[90%] max-w-[1045px] text-4xl font-semibold sm:text-5xl">
-              학회 소식
-            </h2>
-            <div className="mx-auto mt-10 w-[90%] max-w-[1045px] overflow-hidden rounded-[26px] bg-white/50 shadow-[0_1px_73px_rgba(0,0,0,0.25)] backdrop-blur-xl">
-              {NEWS_ITEMS.map((item) => (
-                <div
-                  key={item.title}
-                  className="grid min-h-[77px] grid-cols-[59px_minmax(0,1fr)] items-center gap-3.5 border-b border-[#d8d8d8] px-4 last:border-b-0 sm:min-h-[89px] sm:grid-cols-[81px_minmax(0,1fr)_178px] sm:gap-8 sm:px-[41px]"
-                >
-                  <span className="flex h-9 items-center justify-center rounded-full bg-[#37825d] text-xs text-white sm:h-[37px] sm:text-lg">
-                    {item.tag}
-                  </span>
-                  <span className="truncate text-sm sm:text-xl">{item.title}</span>
-                  <span className="hidden text-center text-xl text-[#929191] sm:block">
-                    {item.date}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <ScrollReveal>
+              <h2 className="mx-auto w-[90%] max-w-[1045px] text-4xl font-semibold sm:text-5xl">
+                학회 소식
+              </h2>
+              <div className="mx-auto mt-10 w-[90%] max-w-[1045px] overflow-hidden rounded-[26px] bg-white/50 shadow-[0_1px_73px_rgba(0,0,0,0.25)] backdrop-blur-xl">
+                {NEWS_ITEMS.map((item) => (
+                  <div
+                    key={item.title}
+                    className="grid min-h-[77px] grid-cols-[59px_minmax(0,1fr)] items-center gap-3.5 border-b border-[#d8d8d8] px-4 last:border-b-0 sm:min-h-[89px] sm:grid-cols-[81px_minmax(0,1fr)_178px] sm:gap-8 sm:px-[41px]"
+                  >
+                    <span className="flex h-9 items-center justify-center rounded-full bg-[#37825d] text-xs text-white sm:h-[37px] sm:text-lg">
+                      {item.tag}
+                    </span>
+                    <span className="truncate text-sm sm:text-xl">{item.title}</span>
+                    <span className="hidden text-center text-xl text-[#929191] sm:block">
+                      {item.date}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -217,18 +226,18 @@ export default function Home() {
         id="recruit"
         className="flex min-h-[585px] scroll-mt-16 items-center justify-center bg-[#14231b] py-20 sm:min-h-[720px]"
       >
-        <div className="w-full">
+        <ScrollReveal className="w-full">
           <Suspense fallback={<RecruitmentCTASkeleton />}>
             <RecruitmentCTA />
           </Suspense>
-        </div>
+        </ScrollReveal>
       </section>
 
       <Link
         href="/portfolio"
         className="group relative block h-[270px] overflow-hidden border-b border-[#e5e5e5] bg-white/30 transition-colors duration-300 hover:bg-[#14231b] sm:h-[450px]"
       >
-        <div className="relative mx-auto h-full w-full max-w-[1062px] px-5">
+        <ScrollReveal className="relative mx-auto h-full w-full max-w-[1062px] px-5">
           <div className="absolute top-1/2 left-5 -translate-y-1/2 sm:left-0">
             <h2 className="font-cnu-display text-4xl font-bold tracking-[-0.45px] transition-colors group-hover:text-white sm:text-[61px] sm:leading-[54px]">
               지금까지의 작업
@@ -241,14 +250,14 @@ export default function Home() {
           <span className="font-cnu-display absolute right-5 bottom-5 text-[65px] leading-none font-bold tracking-[-0.45px] text-[#e0e0e0] transition-colors group-hover:text-white sm:right-0 sm:bottom-4 sm:text-[162px]">
             portfolio
           </span>
-        </div>
+        </ScrollReveal>
       </Link>
 
       <Link
         href="/blog"
         className="group relative block h-[270px] overflow-hidden border-b border-[#e5e5e5] bg-white/30 transition-colors duration-300 hover:bg-[#14231b] sm:h-[450px]"
       >
-        <div className="relative mx-auto h-full w-full max-w-[1062px] px-5">
+        <ScrollReveal className="relative mx-auto h-full w-full max-w-[1062px] px-5">
           <div className="absolute top-1/2 left-5 -translate-y-1/2 sm:left-0">
             <h2 className="font-cnu-display text-4xl font-bold tracking-[-0.45px] transition-colors group-hover:text-white sm:text-[61px] sm:leading-[54px]">
               남겨온 이야기
@@ -261,7 +270,7 @@ export default function Home() {
           <span className="font-cnu-display absolute right-5 bottom-5 text-[79px] leading-none font-bold tracking-[-0.45px] text-[#e0e0e0] transition-colors group-hover:text-white sm:right-0 sm:bottom-4 sm:text-[162px]">
             blog
           </span>
-        </div>
+        </ScrollReveal>
       </Link>
 
       <section
@@ -269,36 +278,40 @@ export default function Home() {
         className="scroll-mt-16 px-5 py-16 sm:min-h-[1350px] sm:px-8 sm:pt-[53px]"
       >
         <div className="mx-auto w-full max-w-[1062px]">
-          <h2 className="font-cnu-display text-6xl leading-none font-bold tracking-[0.45px] text-[#020618] sm:text-[79px] sm:leading-[86px]">
-            Contact
-          </h2>
-          <p className="mt-8 text-base font-medium leading-8 text-[#0b0c0c] sm:text-2xl">
-            CNU의 모든 공식 문의는 이메일을 통해 받고 있습니다.
-            <br />
-            활동, 모집, 프로젝트, 협업과 관련해 궁금한 점이 있다면
-            admin@cnu.team으로 전달해 주세요.
-          </p>
-          <a
-            href="mailto:admin@cnu.team"
-            className="mt-10 flex h-[59px] w-[234px] items-center justify-center rounded-full border border-black bg-white text-lg font-medium transition-colors hover:bg-[#1f3f2e] hover:text-white sm:w-[286px] sm:text-2xl"
-          >
-            메일로 문의하기
-          </a>
+          <ScrollReveal>
+            <h2 className="font-cnu-display text-6xl leading-none font-bold tracking-[0.45px] text-[#020618] sm:text-[79px] sm:leading-[86px]">
+              Contact
+            </h2>
+            <p className="mt-8 text-base font-medium leading-8 text-[#0b0c0c] sm:text-2xl">
+              CNU의 모든 공식 문의는 이메일을 통해 받고 있습니다.
+              <br />
+              활동, 모집, 프로젝트, 협업과 관련해 궁금한 점이 있다면
+              admin@cnu.team으로 전달해 주세요.
+            </p>
+            <a
+              href="mailto:admin@cnu.team"
+              className="mt-10 flex h-[59px] w-[234px] items-center justify-center rounded-full border border-black bg-white text-lg font-medium transition-colors hover:bg-[#1f3f2e] hover:text-white sm:w-[286px] sm:text-2xl"
+            >
+              메일로 문의하기
+            </a>
+          </ScrollReveal>
 
-          <h3 className="mt-11 text-3xl font-bold">랩실 위치</h3>
-          <p className="mt-5 text-base font-medium leading-8 sm:text-2xl">
-            CNU의 랩실 R912는 서강대학교 리치과학관 9층에 위치하고 있습니다.
-          </p>
-          <br></br>
-          <div className="relative mx-auto mt-5 aspect-[885/679] w-full max-w-[797px] overflow-hidden">
-            <Image
-              src="/map.png"
-              alt="CNU 랩실 위치 지도"
-              fill
-              sizes="(max-width: 900px) 100vw, 797px"
-              className="object-cover"
-            />
-          </div>
+          <ScrollReveal delay={100}>
+            <h3 className="mt-11 text-3xl font-bold">랩실 위치</h3>
+            <p className="mt-5 text-base font-medium leading-8 sm:text-2xl">
+              CNU의 랩실 R912는 서강대학교 리치과학관 9층에 위치하고 있습니다.
+            </p>
+            <br></br>
+            <div className="relative mx-auto mt-5 aspect-[885/679] w-full max-w-[797px] overflow-hidden">
+              <Image
+                src="/map.png"
+                alt="CNU 랩실 위치 지도"
+                fill
+                sizes="(max-width: 900px) 100vw, 797px"
+                className="object-cover"
+              />
+            </div>
+          </ScrollReveal>
         </div>
       </section>
     </div>

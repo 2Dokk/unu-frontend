@@ -27,8 +27,8 @@ export default function PortfolioPage() {
   const sliderPortfolios = pinned.length > 0 ? pinned : portfolios;
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-8 space-y-10">
-      <div className="flex items-start justify-between">
+    <main className="w-full space-y-10 py-8">
+      <div className="mx-auto flex w-full max-w-6xl items-start justify-between px-6">
         <div>
           <h1 className="font-cnu-display mb-3 text-6xl leading-[0.92] font-bold sm:text-7xl">
             Portfolio
@@ -44,22 +44,24 @@ export default function PortfolioPage() {
         )}
       </div>
 
-      {loading ? (
-        <div className="rounded-2xl border bg-muted animate-pulse h-120 w-full" />
-      ) : (
-        <PortfolioSlider portfolios={sliderPortfolios} />
-      )}
+      <div className="mx-auto w-full max-w-7xl space-y-10 px-6">
+        {loading ? (
+          <div className="rounded-2xl border bg-muted animate-pulse h-120 w-full" />
+        ) : (
+          <PortfolioSlider portfolios={sliderPortfolios} />
+        )}
 
-      {/* Recent */}
-      {!loading && portfolios.length > 0 && (
-        <section className="space-y-4">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            {portfolios.map((p) => (
-              <PortfolioRecentCard key={p.id} portfolio={p} />
-            ))}
-          </div>
-        </section>
-      )}
+        {/* Recent */}
+        {!loading && portfolios.length > 0 && (
+          <section className="space-y-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              {portfolios.map((p) => (
+                <PortfolioRecentCard key={p.id} portfolio={p} />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
     </main>
   );
 }
