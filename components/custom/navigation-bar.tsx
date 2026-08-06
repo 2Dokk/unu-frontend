@@ -38,7 +38,7 @@ export function NavigationBar() {
       return (
         <Link
           href="/login"
-          className="font-cnu-body flex h-16 items-center justify-center px-4 text-base text-[#999999] transition-colors hover:bg-[rgba(225,238,224,0.33)] hover:text-black sm:w-[133px] sm:px-0 sm:text-[17.8px]"
+          className="font-cnu-body flex h-16 items-center justify-center px-4 text-base text-white/80 transition-colors hover:bg-white/10 hover:text-white sm:w-[133px] sm:px-0 sm:text-[17.8px]"
         >
           로그인
         </Link>
@@ -52,12 +52,12 @@ export function NavigationBar() {
            {currentQuarter.year} {currentQuarter.season.toUpperCase()}
           </span>
         )} 없어도 될듯 해서 뺍니다 */}
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="sm"
-              className="font-cnu-body gap-2 rounded-none text-[#777777] hover:bg-[rgba(225,238,224,0.33)] hover:text-black"
+              className="font-cnu-body gap-2 rounded-none text-white/80 hover:bg-white/10 hover:text-white"
             >
               <User className="size-4" />
               <span className="hidden sm:inline">프로필</span>
@@ -82,12 +82,12 @@ export function NavigationBar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 w-full shrink-0 items-center border-b border-black/5 bg-white/95 pl-4 backdrop-blur md:pl-[26px]">
+    <header className="sticky top-0 z-50 flex h-16 w-full shrink-0 items-center border-b border-white/10 bg-[#14231b] pl-4 md:pl-[26px]">
       {!isLoading && userRole !== "GUEST" && (
         <Button
           variant="ghost"
           size="icon"
-          className="mr-2 md:hidden"
+          className="mr-2 text-white hover:bg-white/10 hover:text-white md:hidden"
           onClick={() => setIsOpen(true)}
           aria-label="메뉴 열기"
         >
