@@ -109,7 +109,7 @@ export default function Home() {
       className="font-cnu-body overflow-x-hidden bg-white text-black"
     >
       <section className="border-b border-[#dddddd]">
-        <div className="relative h-[510px] overflow-hidden bg-[#14231b] lg:h-[clamp(510px,29.48vw,566px)]">
+        <div className="relative h-[510px] overflow-hidden bg-[#14231b] lg:h-[clamp(510px,30.36vw,583px)]">
           <div className="pointer-events-none absolute inset-0">
             <Image
               src="/home-hero-figma-v2.png"
@@ -118,6 +118,7 @@ export default function Home() {
               sizes="100vw"
               className="object-cover object-center"
               priority
+              unoptimized
             />
           </div>
 
