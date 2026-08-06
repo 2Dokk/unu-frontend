@@ -98,7 +98,7 @@ export function QuarterSelector({
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:w-fit">
       <Button
         type="button"
         variant="outline"
@@ -110,7 +110,7 @@ export function QuarterSelector({
         <ChevronLeft />
       </Button>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-full min-w-0 sm:w-[180px]">
           <SelectValue placeholder="분기 선택" />
         </SelectTrigger>
         <SelectContent>

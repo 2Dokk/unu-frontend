@@ -191,12 +191,12 @@ export default function ApplicationLookupPage() {
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
+              <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                <div className="min-w-0">
                   <span className="text-muted-foreground">이름:</span>{" "}
                   <span className="font-medium">{foundApplication.name}</span>
                 </div>
-                <div>
+                <div className="min-w-0 break-words">
                   <span className="text-muted-foreground">이메일:</span>{" "}
                   <span className="font-medium">{foundApplication.email}</span>
                 </div>
@@ -233,12 +233,12 @@ export default function ApplicationLookupPage() {
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
+              <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                <div className="min-w-0">
                   <span className="text-muted-foreground">이름:</span>{" "}
                   <span className="font-medium">{foundApplication.name}</span>
                 </div>
-                <div>
+                <div className="min-w-0 break-words">
                   <span className="text-muted-foreground">이메일:</span>{" "}
                   <span className="font-medium">{foundApplication.email}</span>
                 </div>
