@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, Home, LogOut, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,7 @@ import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
 
 export function NavigationBar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { userRole, logout, isLoading } = useAuth();
   const { setIsOpen } = useSidebar();
   const [currentQuarter, setCurrentQuarter] =
@@ -30,6 +31,15 @@ export function NavigationBar() {
   React.useEffect(() => {
     getCurrentQuarter().then(setCurrentQuarter).catch(() => undefined);
   }, []);
+
+  const isMainRoute = [
+    "/activities",
+    "/admin",
+    "/forms",
+    "/home",
+    "/manage",
+    "/profile",
+  ].some((route) => pathname === route || pathname.startsWith(`${route}/`));
 
   const rightContent = () => {
     if (isLoading) return <div className="h-16 w-20 sm:w-[133px]" />;
@@ -83,7 +93,7 @@ export function NavigationBar() {
 
   return (
     <header className="sticky top-0 z-50 flex h-16 w-full shrink-0 items-center border-b border-white/10 bg-[#14231b] pl-4 md:pl-[26px]">
-      {!isLoading && userRole !== "GUEST" && (
+      {!isLoading && userRole !== "GUEST" && isMainRoute && (
         <Button
           variant="ghost"
           size="icon"
@@ -113,7 +123,9 @@ export function NavigationBar() {
       </TimedAnchorLink>
 
       <div className="ml-auto flex h-16 items-stretch">
-        <PublicNavLinks />
+        <PublicNavLinks
+          showMobile={!isLoading && (userRole === "GUEST" || !isMainRoute)}
+        />
         {rightContent()}
       </div>
     </header>
