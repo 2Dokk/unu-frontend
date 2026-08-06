@@ -110,7 +110,7 @@ export default function Home() {
       className="font-cnu-body overflow-x-hidden bg-white text-black"
     >
       <section className="border-b border-[#dddddd]">
-        <div className="relative h-[510px] overflow-hidden bg-[#14231b] lg:h-[clamp(510px,30.36vw,583px)]">
+        <div className="relative h-[510px] overflow-hidden bg-[#14231b] lg:h-[clamp(540px,30.36vw,583px)]">
           <div className="pointer-events-none absolute inset-0">
             <Image
               src="/home-hero-figma-v2.png"
@@ -131,9 +131,10 @@ export default function Home() {
               <h1 className="font-cnu-body mt-2 text-7xl leading-none font-bold tracking-[0.45px] sm:text-8xl lg:text-[115px] lg:leading-[126px]">
                 CNU
               </h1>
-              <p className="mt-2 max-w-[603px] text-base leading-8 text-white sm:text-2xl sm:leading-[72px]">
+              <p className="mt-2 max-w-[670px] text-base leading-8 text-white sm:text-2xl sm:leading-[72px]">
                 <span className="text-[#2d9c64]">웹과 시스템</span>을 중심으로 함께
-                성장하는 서강대학교 컴퓨터공학과 학회
+                성장하는 서강대학교 컴퓨터공학과{" "}
+                <span className="whitespace-nowrap">학회</span>
               </p>
               <TimedAnchorLink
                 targetId="recruit"
