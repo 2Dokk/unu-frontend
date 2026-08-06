@@ -8,6 +8,7 @@ import { getCurrentQuarter } from "@/lib/api/quarter";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
 import { ScrollReveal } from "@/components/custom/scroll-reveal";
+import { HomeHeroScene } from "@/components/custom/home-hero-scene";
 
 const STATS = [
   { value: "240+", label: "누적 학회원" },
@@ -110,51 +111,45 @@ export default function Home() {
       className="font-cnu-body overflow-x-hidden bg-white text-black"
     >
       <section className="border-b border-[#dddddd]">
-        <div className="relative h-[510px] overflow-hidden bg-[#14231b] lg:h-[clamp(540px,30.36vw,583px)]">
-          <div className="pointer-events-none absolute inset-0">
-            <Image
-              src="/home-hero-figma-v2.png"
-              alt=""
-              fill
-              sizes="100vw"
-              className="object-cover object-center"
-              priority
-              unoptimized
-            />
-          </div>
+        <div
+          data-home-hero
+          className="relative min-h-[calc(100svh-4rem)] select-none overflow-hidden bg-[#14231b]"
+        >
+          <HomeHeroScene />
 
-          <div className="relative mx-auto h-full w-full max-w-[1219px] px-5 text-white sm:px-8 2xl:max-w-[1236px] 2xl:px-0">
-            <div className="h-full pt-12 sm:pt-16">
-              <p className="font-cnu-body text-sm font-semibold text-[#80c3a1] sm:text-2xl">
+          <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-[1219px] items-center justify-center px-5 py-10 text-center text-white sm:px-8 sm:py-12 2xl:max-w-[1236px] 2xl:px-0">
+            <div className="flex w-full flex-col items-center">
+              <p className="font-cnu-body text-sm font-semibold text-[#b4e2c9] [text-shadow:0_2px_12px_rgba(0,0,0,0.72)] sm:text-2xl">
                 WEB DEVELOPMENT &amp; SOFTWARE SYSTEM COMMUNITY
               </p>
-              <h1 className="font-cnu-body mt-2 text-7xl leading-none font-bold tracking-[0.45px] sm:text-8xl lg:text-[115px] lg:leading-[126px]">
+              <h1 className="font-cnu-body mt-2 text-7xl leading-none font-bold tracking-[0.45px] [text-shadow:0_3px_22px_rgba(0,0,0,0.82)] sm:text-8xl lg:text-[140px] lg:leading-none">
                 CNU
               </h1>
-              <p className="mt-2 max-w-[670px] text-base leading-8 text-white sm:text-2xl sm:leading-[72px]">
-                <span className="text-[#2d9c64]">웹과 시스템</span>을 중심으로 함께
+              <p className="mt-3 max-w-[760px] text-base leading-7 font-medium text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.88)] sm:text-2xl sm:leading-9">
+                <span className="font-semibold text-[#c1efd3]">웹과 시스템</span>을 중심으로 함께
                 성장하는 서강대학교 컴퓨터공학과{" "}
                 <span className="whitespace-nowrap">학회</span>
               </p>
               <TimedAnchorLink
                 targetId="recruit"
                 duration={900}
-                className="mt-4 flex h-[45px] w-[180px] items-center justify-center rounded-full border border-[#c9c9c9] bg-white text-lg font-medium text-black transition-colors hover:border-[#264638] hover:bg-[#264638] hover:text-white sm:text-2xl"
+                className="mt-7 flex h-[45px] w-[180px] items-center justify-center rounded-full border border-[#c9c9c9] bg-white text-lg font-medium text-black shadow-[0_10px_34px_rgba(0,0,0,0.3)] transition-colors hover:border-[#264638] hover:bg-[#264638] hover:text-white sm:text-2xl"
               >
                 지원 안내
               </TimedAnchorLink>
 
-              <div className="mt-12 grid w-full max-w-[720px] grid-cols-2 gap-y-10 sm:grid-cols-4">
-                {STATS.map((stat) => (
+              <div className="mt-12 grid w-full max-w-[860px] grid-cols-2 gap-y-10 sm:mt-14 sm:grid-cols-4">
+                {STATS.map((stat, index) => (
                   <div
                     key={stat.label}
-                    className="min-h-[66px] min-w-0 sm:min-h-[100px]"
+                    className="hero-stat-reveal group min-h-[66px] min-w-0 sm:min-h-[100px]"
+                    style={{ animationDelay: `${360 + index * 120}ms` }}
                   >
-                    <div className="relative mx-auto w-fit">
-                      <p className="text-4xl leading-none font-medium sm:text-[50px] lg:text-[58px]">
+                    <div className="hero-stat-float relative mx-auto w-fit transition-transform duration-300 ease-out group-hover:-translate-y-1.5">
+                      <p className="text-4xl leading-none font-medium [text-shadow:0_3px_16px_rgba(0,0,0,0.78)] sm:text-[50px] lg:text-[58px]">
                         {stat.value}
                       </p>
-                      <p className="absolute top-full left-0 mt-4 whitespace-nowrap text-sm font-medium sm:text-xl">
+                      <p className="absolute top-full left-0 mt-4 whitespace-nowrap text-sm font-medium [text-shadow:0_2px_10px_rgba(0,0,0,0.8)] sm:text-xl">
                         {stat.label}
                       </p>
                     </div>

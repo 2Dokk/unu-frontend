@@ -135,6 +135,35 @@
   font-family: var(--font-instrument-sans), var(--font-geist-sans), sans-serif;
 }
 
+@keyframes hero-stat-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.hero-stat-reveal {
+  opacity: 0;
+  animation: hero-stat-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-stat-reveal {
+    opacity: 1;
+    animation: none;
+  }
+
+  .hero-stat-float {
+    transition: none;
+  }
+}
+
 /* ── Tiptap editor ────────────────────────────────────────────────── */
 .ProseMirror {
   outline: none;
