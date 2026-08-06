@@ -1,15 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Pencil, Trash2 } from "lucide-react";
 import { MarkdownPreview } from "@/components/custom/markdown-editor";
 import { DefaultBlogThumbnail } from "@/components/custom/blog/default-blog-thumbnail";
 import { Button } from "@/components/ui/button";
 import {
   getBlogPostById,
   getCachedBlogPostById,
+  getCachedBlogPosts,
+  getBlogPosts,
   deleteBlogPost,
 } from "@/lib/api/blog";
 import { BlogPost } from "@/lib/interfaces/blog";
@@ -25,6 +28,11 @@ export default function BlogDetailPage() {
   const [loading, setLoading] = useState(
     () => !getCachedBlogPostById(id),
   );
+  const [otherPosts, setOtherPosts] = useState<BlogPost[]>(() =>
+    (getCachedBlogPosts()?.posts ?? [])
+      .filter((cachedPost) => cachedPost.id !== id)
+      .slice(0, 3),
+  );
 
   useEffect(() => {
     const cached = getCachedBlogPostById(id);
@@ -34,6 +42,22 @@ export default function BlogDetailPage() {
     getBlogPostById(id)
       .then(setPost)
       .finally(() => setLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getBlogPosts()
+      .then(({ posts }) => {
+        if (!cancelled) {
+          setOtherPosts(posts.filter((item) => item.id !== id).slice(0, 3));
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const handleDelete = async () => {
@@ -177,6 +201,68 @@ export default function BlogDetailPage() {
           hiddenImageUrl={post.thumbnailUrl || undefined}
         />
       </article>
+
+      <div className="pt-12 sm:pt-16">
+        {otherPosts.length > 0 && (
+          <section className="border-t border-black/15 pt-8" aria-labelledby="other-posts-heading">
+            <h2
+              id="other-posts-heading"
+              className="font-cnu-display text-3xl font-bold sm:text-4xl"
+            >
+              블로그의 다른 글
+            </h2>
+
+            <div className="mt-5 divide-y divide-black/10 border-y border-black/10">
+              {otherPosts.map((item) => {
+                const itemDate = new Date(item.createdAt).toLocaleDateString("ko-KR", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                });
+
+                return (
+                  <Link
+                    key={item.id}
+                    href={`/blog/${item.id}`}
+                    className="group flex min-w-0 items-center gap-4 py-5 sm:gap-6"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="font-medium text-[#2d6f50]">
+                          {item.category === "tech" ? "Tech" : "Essay"}
+                        </span>
+                        <span aria-hidden="true">·</span>
+                        <span>{item.createdBy?.name || "알 수 없음"}</span>
+                        <span aria-hidden="true">·</span>
+                        <span>{itemDate}</span>
+                      </div>
+                      <h3 className="mt-2 line-clamp-2 text-lg leading-snug font-semibold transition-colors group-hover:text-[#2d6f50] sm:text-xl">
+                        {item.title}
+                      </h3>
+                      {item.subtitle && (
+                        <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+                          {item.subtitle}
+                        </p>
+                      )}
+                    </div>
+                    <ArrowRight className="size-5 shrink-0 text-[#2d6f50] transition-transform group-hover:translate-x-1" />
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        <div className="flex justify-center pt-10">
+          <Link
+            href="/blog"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#14231b] bg-white px-7 text-sm font-semibold text-[#14231b] transition-colors hover:bg-[#14231b] hover:text-white sm:text-base"
+          >
+            <ArrowLeft className="size-4" />
+            블로그 목록으로
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }

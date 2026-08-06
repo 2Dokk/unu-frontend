@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function SiteFooter() {
   return (
-    <footer className="mt-auto shrink-0 border-t border-black/10 bg-white">
+    <footer className="mt-auto shrink-0 border-t border-white/10 bg-[#14231b]">
       <div className="mx-auto flex min-h-24 w-full max-w-[1180px] flex-col items-start justify-center gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <Link
           href="/"
@@ -19,15 +19,15 @@ export function SiteFooter() {
               className="object-cover"
             />
           </span>
-          <span className="font-cnu-body text-lg font-bold text-[#0b0c0c]">
+          <span className="font-cnu-body text-lg font-bold text-white">
             CNU
           </span>
         </Link>
 
-        <div className="flex max-w-full flex-col gap-1 text-left text-xs leading-relaxed text-[#777777] sm:items-end sm:text-right">
+        <div className="flex max-w-full flex-col gap-1 text-left text-xs leading-relaxed text-white/65 sm:items-end sm:text-right">
           <a
             href="mailto:admin@cnu.team"
-            className="transition-colors hover:text-black"
+            className="transition-colors hover:text-white"
           >
             admin@cnu.team
           </a>
