@@ -364,9 +364,18 @@ function CompactCube({
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const { viewport } = useThree();
-  const positionX = desktopSiteMode ? viewport.width * -0.15 : narrow ? -0.86 : -1.55;
-  const positionY = desktopSiteMode ? viewport.height * 0.035 : narrow ? 1.82 : 1.88;
   const cubeScale = desktopSiteMode ? 0.26 : narrow ? 0.5 : 0.58;
+  const cubeSize = CUBE_SIZE * cubeScale;
+  const positionX = desktopSiteMode
+    ? viewport.width * -0.15 - cubeSize
+    : narrow
+      ? -0.86
+      : -1.55;
+  const positionY = desktopSiteMode
+    ? viewport.height * 0.035 + cubeSize
+    : narrow
+      ? 1.82
+      : 1.88;
   const rotationAxis = useMemo(
     () => new THREE.Vector3(0.72, 1, 0.38).normalize(),
     [],
@@ -388,7 +397,7 @@ function CompactCube({
 
   return (
     <group ref={groupRef} position={[positionX, positionY, -0.3]}>
-      <CubeVisual cubeSize={CUBE_SIZE * cubeScale} />
+      <CubeVisual cubeSize={cubeSize} />
     </group>
   );
 }
@@ -736,6 +745,37 @@ function CnuCube({
   );
 }
 
+function PhysicsCubeWorld({
+  reducedMotion,
+  pointerRef,
+}: {
+  reducedMotion: boolean;
+  pointerRef: RefObject<PointerState>;
+}) {
+  const landingRef = useRef<LandingState>({
+    id: 0,
+    x: 0,
+    z: 0,
+    scale: 1,
+    visible: false,
+  });
+  const landingArmedRef = useRef(false);
+
+  return (
+    <Physics gravity={[0, -6.2, 0]} timeStep={1 / 60} interpolate>
+      <Arena />
+      <FloorShadow />
+      <LandingWeb landingRef={landingRef} />
+      <CnuCube
+        reducedMotion={reducedMotion}
+        pointerRef={pointerRef}
+        landingRef={landingRef}
+        landingArmedRef={landingArmedRef}
+      />
+    </Physics>
+  );
+}
+
 function CubeWorld({
   reducedMotion,
   pointerRef,
@@ -747,15 +787,6 @@ function CubeWorld({
   viewportWidth: number | null;
   mobileLikeDevice: boolean | null;
 }) {
-  const landingRef = useRef<LandingState>({
-    id: 0,
-    x: 0,
-    z: 0,
-    scale: 1,
-    visible: false,
-  });
-  const landingArmedRef = useRef(false);
-
   if (viewportWidth === null || mobileLikeDevice === null) {
     return null;
   }
@@ -779,19 +810,7 @@ function CubeWorld({
     );
   }
 
-  return (
-    <Physics gravity={[0, -6.2, 0]} timeStep={1 / 60} interpolate>
-      <Arena />
-      <FloorShadow />
-      <LandingWeb landingRef={landingRef} />
-      <CnuCube
-        reducedMotion={reducedMotion}
-        pointerRef={pointerRef}
-        landingRef={landingRef}
-        landingArmedRef={landingArmedRef}
-      />
-    </Physics>
-  );
+  return <PhysicsCubeWorld reducedMotion={reducedMotion} pointerRef={pointerRef} />;
 }
 
 export function HomeHeroScene() {
