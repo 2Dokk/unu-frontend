@@ -48,3 +48,7 @@ export async function deleteRecruitment(id: string): Promise<void> {
 export async function getActiveRecruitment(): Promise<RecruitmentResponse> {
   return publicClient.get<RecruitmentResponse>(`/public/recruitments/active`);
 }
+
+export async function getClosestRecruitment(): Promise<RecruitmentResponse> {
+  return publicClient.get<RecruitmentResponse>(`/public/recruitments/closest`);
+}

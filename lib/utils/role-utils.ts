@@ -25,6 +25,8 @@ export function getRoleBadgeVariant(
       return "default";
     case "MEMBER":
       return "secondary";
+    case "LECTURE_ROOM_MANAGER":
+      return "secondary";
     case "BLOG_MANAGER":
       return "secondary";
     default:

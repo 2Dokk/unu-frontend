@@ -3,9 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowRight, Code2, Rocket, Users } from "lucide-react";
 import { formatDate } from "@/lib/utils/date-utils";
-import { getActiveRecruitment } from "@/lib/api/recruitment";
-import { getCurrentQuarter } from "@/lib/api/quarter";
-import { QuarterResponse } from "@/lib/interfaces/quarter";
+import { getClosestRecruitment } from "@/lib/api/recruitment";
 import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
 import { ScrollReveal } from "@/components/custom/scroll-reveal";
 import { HomeHeroScene } from "@/components/custom/home-hero-scene";
@@ -42,58 +40,88 @@ function calculateDDay(endDate: string): number {
   return Math.ceil((end.getTime() - today.getTime()) / 86_400_000);
 }
 
-function formatQuarterLabel(quarter: QuarterResponse): string {
-  return `${String(quarter.year).slice(2)} ${quarter.season.toUpperCase()}`;
+function formatDDayLabel(dDay: number): string {
+  return dDay <= 0 ? "오늘 마감" : `D-${dDay}`;
 }
 
-async function RecruitmentCTA() {
-  const [activeRecruitment, currentQuarter] = await Promise.all([
-    getActiveRecruitment().catch(() => null),
-    getCurrentQuarter().catch(() => null),
-  ]);
+type RecruitmentCTAStatus = "none" | "upcoming" | "open";
 
-  const dDay = activeRecruitment
-    ? calculateDDay(activeRecruitment.endAt)
-    : null;
-  const quarterLabel = currentQuarter
-    ? formatQuarterLabel(currentQuarter)
-    : null;
+async function RecruitmentCTA() {
+  const recruitment = await getClosestRecruitment().catch(() => null);
+
+  const now = new Date();
+  const startAt = recruitment ? new Date(recruitment.startAt) : null;
+  const endAt = recruitment ? new Date(recruitment.endAt) : null;
+
+  const status: RecruitmentCTAStatus =
+    !recruitment || !startAt || !endAt || now > endAt
+      ? "none"
+      : now < startAt
+        ? "upcoming"
+        : "open";
+
+  const pillText =
+    status === "open" && recruitment
+      ? `현재 모집 중 · 모집 마감 ${formatDDayLabel(calculateDDay(recruitment.endAt))}`
+      : status === "upcoming" && recruitment
+        ? `${recruitment.quarter.name} 분기 모집이 ${formatDate(recruitment.startAt)}에 시작됩니다.`
+        : "지금은 모집 기간이 아니에요.";
+
+  const supportingText =
+    status === "open" && recruitment ? (
+      <>
+        지원 기간은 {formatDate(recruitment.startAt)}부터 {formatDate(recruitment.endAt)}까지입니다.{" "}
+      </>
+    ) : status === "upcoming" && recruitment ? (
+      <>
+        아직은 지원 기간이 아니에요.
+      </>
+    ) : (
+      "다음 모집을 준비 중이에요."
+    );
+
+  const buttonLabel = "지원하러 가기";
+  const buttonDisabled = status !== "open";
 
   return (
     <div className="font-cnu-body flex flex-col items-center px-5 text-center text-white">
-      <div className="flex min-h-[45px] w-full max-w-[585px] items-center justify-center rounded-full border border-[#8b8a8a] px-5 text-sm sm:text-xl">
-        {activeRecruitment
-          ? `현재 모집 중${dDay !== null && dDay >= 0 ? ` · D-${dDay}` : ""}`
-          : quarterLabel
-            ? `지금은 모집 기간이 아니에요 · 다음 모집 ${quarterLabel}`
-            : "지금은 모집 기간이 아니에요 · 다음 모집 준비 중"}
+      <div className="flex min-h-[45px] w-fit min-w-[280px] max-w-full items-center justify-center rounded-full border border-[#8b8a8a] px-6 text-sm sm:text-xl">
+        {pillText}
       </div>
 
-      <h2 className="font-cnu-display mt-12 text-[40px] leading-[1.06] font-bold sm:text-6xl lg:text-[83px] lg:leading-[86px]">
-        함께할 분들을
-        <br />
-        기다리고 있어요.
+      <h2 className="font-cnu-body mt-12 text-[40px] leading-[1.06] font-bold sm:text-6xl lg:text-[83px] lg:leading-[86px]">
+        {status === "open" && recruitment ? (
+          <>
+            {recruitment.quarter.name}
+            <br />
+            모집 진행 중
+          </>
+        ) : (
+          <>
+            함께할 분들을
+            <br />
+            기다리고 있어요.
+          </>
+        )}
       </h2>
 
-      <p className="mt-8 text-base leading-8 sm:text-2xl">
-        {activeRecruitment ? (
-          <>
-            {formatDate(activeRecruitment.startAt)} -{" "}
-            {formatDate(activeRecruitment.endAt)} 지원을 받고 있습니다.
-          </>
-        ) : quarterLabel ? (
-          `${quarterLabel} 분기 CNU 모집이 곧 시작될 예정입니다.`
-        ) : (
-          "다음 모집이 시작되면 가장 먼저 알려드릴게요."
-        )}
-      </p>
+      <p className="mt-8 text-base leading-8 sm:text-2xl">{supportingText}</p>
 
-      <Link
-        href="/apply"
-        className="mt-10 flex h-[45px] w-full max-w-[391px] items-center justify-center rounded-full bg-white px-6 text-lg font-medium text-black transition-colors hover:bg-[#264638] hover:text-white sm:text-2xl"
-      >
-        {activeRecruitment ? "지원하러 가기" : "모집 공고 확인하기"}
-      </Link>
+      {buttonDisabled ? (
+        <span
+          aria-disabled="true"
+          className="mt-10 flex h-[45px] w-full max-w-[250px] cursor-not-allowed items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 text-lg font-medium text-white/50 sm:text-2xl"
+        >
+          {buttonLabel}
+        </span>
+      ) : (
+        <Link
+          href="/apply"
+          className="mt-10 flex h-[45px] w-full max-w-[250px] items-center justify-center rounded-full bg-white px-6 text-lg font-medium text-black transition-colors hover:bg-[#264638] hover:text-white sm:text-2xl"
+        >
+          {buttonLabel}
+        </Link>
+      )}
     </div>
   );
 }

@@ -38,7 +38,7 @@ export default function PortfolioEditPage() {
   const sessionIdsRef = useRef<Set<string>>(new Set());
   const submittedRef = useRef(false);
 
-  // 운영자(MANAGER) 이상만 수정 가능. 권한 확인이 끝난 뒤에만 판단한다.
+
   const canWrite = hasRole("MANAGER");
 
   useEffect(() => {

@@ -27,14 +27,18 @@ import { getAllQuarters } from "@/lib/api/quarter";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { getRoleBadgeVariant, getRoleLabel } from "@/lib/utils/role-utils";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { MemberCreateDialog } from "@/components/custom/member/member-create-dialog";
 
 type RoleFilter = "ALL" | "MEMBER" | "MANAGER" | "ADMIN";
 type ActiveFilter = "ALL" | "ACTIVE" | "INACTIVE";
 
 export default function MembersManagementPage() {
   const router = useRouter();
+  const { hasRole } = useAuth();
 
   const [members, setMembers] = useState<UserResponseDto[]>([]);
+  const [refreshToken, setRefreshToken] = useState(0);
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,6 +50,13 @@ export default function MembersManagementPage() {
 
   const [debouncedName, setDebouncedName] = useState("");
   const [debouncedStudentId, setDebouncedStudentId] = useState("");
+
+  const seasonOrder: Record<string, number> = {
+    WINTER: 1,
+    SPRING: 2,
+    SUMMER: 3,
+    FALL: 4,
+  };
 
   // Load quarters on mount
   useEffect(() => {
@@ -92,6 +103,27 @@ export default function MembersManagementPage() {
         if (debouncedStudentId.trim())
           params.studentId = debouncedStudentId.trim();
         const results = await searchUsers(params);
+
+      const sortedResults = results.sort((a, b) => {
+        const qA = a.joinedQuarter?.name; 
+        const qB = b.joinedQuarter?.name;
+
+        if (!qA && !qB) return 0;
+       
+        if (!qA) return 1; 
+        if (!qB) return -1;
+
+        const [yearA, seasonA] = qA.split(" ");
+        const [yearB, seasonB] = qB.split(" ");
+
+        if (yearA !== yearB) {
+          return Number(yearB) - Number(yearA);
+        }
+        const orderA = seasonOrder[seasonA.toUpperCase()] || 0;
+        const orderB = seasonOrder[seasonB.toUpperCase()] || 0;
+        return orderB - orderA; 
+      });
+
         setMembers(results);
       } catch (err) {
         console.error("Search failed:", err);
@@ -106,6 +138,7 @@ export default function MembersManagementPage() {
     joinedQuarterFilter,
     debouncedName,
     debouncedStudentId,
+    refreshToken,
   ]);
 
   const hasFilters =
@@ -118,11 +151,18 @@ export default function MembersManagementPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       {/* Page Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">학회원 관리</h1>
-        <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          학회원 정보를 조회하고 관리합니다
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight">학회원 관리</h1>
+          <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
+            학회원 정보를 조회하고 관리합니다
+          </p>
+        </div>
+        {hasRole("ADMIN") && (
+          <MemberCreateDialog
+            onCreated={() => setRefreshToken((v) => v + 1)}
+          />
+        )}
       </div>
 
       <Card>
@@ -171,6 +211,12 @@ export default function MembersManagementPage() {
                   </SelectItem>
                   <SelectItem value="ADMIN" className="text-xs">
                     관리자
+                  </SelectItem>
+                  <SelectItem value="LECTURE_ROOM_MANAGER" className="text-xs">
+                    학회실 관리자
+                  </SelectItem>
+                  <SelectItem value="BLOG_MANAGER" className="text-xs">
+                    블로그 에디터
                   </SelectItem>
                 </SelectContent>
               </Select>
