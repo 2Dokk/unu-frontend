@@ -2,7 +2,15 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus, Tag, CalendarDays, Users, KeyRound, RefreshCw } from "lucide-react";
+import {
+  UserPlus,
+  Tag,
+  CalendarDays,
+  Users,
+  KeyRound,
+  RefreshCw,
+  type LucideIcon,
+} from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import {
   Card,
@@ -17,7 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface AdminMenuItem {
   title: string;
   description: string;
-  icon: React.ElementType;
+  icon: LucideIcon;
   href: string;
 }
 
