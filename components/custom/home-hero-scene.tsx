@@ -363,9 +363,10 @@ function CompactCube({
   desktopSiteMode: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null);
-  const positionX = desktopSiteMode ? -1.72 : narrow ? -0.86 : -1.55;
-  const positionY = desktopSiteMode ? 1.98 : narrow ? 1.82 : 1.88;
-  const cubeScale = desktopSiteMode ? 0.46 : narrow ? 0.5 : 0.58;
+  const { viewport } = useThree();
+  const positionX = desktopSiteMode ? viewport.width * -0.15 : narrow ? -0.86 : -1.55;
+  const positionY = desktopSiteMode ? viewport.height * 0.035 : narrow ? 1.82 : 1.88;
+  const cubeScale = desktopSiteMode ? 0.26 : narrow ? 0.5 : 0.58;
   const rotationAxis = useMemo(
     () => new THREE.Vector3(0.72, 1, 0.38).normalize(),
     [],
