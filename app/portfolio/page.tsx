@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 
 export default function PortfolioPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { hasRole } = useAuth();
   const [portfolios, setPortfolios] = useState<PortfolioResponse[]>(
     () => getCachedPortfolios()?.portfolios ?? [],
   );
@@ -37,7 +37,7 @@ export default function PortfolioPage() {
             CNU가 만들어온 활동을 소개합니다.
           </p>
         </div>
-        {isAuthenticated && (
+        {hasRole("MANAGER") && (
           <Button size="sm" className="mt-8" onClick={() => router.push("/portfolio/create")}>
             추가
           </Button>

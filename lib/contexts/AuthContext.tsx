@@ -18,15 +18,39 @@ export type UserRole = "ADMIN" | "MANAGER" | "LECTURE_ROOM_MANAGER" | "MEMBER" |
 interface AuthContextType {
   isAuthenticated: boolean;
   userRole: UserRole;
+  /** 토큰에 담긴 모든 역할. userRole과 달리 하나로 접히지 않는다. */
+  roles: string[];
   userId: string | null;
   isLoading: boolean;
   login: (token: string, refreshToken?: string) => void;
   logout: () => void;
   getAuthToken: () => string | undefined;
   hasRole: (requiredRole: UserRole) => boolean;
+  /** 계층과 무관한 역할(BLOG_MANAGER 등)은 hasRole이 아니라 이쪽으로 검사한다. */
+  hasAnyRole: (required: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/**
+ * JWT 토큰에서 역할 목록을 그대로 추출한다.
+ * "ROLE_" 접두사는 떼고 대문자로 정규화한다.
+ */
+function extractRolesFromToken(token: string): string[] {
+  try {
+    const decoded = jwtDecode<DecodedToken>(token);
+
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+      return [];
+    }
+
+    return (decoded.roles || []).map((r) =>
+      r.toUpperCase().replace(/^ROLE_/, ""),
+    );
+  } catch {
+    return [];
+  }
+}
 
 /**
  * JWT 토큰에서 가장 높은 권한을 추출
@@ -87,6 +111,7 @@ function extractRoleFromToken(token: string): UserRole {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>("GUEST");
+  const [roles, setRoles] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -99,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!token) {
         setIsAuthenticated(false);
         setUserRole("GUEST");
+        setRoles([]);
         setIsLoading(false);
         return;
       }
@@ -112,11 +138,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           Cookies.remove("refreshToken");
           setIsAuthenticated(false);
           setUserRole("GUEST");
+          setRoles([]);
           setUserId(null);
         } else {
           const decoded = jwtDecode<DecodedToken>(token);
           setIsAuthenticated(true);
           setUserRole(role);
+          setRoles(extractRolesFromToken(token));
           setUserId(decoded.sub ?? null);
         }
       } catch (error: any) {
@@ -125,6 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         Cookies.remove("refreshToken");
         setIsAuthenticated(false);
         setUserRole("GUEST");
+        setRoles([]);
       }
 
       setIsLoading(false);
@@ -143,6 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const decoded = jwtDecode<DecodedToken>(token);
     setIsAuthenticated(true);
     setUserRole(role);
+    setRoles(extractRolesFromToken(token));
     setUserId(decoded.sub ?? null);
   };
 
@@ -151,6 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     Cookies.remove("refreshToken");
     setIsAuthenticated(false);
     setUserRole("GUEST");
+    setRoles([]);
     setUserId(null);
 
     if (typeof window !== "undefined") {
@@ -174,15 +205,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
   };
 
+  const hasAnyRole = (required: string[]): boolean =>
+    required.some((r) => roles.includes(r.toUpperCase()));
+
   const value: AuthContextType = {
     isAuthenticated,
     userRole,
+    roles,
     userId,
     isLoading,
     login,
     logout,
     getAuthToken,
     hasRole,
+    hasAnyRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

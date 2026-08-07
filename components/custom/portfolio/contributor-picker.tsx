@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Search, UserPlus, X } from "lucide-react";
+import { Check, Plus, Search, UserPlus, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,9 @@ export function ContributorPicker({
   const [allUsers, setAllUsers] = useState<UserResponseDto[]>([]);
   const [search, setSearch] = useState("");
   const [selectorOpen, setSelectorOpen] = useState(false);
+  const [externalOpen, setExternalOpen] = useState(false);
+  const [externalName, setExternalName] = useState("");
+  const [externalRole, setExternalRole] = useState("");
 
   useEffect(() => {
     getAllUsers()
@@ -30,7 +33,9 @@ export function ContributorPicker({
       .catch(() => {});
   }, []);
 
-  const selectedIds = new Set(contributors.map((c) => c.id));
+  const selectedIds = new Set(
+    contributors.map((c) => c.userId).filter(Boolean) as string[],
+  );
 
   const filteredUsers = allUsers.filter((u) => {
     const q = search.trim().toLowerCase();
@@ -44,13 +49,34 @@ export function ContributorPicker({
 
   const toggleUser = (user: UserResponseDto) => {
     if (selectedIds.has(user.id)) {
-      onChange(contributors.filter((c) => c.id !== user.id));
+      onChange(contributors.filter((c) => c.userId !== user.id));
     } else {
       onChange([
         ...contributors,
-        { id: user.id, name: user.name || user.username, role: "" },
+        {
+          id: user.id,
+          userId: user.id,
+          name: user.name || user.username,
+          role: "",
+        },
       ]);
     }
+  };
+
+  const addExternal = () => {
+    const name = externalName.trim();
+    if (!name) return;
+    onChange([
+      ...contributors,
+      {
+        id: `ext-local:${crypto.randomUUID()}`,
+        userId: null,
+        name,
+        role: externalRole.trim(),
+      },
+    ]);
+    setExternalName("");
+    setExternalRole("");
   };
 
   const removeContributor = (id: string) => {
@@ -59,6 +85,10 @@ export function ContributorPicker({
 
   const updateRole = (id: string, role: string) => {
     onChange(contributors.map((c) => (c.id === id ? { ...c, role } : c)));
+  };
+
+  const updateName = (id: string, name: string) => {
+    onChange(contributors.map((c) => (c.id === id ? { ...c, name } : c)));
   };
 
   return (
@@ -73,18 +103,35 @@ export function ContributorPicker({
               </span>
             )}
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setSelectorOpen((v) => !v);
-              if (selectorOpen) setSearch("");
-            }}
-          >
-            <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-            기여자 추가
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectorOpen((v) => !v);
+                if (selectorOpen) setSearch("");
+              }}
+            >
+              <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+              기여자 추가
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setExternalOpen((v) => !v);
+                if (externalOpen) {
+                  setExternalName("");
+                  setExternalRole("");
+                }
+              }}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              외부 인원 추가
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
@@ -96,9 +143,24 @@ export function ContributorPicker({
                 key={c.id}
                 className="flex items-center gap-2 rounded-md border px-3 py-1.5"
               >
-                <span className="text-sm font-medium shrink-0 min-w-16 flex-1">
-                  {c.name}
-                </span>
+                {c.userId ? (
+                  // 학회원 이름은 계정에서 오므로 여기서 고치지 않는다.
+                  <span className="text-sm font-medium shrink-0 min-w-16 flex-1">
+                    {c.name}
+                  </span>
+                ) : (
+                  <div className="flex flex-1 items-center gap-1.5">
+                    <Input
+                      value={c.name}
+                      onChange={(e) => updateName(c.id, e.target.value)}
+                      placeholder="이름"
+                      className="h-7 text-xs flex-1 rounded-2xl"
+                    />
+                    <Badge variant="outline" className="shrink-0 text-[10px]">
+                      외부
+                    </Badge>
+                  </div>
+                )}
                 <Input
                   value={c.role}
                   onChange={(e) => updateRole(c.id, e.target.value)}
@@ -116,11 +178,51 @@ export function ContributorPicker({
             ))}
           </div>
         ) : (
-          !selectorOpen && (
+          !selectorOpen &&
+          !externalOpen && (
             <p className="text-sm text-muted-foreground">
               등록된 기여자가 없습니다.
             </p>
           )
+        )}
+
+        {externalOpen && (
+          <div className="flex items-center gap-2 rounded-md border p-2">
+            <Input
+              autoFocus
+              value={externalName}
+              onChange={(e) => setExternalName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addExternal();
+                }
+              }}
+              placeholder="이름"
+              className="h-8 flex-1 text-sm"
+            />
+            <Input
+              value={externalRole}
+              onChange={(e) => setExternalRole(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addExternal();
+                }
+              }}
+              placeholder="역할"
+              className="h-8 flex-1 text-sm"
+            />
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 shrink-0"
+              disabled={!externalName.trim()}
+              onClick={addExternal}
+            >
+              추가
+            </Button>
+          </div>
         )}
 
         {selectorOpen && (

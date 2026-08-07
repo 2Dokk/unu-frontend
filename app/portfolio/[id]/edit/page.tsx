@@ -12,12 +12,14 @@ import { ContributorPicker } from "@/components/custom/portfolio/contributor-pic
 import { getPortfolioById, updatePortfolio } from "@/lib/api/portfolio";
 import { uploadImage, deleteImage } from "@/lib/api/image";
 import { ContributorInfo } from "@/lib/interfaces/portfolio";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function PortfolioEditPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { hasRole, isLoading: authLoading } = useAuth();
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [title, setTitle] = useState("");
@@ -35,6 +37,14 @@ export default function PortfolioEditPage() {
 
   const sessionIdsRef = useRef<Set<string>>(new Set());
   const submittedRef = useRef(false);
+
+  // 운영자(MANAGER) 이상만 수정 가능. 권한 확인이 끝난 뒤에만 판단한다.
+  const canWrite = hasRole("MANAGER");
+
+  useEffect(() => {
+    if (authLoading || canWrite) return;
+    router.replace(`/portfolio/${id}`);
+  }, [authLoading, canWrite, router, id]);
 
   useEffect(() => {
     getPortfolioById(id).then((p) => {
@@ -102,7 +112,8 @@ export default function PortfolioEditPage() {
         startQuarterId,
         endQuarterId: isOngoing ? "" : endQuarterId,
         contributors: contributors.map((c) => ({
-          userId: c.id,
+          userId: c.userId,
+          name: c.userId ? null : c.name,
           role: c.role,
         })),
       });
@@ -126,6 +137,8 @@ export default function PortfolioEditPage() {
       setSubmitting(false);
     }
   };
+
+  if (authLoading || !canWrite) return null;
 
   if (!loaded) {
     return (

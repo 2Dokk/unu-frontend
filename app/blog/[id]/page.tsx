@@ -21,7 +21,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 export default function BlogDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { userId, hasRole } = useAuth();
+  const { userId, hasRole, hasAnyRole } = useAuth();
   const [post, setPost] = useState<BlogPost | null>(
     () => getCachedBlogPostById(id) ?? null,
   );
@@ -67,8 +67,12 @@ export default function BlogDetailPage() {
   };
 
   const isAuthor = !!userId && post?.createdBy?.id === userId;
-  const canEdit = isAuthor;
-  const canDelete = isAuthor || hasRole("MANAGER");
+  // ADMIN만 남의 글을 건드릴 수 있다. MANAGER/BLOG_MANAGER는 자기 글만.
+  const canManage =
+    hasRole("ADMIN") ||
+    (hasAnyRole(["MANAGER", "BLOG_MANAGER"]) && isAuthor);
+  const canEdit = canManage;
+  const canDelete = canManage;
 
   if (loading) {
     return (

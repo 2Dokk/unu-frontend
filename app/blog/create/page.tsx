@@ -22,6 +22,7 @@ const NotionEditor = dynamic(
 import { createBlogPost } from "@/lib/api/blog";
 import { uploadImage, deleteImage } from "@/lib/api/image";
 import { BlogRequest, BlogCategory } from "@/lib/interfaces/blog";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES: { value: BlogCategory; label: string }[] = [
@@ -31,6 +32,7 @@ const CATEGORIES: { value: BlogCategory; label: string }[] = [
 
 export default function BlogCreatePage() {
   const router = useRouter();
+  const { hasAnyRole, isLoading: authLoading } = useAuth();
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const subtitleRef = useRef<HTMLTextAreaElement>(null);
   const [form, setForm] = useState<BlogRequest>({
@@ -48,6 +50,14 @@ export default function BlogCreatePage() {
 
   const sessionIdsRef = useRef<Set<string>>(new Set());
   const submittedRef = useRef(false);
+
+  // 블로그 에디터 또는 운영진만 작성 가능. 권한 확인이 끝난 뒤에만 판단한다.
+  const canWrite = hasAnyRole(["ADMIN", "MANAGER", "BLOG_MANAGER"]);
+
+  useEffect(() => {
+    if (authLoading || canWrite) return;
+    router.replace("/blog");
+  }, [authLoading, canWrite, router]);
 
   useEffect(() => {
     return () => {
@@ -90,6 +100,8 @@ export default function BlogCreatePage() {
       setSubmitting(false);
     }
   };
+
+  if (authLoading || !canWrite) return null;
 
   return (
     <form

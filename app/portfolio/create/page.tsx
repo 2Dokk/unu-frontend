@@ -11,10 +11,12 @@ import { ContributorPicker } from "@/components/custom/portfolio/contributor-pic
 import { createPortfolio } from "@/lib/api/portfolio";
 import { uploadImage, deleteImage } from "@/lib/api/image";
 import { ContributorInfo } from "@/lib/interfaces/portfolio";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 export default function PortfolioCreatePage() {
   const router = useRouter();
+  const { hasRole, isLoading: authLoading } = useAuth();
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -31,6 +33,14 @@ export default function PortfolioCreatePage() {
 
   const sessionIdsRef = useRef<Set<string>>(new Set());
   const submittedRef = useRef(false);
+
+  // 운영자(MANAGER) 이상만 작성 가능. 권한 확인이 끝난 뒤에만 판단한다.
+  const canWrite = hasRole("MANAGER");
+
+  useEffect(() => {
+    if (authLoading || canWrite) return;
+    router.replace("/portfolio");
+  }, [authLoading, canWrite, router]);
 
   useEffect(() => {
     return () => {
@@ -67,7 +77,8 @@ export default function PortfolioCreatePage() {
         startQuarterId,
         endQuarterId: isOngoing ? "" : endQuarterId,
         contributors: contributors.map((c) => ({
-          userId: c.id,
+          userId: c.userId,
+          name: c.userId ? null : c.name,
           role: c.role,
         })),
       });
@@ -77,6 +88,8 @@ export default function PortfolioCreatePage() {
       setSubmitting(false);
     }
   };
+
+  if (authLoading || !canWrite) return null;
 
   return (
     <form

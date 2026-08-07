@@ -20,7 +20,7 @@ const FILTERS: { value: Filter; label: string }[] = [
 
 export default function BlogPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { hasAnyRole } = useAuth();
   const [posts, setPosts] = useState<BlogPost[]>(
     () => getCachedBlogPosts()?.posts ?? [],
   );
@@ -60,7 +60,7 @@ export default function BlogPage() {
             Blog
           </h1>
         </div>
-        {isAuthenticated && (
+        {hasAnyRole(["ADMIN", "MANAGER", "BLOG_MANAGER"]) && (
           <Button
             size="sm"
             className="mt-8"

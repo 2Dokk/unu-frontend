@@ -22,6 +22,7 @@ const NotionEditor = dynamic(
 import { getBlogPostById, updateBlogPost } from "@/lib/api/blog";
 import { uploadImage, deleteImage } from "@/lib/api/image";
 import { BlogRequest, BlogCategory } from "@/lib/interfaces/blog";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES: { value: BlogCategory; label: string }[] = [
@@ -32,6 +33,7 @@ const CATEGORIES: { value: BlogCategory; label: string }[] = [
 export default function BlogEditPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { hasAnyRole, isLoading: authLoading } = useAuth();
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const subtitleRef = useRef<HTMLTextAreaElement>(null);
   const [form, setForm] = useState<BlogRequest | null>(null);
@@ -43,6 +45,14 @@ export default function BlogEditPage() {
 
   const sessionIdsRef = useRef<Set<string>>(new Set());
   const submittedRef = useRef(false);
+
+  // 역할 수준에서만 막는다. "자기 글만" 여부는 서버가 최종 판단한다.
+  const canWrite = hasAnyRole(["ADMIN", "MANAGER", "BLOG_MANAGER"]);
+
+  useEffect(() => {
+    if (authLoading || canWrite) return;
+    router.replace(`/blog/${id}`);
+  }, [authLoading, canWrite, router, id]);
 
   useEffect(() => {
     getBlogPostById(id).then((post) => {
@@ -112,6 +122,8 @@ export default function BlogEditPage() {
       </main>
     );
   }
+
+  if (authLoading || !canWrite) return null;
 
   return (
     <form

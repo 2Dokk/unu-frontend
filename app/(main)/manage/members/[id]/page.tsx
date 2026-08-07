@@ -76,6 +76,7 @@ const ASSIGNABLE_ROLES = [
   "MANAGER",
   "ADMIN",
   "LECTURE_ROOM_MANAGER",
+  "BLOG_MANAGER",
 ] as const;
 
 export default function MemberDetailPage() {

@@ -49,8 +49,10 @@ export default function PortfolioDetailPage() {
   };
 
   const isAuthor = !!userId && portfolio?.createdBy === userId;
-  const canEdit = isAuthor;
-  const canDelete = isAuthor || hasRole("MANAGER");
+  // ADMIN만 남의 글을 건드릴 수 있다. MANAGER는 자기 글만.
+  const canManage = hasRole("ADMIN") || (hasRole("MANAGER") && isAuthor);
+  const canEdit = canManage;
+  const canDelete = canManage;
 
   if (loading) {
     return (
