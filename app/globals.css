@@ -127,9 +127,7 @@
   }
 }
 
-/* Radix(react-remove-scroll)가 Select/Dialog를 열 때 body에 보정용 margin-right를 강제로 건다.
-   위 html의 scrollbar-gutter:stable과 겹치면 열고 닫을 때마다 콘텐츠가 밀렸다 돌아온다.
-   Radix가 주입하는 스타일과 동일한 선택자라 선택자를 한 단계 더 구체적으로 만들어 항상 이긴다. */
+
 html body[data-scroll-locked] {
   margin-right: 0 !important;
 }

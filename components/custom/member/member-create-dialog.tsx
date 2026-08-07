@@ -43,9 +43,6 @@ const EMPTY_FORM = {
   githubId: "",
 };
 
-// 학회원 개별 등록 화면. 관리자 전용 CSV 일괄 등록 API(POST /api/admin/migrations/users)에
-// 한 줄짜리 CSV를 만들어 그대로 태운다. 백엔드에 새 엔드포인트를 만들지 않기 위한 선택으로,
-// 중복 아이디/학번 skip, 분기 자동 매칭 등 기존 로직을 그대로 재사용한다.
 function toCsvField(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
