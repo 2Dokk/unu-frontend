@@ -11,6 +11,7 @@ interface TimedAnchorLinkProps {
   duration?: number;
   href?: string;
   offset?: number;
+  onNavigate?: () => void;
   targetId: string;
 }
 
@@ -20,15 +21,20 @@ export function TimedAnchorLink({
   duration = 900,
   href,
   offset,
+  onNavigate,
   targetId,
 }: TimedAnchorLinkProps) {
   const pathname = usePathname();
   const router = useRouter();
   const animationFrame = useRef<number | null>(null);
+  const preserveAnimationOnUnmount = useRef(false);
 
   useEffect(
     () => () => {
-      if (animationFrame.current !== null) {
+      if (
+        animationFrame.current !== null &&
+        !preserveAnimationOnUnmount.current
+      ) {
         cancelAnimationFrame(animationFrame.current);
       }
     },
@@ -91,9 +97,14 @@ export function TimedAnchorLink({
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
 
-    if (scrollToTarget()) return;
+    if (scrollToTarget()) {
+      preserveAnimationOnUnmount.current = Boolean(onNavigate);
+      onNavigate?.();
+      return;
+    }
 
     if (href) {
+      onNavigate?.();
       sessionStorage.setItem(PENDING_SCROLL_KEY, targetId);
       router.push(href.split("#")[0] || "/");
     }

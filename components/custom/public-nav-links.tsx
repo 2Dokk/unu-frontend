@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
@@ -42,6 +43,7 @@ interface PublicNavLinksProps {
 
 export function PublicNavLinks({ showMobile = true }: PublicNavLinksProps) {
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <>
@@ -88,7 +90,11 @@ export function PublicNavLinks({ showMobile = true }: PublicNavLinksProps) {
 
       {showMobile && (
         <div className="flex h-16 items-center md:hidden">
-          <DropdownMenu modal={false}>
+          <DropdownMenu
+            modal={false}
+            open={mobileMenuOpen}
+            onOpenChange={setMobileMenuOpen}
+          >
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
@@ -110,12 +116,13 @@ export function PublicNavLinks({ showMobile = true }: PublicNavLinksProps) {
 
                 if (targetId) {
                   return (
-                    <DropdownMenuItem key={href} className="p-0">
+                    <DropdownMenuItem key={href} asChild className={itemClassName}>
                       <TimedAnchorLink
                         href={href}
                         targetId={targetId}
                         duration={900}
-                        className="w-full px-2 py-1.5"
+                        className="w-full"
+                        onNavigate={() => setMobileMenuOpen(false)}
                       >
                         {label}
                       </TimedAnchorLink>
