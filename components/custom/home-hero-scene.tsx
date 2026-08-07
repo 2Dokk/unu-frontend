@@ -356,14 +356,16 @@ function CubeVisual({ cubeSize }: { cubeSize: number }) {
 function CompactCube({
   reducedMotion,
   narrow,
+  desktopSiteMode,
 }: {
   reducedMotion: boolean;
   narrow: boolean;
+  desktopSiteMode: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null);
-  const positionX = narrow ? -0.86 : -1.55;
-  const positionY = narrow ? 1.82 : 1.88;
-  const cubeScale = narrow ? 0.5 : 0.58;
+  const positionX = desktopSiteMode ? -1.72 : narrow ? -0.86 : -1.55;
+  const positionY = desktopSiteMode ? 1.98 : narrow ? 1.82 : 1.88;
+  const cubeScale = desktopSiteMode ? 0.46 : narrow ? 0.5 : 0.58;
   const rotationAxis = useMemo(
     () => new THREE.Vector3(0.72, 1, 0.38).normalize(),
     [],
@@ -737,12 +739,12 @@ function CubeWorld({
   reducedMotion,
   pointerRef,
   viewportWidth,
-  touchOnlyDevice,
+  mobileLikeDevice,
 }: {
   reducedMotion: boolean;
   pointerRef: RefObject<PointerState>;
   viewportWidth: number | null;
-  touchOnlyDevice: boolean | null;
+  mobileLikeDevice: boolean | null;
 }) {
   const landingRef = useRef<LandingState>({
     id: 0,
@@ -753,11 +755,12 @@ function CubeWorld({
   });
   const landingArmedRef = useRef(false);
 
-  if (viewportWidth === null || touchOnlyDevice === null) {
+  if (viewportWidth === null || mobileLikeDevice === null) {
     return null;
   }
 
-  const compact = viewportWidth < 720 || touchOnlyDevice;
+  const desktopSiteMode = mobileLikeDevice && viewportWidth >= 720;
+  const compact = viewportWidth < 720 || mobileLikeDevice;
   const hideCompactCube = viewportWidth < 375;
   const narrowCompactCube = viewportWidth < 480;
 
@@ -770,6 +773,7 @@ function CubeWorld({
       <CompactCube
         reducedMotion={reducedMotion}
         narrow={narrowCompactCube}
+        desktopSiteMode={desktopSiteMode}
       />
     );
   }
@@ -792,21 +796,29 @@ function CubeWorld({
 export function HomeHeroScene() {
   const reducedMotion = useReducedMotion();
   const [viewportWidth, setViewportWidth] = useState<number | null>(null);
-  const [touchOnlyDevice, setTouchOnlyDevice] = useState<boolean | null>(null);
+  const [mobileLikeDevice, setMobileLikeDevice] = useState<boolean | null>(null);
   const pointerRef = useRef<PointerState>({ active: false, x: 0, y: 0, revision: 0 });
 
   useEffect(() => {
     const updateViewportWidth = () => setViewportWidth(window.innerWidth);
     const touchOnlyQuery = window.matchMedia("(pointer: coarse) and (hover: none)");
-    const updateTouchOnlyDevice = () => setTouchOnlyDevice(touchOnlyQuery.matches);
+    const updateMobileLikeDevice = () => {
+      const smallTouchScreen =
+        navigator.maxTouchPoints > 0 &&
+        Math.min(window.screen.width, window.screen.height) <= 900;
+
+      setMobileLikeDevice(touchOnlyQuery.matches || smallTouchScreen);
+    };
 
     updateViewportWidth();
-    updateTouchOnlyDevice();
+    updateMobileLikeDevice();
     window.addEventListener("resize", updateViewportWidth, { passive: true });
-    touchOnlyQuery.addEventListener("change", updateTouchOnlyDevice);
+    window.addEventListener("orientationchange", updateMobileLikeDevice);
+    touchOnlyQuery.addEventListener("change", updateMobileLikeDevice);
     return () => {
       window.removeEventListener("resize", updateViewportWidth);
-      touchOnlyQuery.removeEventListener("change", updateTouchOnlyDevice);
+      window.removeEventListener("orientationchange", updateMobileLikeDevice);
+      touchOnlyQuery.removeEventListener("change", updateMobileLikeDevice);
     };
   }, []);
 
@@ -870,7 +882,7 @@ export function HomeHeroScene() {
             reducedMotion={reducedMotion}
             pointerRef={pointerRef}
             viewportWidth={viewportWidth}
-            touchOnlyDevice={touchOnlyDevice}
+            mobileLikeDevice={mobileLikeDevice}
           />
         </Suspense>
       </Canvas>
