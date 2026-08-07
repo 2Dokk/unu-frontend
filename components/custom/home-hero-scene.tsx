@@ -1,128 +1,137 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import {
+  CuboidCollider,
+  Physics,
+  RigidBody,
+  type RapierRigidBody,
+} from "@react-three/rapier";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
-type Point = [number, number, number];
+type PointerState = {
+  active: boolean;
+  x: number;
+  y: number;
+  revision: number;
+};
 
-const BRANCHES: Array<{ points: Point[]; radius: number }> = [
-  {
-    points: [
-      [0, -1.92, 0],
-      [-0.08, -1.2, 0.02],
-      [0.08, -0.48, 0.08],
-      [0, 0.28, 0.12],
-      [-0.05, 1.02, 0.02],
-      [0.03, 1.72, -0.18],
-    ],
-    radius: 0.12,
-  },
-  {
-    points: [
-      [0.02, -0.73, 0.04],
-      [-0.48, -0.24, 0],
-      [-1, 0.24, -0.14],
-      [-1.52, 0.55, -0.28],
-    ],
-    radius: 0.075,
-  },
-  {
-    points: [
-      [0.04, -0.51, 0.06],
-      [0.52, -0.12, 0.01],
-      [1.02, 0.16, -0.12],
-      [1.52, 0.42, -0.27],
-    ],
-    radius: 0.073,
-  },
-  {
-    points: [
-      [0.02, -0.08, 0.1],
-      [-0.38, 0.4, 0.04],
-      [-0.7, 0.86, -0.12],
-      [-1.04, 1.27, -0.3],
-    ],
-    radius: 0.06,
-  },
-  {
-    points: [
-      [0.01, 0.04, 0.1],
-      [0.38, 0.45, 0.04],
-      [0.66, 0.92, -0.12],
-      [0.98, 1.38, -0.29],
-    ],
-    radius: 0.06,
-  },
-  {
-    points: [
-      [-0.48, 0.54, -0.04],
-      [-0.94, 0.96, -0.2],
-      [-1.54, 1.4, -0.5],
-    ],
-    radius: 0.043,
-  },
-  {
-    points: [
-      [0.46, 0.58, -0.03],
-      [0.96, 1.02, -0.2],
-      [1.54, 1.42, -0.48],
-    ],
-    radius: 0.043,
-  },
-  {
-    points: [
-      [-0.02, 1.04, -0.04],
-      [-0.52, 1.42, -0.23],
-      [-0.84, 1.72, -0.42],
-    ],
-    radius: 0.037,
-  },
-  {
-    points: [
-      [0.02, 1.12, -0.05],
-      [0.48, 1.48, -0.24],
-      [0.79, 1.79, -0.43],
-    ],
-    radius: 0.037,
-  },
-  {
-    points: [
-      [0, -1.78, -0.02],
-      [-0.36, -2.02, -0.12],
-      [-0.9, -2.12, -0.3],
-    ],
-    radius: 0.046,
-  },
-  {
-    points: [
-      [0, -1.78, -0.02],
-      [0.38, -2.02, -0.12],
-      [0.92, -2.1, -0.3],
-    ],
-    radius: 0.046,
-  },
-];
+type LandingState = {
+  id: number;
+  x: number;
+  z: number;
+  scale: number;
+  visible: boolean;
+};
 
-const LEAF_CLUSTERS: Array<{ center: Point; count: number; spread: number }> = [
-  { center: [-1.52, 0.57, -0.25], count: 5, spread: 0.32 },
-  { center: [1.53, 0.44, -0.24], count: 5, spread: 0.32 },
-  { center: [-1.04, 1.28, -0.27], count: 5, spread: 0.3 },
-  { center: [0.98, 1.39, -0.26], count: 5, spread: 0.3 },
-  { center: [0.02, 1.78, -0.2], count: 6, spread: 0.32 },
-  { center: [-1.52, 1.42, -0.47], count: 5, spread: 0.28 },
-  { center: [1.53, 1.44, -0.45], count: 5, spread: 0.28 },
-  { center: [-0.82, 1.72, -0.4], count: 4, spread: 0.24 },
-  { center: [0.8, 1.79, -0.4], count: 4, spread: 0.24 },
-  { center: [-0.45, 0.58, 0.03], count: 4, spread: 0.22 },
-  { center: [0.48, 0.62, 0.02], count: 4, spread: 0.22 },
-];
+const FACE_LETTERS = ["U", "U", "N", "N", "C", "C"];
+const CUBE_SIZE = 1.24;
+const CUBE_START_POSITION: [number, number, number] = [-2.35, 0.41, -0.1];
+const CUBE_START_ROTATION: [number, number, number] = [0.34, -0.55, 0];
+const CUBE_INTRO_START_X = 5.2;
+const CUBE_INTRO_START_Y = 3.45;
+const CUBE_INTRO_DURATION = 2.4;
+const CUBE_INTRO_FIRST_CONTACT = 0.28;
+const CUBE_INTRO_SECOND_CONTACT = 0.72;
+const CUBE_INTRO_FINAL_CONTACT = 0.94;
+const CUBE_INTRO_CONTACT_X = [2.15, -1, CUBE_START_POSITION[0]];
+const CUBE_INTRO_CONTACT_ANGLE = [(Math.PI * 3) / 4, Math.PI / 4, 0];
+const CUBE_INTRO_HOP_HEIGHT = [0.82, 0.34];
+const HOVER_TRIGGER_RADIUS = 0.25;
+const HOVER_RESET_RADIUS = 0.36;
+const MIN_REACTION_INTERVAL = 0.65;
+const FLOOR_SURFACE_Y = -0.46;
+const AIRBORNE_CLEARANCE = 0.06;
 
-const LEAF_COLORS = ["#4f8667", "#669d79", "#7daf8d", "#95bda1", "#abcab4"];
+function getCubeGroundContact(quaternion: THREE.Quaternion) {
+  const rotationMatrix = new THREE.Matrix4().makeRotationFromQuaternion(quaternion);
+  const rotatedCorner = new THREE.Vector3();
+  const contactOffset = new THREE.Vector3();
+  const halfSize = CUBE_SIZE / 2;
+  let lowestY = Number.POSITIVE_INFINITY;
+  let contactCount = 0;
 
-function seededRandom(seed: number) {
-  const value = Math.sin(seed) * 43_758.5453;
-  return value - Math.floor(value);
+  for (const x of [-halfSize, halfSize]) {
+    for (const y of [-halfSize, halfSize]) {
+      for (const z of [-halfSize, halfSize]) {
+        rotatedCorner.set(x, y, z).applyMatrix4(rotationMatrix);
+
+        if (rotatedCorner.y < lowestY - 0.025) {
+          lowestY = rotatedCorner.y;
+          contactOffset.copy(rotatedCorner);
+          contactCount = 1;
+        } else if (Math.abs(rotatedCorner.y - lowestY) <= 0.025) {
+          contactOffset.add(rotatedCorner);
+          contactCount += 1;
+        }
+      }
+    }
+  }
+
+  contactOffset.divideScalar(contactCount);
+  return {
+    centerY: FLOOR_SURFACE_Y - lowestY,
+    offsetX: contactOffset.x,
+    offsetZ: contactOffset.z,
+  };
+}
+
+function createLandingWebGeometry() {
+  const lineVertices: number[] = [];
+  const spokeCount = 12;
+  const ringCount = 5;
+  const spokeAngles = Array.from({ length: spokeCount }, (_, spoke) =>
+    (spoke / spokeCount) * Math.PI * 2 + Math.sin(spoke * 2.17) * 0.035,
+  );
+
+  const pointAt = (angle: number, radius: number) => [
+    Math.cos(angle) * radius,
+    Math.sin(angle) * radius,
+    0,
+  ] as const;
+
+  for (let spoke = 0; spoke < spokeCount; spoke += 1) {
+    const angle = spokeAngles[spoke];
+    const radius = 0.96 + Math.sin(spoke * 1.9) * 0.08;
+    lineVertices.push(...pointAt(angle, 0.07), ...pointAt(angle, radius));
+  }
+
+  for (let ring = 1; ring <= ringCount; ring += 1) {
+    const ringRadius = 0.08 + (ring / ringCount) * 0.9;
+
+    for (let spoke = 0; spoke < spokeCount; spoke += 1) {
+      const angle = spokeAngles[spoke];
+      const nextAngle =
+        spoke === spokeCount - 1 ? spokeAngles[0] + Math.PI * 2 : spokeAngles[spoke + 1];
+      const radius = ringRadius * (1 + Math.sin(spoke * 1.7 + ring) * 0.045);
+      const nextRadius =
+        ringRadius * (1 + Math.sin((spoke + 1) * 1.7 + ring) * 0.045);
+      let previousPoint = pointAt(angle, radius);
+      for (let segment = 1; segment <= 4; segment += 1) {
+        const progress = segment / 4;
+        const segmentAngle = THREE.MathUtils.lerp(angle, nextAngle, progress);
+        const curvedRadius =
+          THREE.MathUtils.lerp(radius, nextRadius, progress) -
+          Math.sin(progress * Math.PI) * (0.018 + ring * 0.006);
+        const nextPoint = pointAt(segmentAngle, curvedRadius);
+        lineVertices.push(...previousPoint, ...nextPoint);
+        previousPoint = nextPoint;
+      }
+    }
+  }
+
+  const lines = new THREE.BufferGeometry();
+  lines.setAttribute("position", new THREE.Float32BufferAttribute(lineVertices, 3));
+  return lines;
 }
 
 function useReducedMotion() {
@@ -140,396 +149,679 @@ function useReducedMotion() {
   return reduced;
 }
 
-function OrganicBranch({ points, radius }: { points: Point[]; radius: number }) {
-  const curve = useMemo(
-    () => new THREE.CatmullRomCurve3(points.map((point) => new THREE.Vector3(...point))),
-    [points],
-  );
+function createFaceTexture(letter: string) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+
+  const context = canvas.getContext("2d");
+  if (!context) return new THREE.CanvasTexture(canvas);
+
+  context.fillStyle = "#68c29d";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  context.strokeStyle = "rgba(255, 255, 255, 0.16)";
+  context.lineWidth = 10;
+  context.strokeRect(18, 18, canvas.width - 36, canvas.height - 36);
+
+  context.fillStyle = "#ffffff";
+  context.font = "800 310px Arial, sans-serif";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(letter, canvas.width / 2, canvas.height / 2 + 10);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
+  return texture;
+}
+
+function Arena() {
+  const halfWidth = 4.65;
+  const floorY = -0.58;
+  const ceilingY = 2.78;
+  const wallCenterY = (floorY + ceilingY) / 2;
+  const wallHalfHeight = (ceilingY - floorY) / 2;
 
   return (
-    <mesh>
-      <tubeGeometry args={[curve, 32, radius, 10, false]} />
-      <meshPhysicalMaterial
-        color={radius > 0.1 ? "#819b89" : "#74907e"}
-        roughness={0.62}
-        clearcoat={0.12}
-        clearcoatRoughness={0.72}
-      />
+    <>
+      <RigidBody name="arena-floor" type="fixed" colliders={false}>
+        <CuboidCollider
+          args={[halfWidth, 0.12, 1.75]}
+          position={[0, floorY, 0]}
+          friction={0.82}
+          restitution={0.4}
+        />
+      </RigidBody>
+      <RigidBody name="arena-bounds" type="fixed" colliders={false}>
+        <CuboidCollider
+          args={[halfWidth, 0.12, 1.75]}
+          position={[0, ceilingY, 0]}
+          friction={0.6}
+          restitution={0.46}
+        />
+        <CuboidCollider
+          args={[0.12, wallHalfHeight, 1.75]}
+          position={[-halfWidth, wallCenterY, 0]}
+          friction={0.7}
+          restitution={0.56}
+        />
+        <CuboidCollider
+          args={[0.12, wallHalfHeight, 1.75]}
+          position={[halfWidth, wallCenterY, 0]}
+          friction={0.7}
+          restitution={0.56}
+        />
+        <CuboidCollider
+          args={[halfWidth, wallHalfHeight, 0.12]}
+          position={[0, wallCenterY, -1.5]}
+          restitution={0.46}
+        />
+        <CuboidCollider
+          args={[halfWidth, wallHalfHeight, 0.12]}
+          position={[0, wallCenterY, 1.5]}
+          restitution={0.46}
+        />
+      </RigidBody>
+    </>
+  );
+}
+
+function FloorShadow() {
+  return (
+    <mesh
+      position={[0, -0.44, 0]}
+      rotation={[-Math.PI / 2, 0, 0]}
+      receiveShadow
+    >
+      <planeGeometry args={[8.3, 3.2]} />
+      <shadowMaterial transparent opacity={0.34} depthWrite={false} />
     </mesh>
   );
 }
 
-function createLeafShape() {
-  const shape = new THREE.Shape();
-  shape.moveTo(0, -0.5);
-  shape.bezierCurveTo(0.34, -0.3, 0.36, 0.24, 0, 0.5);
-  shape.bezierCurveTo(-0.36, 0.24, -0.34, -0.3, 0, -0.5);
-  return shape;
-}
-
-function Leaf({
-  index,
-  position,
-  rotation,
-  scale,
-  color,
-  reducedMotion,
-  clickImpulseRef,
-}: {
-  index: number;
-  position: Point;
-  rotation: Point;
-  scale: Point;
-  color: string;
-  reducedMotion: boolean;
-  clickImpulseRef: RefObject<number>;
-}) {
-  const group = useRef<THREE.Group>(null);
-  const shape = useMemo(() => createLeafShape(), []);
-  const phase = index * 0.83;
-
-  useFrame(({ clock }, delta) => {
-    if (!group.current || reducedMotion) return;
-
-    const time = clock.elapsedTime;
-    const impulse = clickImpulseRef.current;
-    const idleSway = Math.sin(time * 0.72 + phase) * 0.012;
-    const clickSway = Math.sin(time * 18 + phase) * impulse * 0.2;
-
-    group.current.rotation.z = THREE.MathUtils.damp(
-      group.current.rotation.z,
-      rotation[2] + idleSway + clickSway,
-      12,
-      delta,
-    );
-    group.current.rotation.x = THREE.MathUtils.damp(
-      group.current.rotation.x,
-      rotation[0] + Math.cos(time * 16 + phase) * impulse * 0.07,
-      12,
-      delta,
-    );
-  });
-
-  return (
-    <group ref={group} position={position} rotation={rotation} scale={scale}>
-      <mesh>
-        <extrudeGeometry
-          args={[
-            shape,
-            {
-              depth: 0.07,
-              bevelEnabled: true,
-              bevelSegments: 2,
-              bevelSize: 0.025,
-              bevelThickness: 0.022,
-            },
-          ]}
-        />
-        <meshPhysicalMaterial
-          color={color}
-          roughness={0.46}
-          clearcoat={0.34}
-          clearcoatRoughness={0.44}
-          sheen={0.32}
-          sheenColor="#d8eadf"
-          sheenRoughness={0.72}
-        />
-      </mesh>
-      <mesh position={[0, -0.04, 0.105]}>
-        <boxGeometry args={[0.022, 0.68, 0.016]} />
-        <meshBasicMaterial color="#315d44" transparent opacity={0.42} />
-      </mesh>
-    </group>
-  );
-}
-
-function TreeCanopy({
-  reducedMotion,
-  clickImpulseRef,
-}: {
-  reducedMotion: boolean;
-  clickImpulseRef: RefObject<number>;
-}) {
-  const leaves = useMemo(
-    () =>
-      LEAF_CLUSTERS.flatMap(({ center, count, spread }, clusterIndex) =>
-        Array.from({ length: count }, (_, leafIndex) => {
-          const angle = (leafIndex / count) * Math.PI * 2 + clusterIndex * 0.41;
-          const ring = leafIndex === count - 1 ? 0.26 : 0.72 + (leafIndex % 2) * 0.22;
-          const x = center[0] + Math.cos(angle) * spread * ring;
-          const y = center[1] + Math.sin(angle) * spread * ring;
-          const z = center[2] + ((leafIndex + clusterIndex) % 3) * 0.1;
-          const length = 0.46 + ((leafIndex + clusterIndex) % 3) * 0.07;
-
-          return {
-            key: `${clusterIndex}-${leafIndex}`,
-            index: clusterIndex * 10 + leafIndex,
-            position: [x, y, z] as Point,
-            rotation: [
-              Math.sin(angle) * 0.2,
-              Math.cos(angle) * 0.28,
-              angle - Math.PI / 2,
-            ] as Point,
-            scale: [length * 0.72, length, 1] as Point,
-            color: LEAF_COLORS[(clusterIndex + leafIndex) % LEAF_COLORS.length],
-          };
-        }),
-      ),
-    [],
-  );
-
-  return leaves.map(({ key, ...leaf }) => (
-    <Leaf
-      key={key}
-      {...leaf}
-      reducedMotion={reducedMotion}
-      clickImpulseRef={clickImpulseRef}
-    />
-  ));
-}
-
-function FallingLeaf({
-  slot,
-  compact,
-  reducedMotion,
-  fallTriggerRef,
-  fallSeedRef,
-}: {
-  slot: number;
-  compact: boolean;
-  reducedMotion: boolean;
-  fallTriggerRef: RefObject<number>;
-  fallSeedRef: RefObject<number>;
-}) {
+function LandingWeb({ landingRef }: { landingRef: RefObject<LandingState> }) {
   const groupRef = useRef<THREE.Group>(null);
-  const leafMaterialRef = useRef<THREE.MeshPhysicalMaterial>(null);
-  const veinMaterialRef = useRef<THREE.MeshBasicMaterial>(null);
-  const lastTriggerRef = useRef(0);
-  const startTimeRef = useRef(-1);
-  const startPositionRef = useRef(new THREE.Vector3());
-  const phaseRef = useRef(0);
-  const shape = useMemo(() => createLeafShape(), []);
+  const materialRef = useRef<THREE.LineBasicMaterial>(null);
+  const lastLandingIdRef = useRef(0);
+  const startedAtRef = useRef(Number.NEGATIVE_INFINITY);
+  const impactScaleRef = useRef(1);
+  const geometry = useMemo(() => createLandingWebGeometry(), []);
 
   useFrame(({ clock }) => {
     const group = groupRef.current;
-    if (!group || reducedMotion || (compact && slot > 0)) return;
+    const material = materialRef.current;
+    if (!group || !material) return;
 
-    const trigger = fallTriggerRef.current;
-    if (trigger !== lastTriggerRef.current) {
-      lastTriggerRef.current = trigger;
-      const seed = fallSeedRef.current + slot * 101.7;
-      const xRandom = seededRandom(seed + 1.13);
-      const yRandom = seededRandom(seed + 8.47);
-      const zRandom = seededRandom(seed + 17.31);
-      const x = compact
-        ? THREE.MathUtils.lerp(-1.65, 1.65, xRandom)
-        : slot === 0
-          ? THREE.MathUtils.lerp(-1.8, -0.45, xRandom)
-          : THREE.MathUtils.lerp(0.45, 1.8, xRandom);
+    if (landingRef.current.id !== lastLandingIdRef.current) {
+      lastLandingIdRef.current = landingRef.current.id;
 
-      startPositionRef.current.set(x, 1.24 + yRandom * 0.56, 0.62 + zRandom * 0.18);
-      startTimeRef.current = clock.elapsedTime + slot * 0.12;
-      phaseRef.current = seed * 0.0137 + slot * 2.1;
-      group.visible = false;
+      if (!landingRef.current.visible) {
+        group.visible = false;
+        return;
+      }
+
+      startedAtRef.current = clock.elapsedTime;
+      group.position.x = landingRef.current.x;
+      group.position.z = landingRef.current.z;
+      impactScaleRef.current = landingRef.current.scale;
+      group.visible = true;
     }
 
-    const elapsed = clock.elapsedTime - startTimeRef.current;
-    const duration = 2.25 + slot * 0.18;
-    if (startTimeRef.current < 0 || elapsed < 0 || elapsed > duration) {
+    const elapsed = clock.elapsedTime - startedAtRef.current;
+    const progress = elapsed / 2.4;
+    if (progress < 0) {
       group.visible = false;
       return;
     }
 
-    const start = startPositionRef.current;
-    const phase = phaseRef.current;
-    const fade = Math.min(1, Math.max(0, (duration - elapsed) / 0.48));
-    const drift = slot === 0 ? -0.075 : 0.075;
+    if (progress >= 1) {
+      group.visible = false;
+      return;
+    }
 
-    group.visible = true;
-    group.position.set(
-      start.x + Math.sin(elapsed * 4.4 + phase) * 0.2 + elapsed * drift,
-      start.y - elapsed * (1.28 + slot * 0.08) - elapsed * elapsed * 0.15,
-      start.z + Math.cos(elapsed * 3.2 + phase) * 0.09,
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const elasticity = Math.sin(progress * Math.PI * 2.2) * (1 - progress) * 0.015;
+    const scale = 0.72 + eased * 0.2;
+    const impactScale = impactScaleRef.current;
+    group.scale.set(
+      scale * (1 + elasticity) * impactScale,
+      scale * (1 - elasticity * 0.45) * impactScale,
+      scale * impactScale,
     );
-    group.rotation.set(
-      Math.sin(elapsed * 5.2 + phase) * 0.42,
-      Math.cos(elapsed * 4.1 + phase) * 0.32,
-      elapsed * (3.4 + slot * 0.3) + phase,
-    );
-
-    if (leafMaterialRef.current) leafMaterialRef.current.opacity = fade;
-    if (veinMaterialRef.current) veinMaterialRef.current.opacity = fade * 0.4;
+    material.opacity = Math.pow(1 - progress, 1.35) * 0.65;
   });
 
   return (
-    <group ref={groupRef} visible={false} scale={[0.36, 0.54, 1]}>
-      <mesh>
-        <extrudeGeometry
-          args={[
-            shape,
-            {
-              depth: 0.07,
-              bevelEnabled: true,
-              bevelSegments: 2,
-              bevelSize: 0.025,
-              bevelThickness: 0.022,
-            },
-          ]}
-        />
-        <meshPhysicalMaterial
-          ref={leafMaterialRef}
-          color={slot === 0 ? "#a8cdb5" : "#bed8c6"}
-          roughness={0.46}
-          clearcoat={0.34}
+    <group
+      ref={groupRef}
+      visible={false}
+      position={[0, FLOOR_SURFACE_Y + 0.012, 0]}
+      rotation={[-Math.PI / 2 + 0.14, 0, 0]}
+    >
+      <lineSegments geometry={geometry}>
+        <lineBasicMaterial
+          ref={materialRef}
+          color="#b8f4d4"
           transparent
+          opacity={0}
+          depthTest
+          depthWrite={false}
+          toneMapped={false}
         />
-      </mesh>
-      <mesh position={[0, -0.04, 0.105]}>
-        <boxGeometry args={[0.022, 0.68, 0.016]} />
-        <meshBasicMaterial
-          ref={veinMaterialRef}
-          color="#315d44"
-          transparent
-          opacity={0.4}
-        />
-      </mesh>
+      </lineSegments>
     </group>
   );
 }
 
-function LivingTree({
-  reducedMotion,
-  pointer,
-  clickImpulseRef,
-  fallTriggerRef,
-  fallSeedRef,
-}: {
-  reducedMotion: boolean;
-  pointer: RefObject<{ x: number; y: number }>;
-  clickImpulseRef: RefObject<number>;
-  fallTriggerRef: RefObject<number>;
-  fallSeedRef: RefObject<number>;
-}) {
-  const group = useRef<THREE.Group>(null);
-  const { size } = useThree();
-  const compact = size.width < 720;
+function CubeVisual({ cubeSize }: { cubeSize: number }) {
+  const { gl } = useThree();
+  const geometry = useMemo(
+    () => new RoundedBoxGeometry(cubeSize, cubeSize, cubeSize, 6, cubeSize * 0.07),
+    [cubeSize],
+  );
+  const textures = useMemo(() => FACE_LETTERS.map(createFaceTexture), []);
 
-  useFrame(({ clock }, delta) => {
-    if (!group.current || reducedMotion) return;
+  useEffect(() => {
+    const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
+    textures.forEach((texture) => {
+      texture.anisotropy = Math.min(8, maxAnisotropy);
+      texture.needsUpdate = true;
+    });
+  }, [gl, textures]);
 
-    group.current.rotation.y = THREE.MathUtils.damp(
-      group.current.rotation.y,
-      pointer.current.x * 0.16,
-      3.2,
-      delta,
-    );
-    group.current.rotation.x = THREE.MathUtils.damp(
-      group.current.rotation.x,
-      pointer.current.y * -0.07,
-      3.2,
-      delta,
-    );
-    const impulse = clickImpulseRef.current;
-    group.current.rotation.z =
-      Math.sin(clock.elapsedTime * 0.32) * 0.018 +
-      Math.sin(clock.elapsedTime * 19) * impulse * 0.065;
-    group.current.position.x = Math.sin(clock.elapsedTime * 22) * impulse * 0.055;
-    group.current.position.y =
-      Math.sin(clock.elapsedTime * 0.48) * 0.05 +
-      Math.cos(clock.elapsedTime * 17) * impulse * 0.025;
+  return (
+    <mesh geometry={geometry} castShadow receiveShadow>
+      {textures.map((texture, index) => (
+        <meshStandardMaterial
+          key={`${FACE_LETTERS[index]}-${index}`}
+          attach={`material-${index}`}
+          map={texture}
+          color="#ffffff"
+          roughness={0.46}
+          metalness={0}
+          transparent={false}
+          opacity={1}
+          depthTest
+          depthWrite
+          side={THREE.FrontSide}
+        />
+      ))}
+    </mesh>
+  );
+}
 
-    clickImpulseRef.current = Math.max(0, impulse - delta * 1.35);
+function CompactCube({ reducedMotion }: { reducedMotion: boolean }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const rotationAxis = useMemo(
+    () => new THREE.Vector3(0.72, 1, 0.38).normalize(),
+    [],
+  );
+  const baseRotation = useMemo(
+    () => new THREE.Quaternion().setFromEuler(new THREE.Euler(0.14, -0.32, -0.08)),
+    [],
+  );
+  const spinRotation = useMemo(() => new THREE.Quaternion(), []);
+
+  useFrame(({ clock }) => {
+    if (!groupRef.current || reducedMotion) return;
+
+    spinRotation.setFromAxisAngle(rotationAxis, clock.elapsedTime * 0.38);
+    groupRef.current.quaternion.copy(baseRotation).premultiply(spinRotation);
+    groupRef.current.position.y = 1.88 + Math.sin(clock.elapsedTime * 0.7) * 0.06;
   });
 
   return (
-    <group ref={group} position={[0, 0, compact ? -1.5 : -0.12]} scale={compact ? 0.74 : 1.1}>
-      {BRANCHES.map(({ points, radius }, index) => (
-        <OrganicBranch key={index} points={points} radius={radius} />
-      ))}
-      <TreeCanopy reducedMotion={reducedMotion} clickImpulseRef={clickImpulseRef} />
-      <FallingLeaf
-        slot={0}
-        compact={compact}
-        reducedMotion={reducedMotion}
-        fallTriggerRef={fallTriggerRef}
-        fallSeedRef={fallSeedRef}
-      />
-      <FallingLeaf
-        slot={1}
-        compact={compact}
-        reducedMotion={reducedMotion}
-        fallTriggerRef={fallTriggerRef}
-        fallSeedRef={fallSeedRef}
-      />
+    <group ref={groupRef} position={[-2.20, 1.88, -0.3]}>
+      <CubeVisual cubeSize={CUBE_SIZE * 0.68} />
     </group>
+  );
+}
+
+function CnuCube({
+  reducedMotion,
+  pointerRef,
+  landingRef,
+  landingArmedRef,
+}: {
+  reducedMotion: boolean;
+  pointerRef: RefObject<PointerState>;
+  landingRef: RefObject<LandingState>;
+  landingArmedRef: RefObject<boolean>;
+}) {
+  const bodyRef = useRef<RapierRigidBody>(null);
+  const introCubeRef = useRef<THREE.Group>(null);
+  const physicsCubeRef = useRef<THREE.Group>(null);
+  const introStartedAtRef = useRef<number | null>(null);
+  const introCompleteRef = useRef(reducedMotion);
+  const introLandingCountRef = useRef(0);
+  const hoverArmedRef = useRef(true);
+  const lastReactionRef = useRef(Number.NEGATIVE_INFINITY);
+  const observedPointerRevisionRef = useRef(-1);
+  const bouncePendingRef = useRef(false);
+  const physicsStartedRef = useRef(false);
+  const projectedPosition = useMemo(() => new THREE.Vector3(), []);
+  const rotationQuaternion = useMemo(() => new THREE.Quaternion(), []);
+  const introFinalQuaternion = useMemo(
+    () => new THREE.Quaternion().setFromEuler(new THREE.Euler(...CUBE_START_ROTATION)),
+    [],
+  );
+  const introRollQuaternion = useMemo(() => new THREE.Quaternion(), []);
+  const introRollAxis = useMemo(() => new THREE.Vector3(0, 0, 1), []);
+  const introContacts = useMemo(
+    () =>
+      CUBE_INTRO_CONTACT_ANGLE.map((angle, index) => {
+        const roll = new THREE.Quaternion().setFromAxisAngle(introRollAxis, angle);
+        const orientation = new THREE.Quaternion()
+          .copy(introFinalQuaternion)
+          .premultiply(roll);
+        const groundContact = getCubeGroundContact(orientation);
+
+        return {
+          angle,
+          x: CUBE_INTRO_CONTACT_X[index],
+          centerY: groundContact.centerY,
+          webX: CUBE_INTRO_CONTACT_X[index] + groundContact.offsetX,
+          webZ: CUBE_START_POSITION[2] + groundContact.offsetZ,
+        };
+      }),
+    [introFinalQuaternion, introRollAxis],
+  );
+  const rotationMatrix = useMemo(() => new THREE.Matrix4(), []);
+  const contactOffset = useMemo(() => new THREE.Vector3(), []);
+  const rotatedCorner = useMemo(() => new THREE.Vector3(), []);
+  const { camera } = useThree();
+
+  useFrame(({ clock }) => {
+    const body = bodyRef.current;
+    const introCube = introCubeRef.current;
+    const physicsCube = physicsCubeRef.current;
+    if (!body || !introCube || !physicsCube || reducedMotion) return;
+
+    if (!introCompleteRef.current) {
+      introStartedAtRef.current ??= clock.elapsedTime;
+      const progress = Math.min(
+        (clock.elapsedTime - introStartedAtRef.current) / CUBE_INTRO_DURATION,
+        1,
+      );
+      let x: number;
+      let y: number;
+      let angle: number;
+
+      if (progress < CUBE_INTRO_FIRST_CONTACT) {
+        const phaseProgress = progress / CUBE_INTRO_FIRST_CONTACT;
+        const contact = introContacts[0];
+        angle = THREE.MathUtils.lerp((Math.PI * 5) / 4, contact.angle, phaseProgress);
+        x = THREE.MathUtils.lerp(CUBE_INTRO_START_X, contact.x, phaseProgress);
+        y = THREE.MathUtils.lerp(
+          CUBE_INTRO_START_Y,
+          contact.centerY,
+          phaseProgress * phaseProgress,
+        );
+      } else if (progress < CUBE_INTRO_SECOND_CONTACT) {
+        const phaseProgress =
+          (progress - CUBE_INTRO_FIRST_CONTACT) /
+          (CUBE_INTRO_SECOND_CONTACT - CUBE_INTRO_FIRST_CONTACT);
+        const start = introContacts[0];
+        const end = introContacts[1];
+        angle = THREE.MathUtils.lerp(start.angle, end.angle, phaseProgress);
+        x = THREE.MathUtils.lerp(start.x, end.x, phaseProgress);
+        y =
+          THREE.MathUtils.lerp(start.centerY, end.centerY, phaseProgress) +
+          4 * phaseProgress * (1 - phaseProgress) * CUBE_INTRO_HOP_HEIGHT[0];
+      } else {
+        const phaseProgress =
+          (progress - CUBE_INTRO_SECOND_CONTACT) /
+          (CUBE_INTRO_FINAL_CONTACT - CUBE_INTRO_SECOND_CONTACT);
+        const start = introContacts[1];
+        const end = introContacts[2];
+        angle = THREE.MathUtils.lerp(start.angle, end.angle, phaseProgress);
+        x = THREE.MathUtils.lerp(start.x, end.x, phaseProgress);
+        y =
+          THREE.MathUtils.lerp(start.centerY, end.centerY, phaseProgress) +
+          4 * phaseProgress * (1 - phaseProgress) * CUBE_INTRO_HOP_HEIGHT[1];
+      }
+
+      introRollQuaternion.setFromAxisAngle(introRollAxis, angle);
+      introCube.quaternion
+        .copy(introFinalQuaternion)
+        .premultiply(introRollQuaternion);
+
+      introCube.position.set(x, y, CUBE_START_POSITION[2]);
+
+      const reachedLandingCount =
+        progress >= CUBE_INTRO_FINAL_CONTACT
+          ? 3
+          : progress >= CUBE_INTRO_SECOND_CONTACT
+            ? 2
+            : progress >= CUBE_INTRO_FIRST_CONTACT
+              ? 1
+              : 0;
+
+      while (introLandingCountRef.current < reachedLandingCount) {
+        const contact = introContacts[introLandingCountRef.current];
+        landingRef.current.id += 1;
+        landingRef.current.x = contact.webX;
+        landingRef.current.z = contact.webZ;
+        landingRef.current.scale = introLandingCountRef.current === 2 ? 0.82 : 1;
+        landingRef.current.visible = true;
+        introLandingCountRef.current += 1;
+      }
+
+      if (progress >= CUBE_INTRO_FINAL_CONTACT) {
+        const contact = introContacts[2];
+        introCompleteRef.current = true;
+        introCube.visible = false;
+        physicsCube.visible = true;
+        body.setTranslation(
+          {
+            x: contact.x,
+            y: contact.centerY,
+            z: CUBE_START_POSITION[2],
+          },
+          true,
+        );
+        body.setRotation(introFinalQuaternion, true);
+        body.setGravityScale(1, true);
+        body.setLinvel({ x: -0.42, y: -0.9, z: 0 }, true);
+        body.setAngvel({ x: 0, y: 0, z: -0.52 }, true);
+        physicsStartedRef.current = true;
+        hoverArmedRef.current = false;
+        observedPointerRevisionRef.current = pointerRef.current.revision;
+      }
+      return;
+    }
+
+    const translation = body.translation();
+    if (
+      !Number.isFinite(translation.x) ||
+      translation.y < -4 ||
+      Math.abs(translation.x) > 6 ||
+      Math.abs(translation.z) > 3
+    ) {
+      body.setTranslation(
+        {
+          x: CUBE_START_POSITION[0],
+          y: CUBE_START_POSITION[1],
+          z: CUBE_START_POSITION[2],
+        },
+        true,
+      );
+      body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      body.setAngvel({ x: 0.4, y: -0.25, z: 0.3 }, true);
+      hoverArmedRef.current = true;
+      landingArmedRef.current = false;
+      bouncePendingRef.current = false;
+      return;
+    }
+
+    const verticalVelocity = body.linvel().y;
+
+    if (bouncePendingRef.current || landingArmedRef.current) {
+      const rotation = body.rotation();
+      rotationQuaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+      rotationMatrix.makeRotationFromQuaternion(rotationQuaternion);
+      const elements = rotationMatrix.elements;
+      const halfExtentY =
+        (CUBE_SIZE / 2) *
+        (Math.abs(elements[1]) + Math.abs(elements[5]) + Math.abs(elements[9]));
+      const bottomY = translation.y - halfExtentY;
+
+      if (bouncePendingRef.current) {
+        if (bottomY > FLOOR_SURFACE_Y + AIRBORNE_CLEARANCE) {
+          landingArmedRef.current = true;
+          bouncePendingRef.current = false;
+        } else if (verticalVelocity <= 0) {
+          bouncePendingRef.current = false;
+        }
+      }
+
+      if (landingArmedRef.current && verticalVelocity < -0.2 && bottomY < -0.38) {
+        const halfSize = CUBE_SIZE / 2;
+        let lowestY = Number.POSITIVE_INFINITY;
+        let contactCount = 0;
+        contactOffset.set(0, 0, 0);
+
+        for (const x of [-halfSize, halfSize]) {
+          for (const y of [-halfSize, halfSize]) {
+            for (const z of [-halfSize, halfSize]) {
+              rotatedCorner.set(x, y, z).applyMatrix4(rotationMatrix);
+
+              if (rotatedCorner.y < lowestY - 0.025) {
+                lowestY = rotatedCorner.y;
+                contactOffset.copy(rotatedCorner);
+                contactCount = 1;
+              } else if (Math.abs(rotatedCorner.y - lowestY) <= 0.025) {
+                contactOffset.add(rotatedCorner);
+                contactCount += 1;
+              }
+            }
+          }
+        }
+
+        contactOffset.divideScalar(contactCount);
+        landingRef.current.id += 1;
+        landingRef.current.x = translation.x + contactOffset.x;
+        landingRef.current.z = translation.z + contactOffset.z;
+        landingRef.current.scale = 1;
+        landingRef.current.visible = true;
+        landingArmedRef.current = false;
+      }
+    }
+
+    const angularVelocity = body.angvel();
+    const angularSpeed = Math.hypot(
+      angularVelocity.x,
+      angularVelocity.y,
+      angularVelocity.z,
+    );
+    if (angularSpeed > 3.4) {
+      const scale = 3.4 / angularSpeed;
+      body.setAngvel(
+        {
+          x: angularVelocity.x * scale,
+          y: angularVelocity.y * scale,
+          z: angularVelocity.z * scale,
+        },
+        true,
+      );
+    }
+
+    const pointer = pointerRef.current;
+    if (!pointer.active) {
+      hoverArmedRef.current = true;
+      observedPointerRevisionRef.current = pointer.revision;
+      return;
+    }
+
+    projectedPosition.set(translation.x, translation.y, translation.z).project(camera);
+    const dx = projectedPosition.x - pointer.x;
+    const dy = projectedPosition.y - pointer.y;
+    const distance = Math.hypot(dx, dy);
+    const now = clock.elapsedTime;
+    const pointerMoved = pointer.revision !== observedPointerRevisionRef.current;
+    observedPointerRevisionRef.current = pointer.revision;
+
+    if (
+      !hoverArmedRef.current &&
+      pointerMoved &&
+      distance > HOVER_RESET_RADIUS
+    ) {
+      hoverArmedRef.current = true;
+    }
+
+    if (
+      !hoverArmedRef.current ||
+      distance >= HOVER_TRIGGER_RADIUS ||
+      now - lastReactionRef.current < MIN_REACTION_INTERVAL
+    ) {
+      return;
+    }
+
+    hoverArmedRef.current = false;
+    lastReactionRef.current = now;
+
+    if (!physicsStartedRef.current) {
+      body.setGravityScale(1, true);
+      physicsStartedRef.current = true;
+    }
+
+    const xDirection = dx === 0 ? (Math.random() > 0.5 ? 1 : -1) : Math.sign(dx);
+    const depthDirection = Math.random() > 0.5 ? 1 : -1;
+
+    body.setLinvel(
+      {
+        x: xDirection * 2.65,
+        y: 2.15,
+        z: depthDirection * 0.42,
+      },
+      true,
+    );
+    landingArmedRef.current = false;
+    bouncePendingRef.current = true;
+    body.setAngvel(
+      {
+        x: (Math.random() - 0.5) * 1.8,
+        y: (Math.random() - 0.5) * 1.4,
+        z: -xDirection * 2.9,
+      },
+      true,
+    );
+  });
+
+  return (
+    <>
+      <group
+        ref={introCubeRef}
+        visible={!reducedMotion}
+        position={[CUBE_INTRO_START_X, CUBE_INTRO_START_Y, CUBE_START_POSITION[2]]}
+        rotation={CUBE_START_ROTATION}
+      >
+        <CubeVisual cubeSize={CUBE_SIZE} />
+      </group>
+      <RigidBody
+        ref={bodyRef}
+        type={reducedMotion ? "fixed" : "dynamic"}
+        colliders={false}
+        position={CUBE_START_POSITION}
+        rotation={CUBE_START_ROTATION}
+        gravityScale={0}
+        linearDamping={0.42}
+        angularDamping={0.46}
+        friction={0.8}
+        restitution={0.48}
+        canSleep
+      >
+        <CuboidCollider args={[CUBE_SIZE / 2, CUBE_SIZE / 2, CUBE_SIZE / 2]} />
+        <group ref={physicsCubeRef} visible={reducedMotion}>
+          <CubeVisual cubeSize={CUBE_SIZE} />
+        </group>
+      </RigidBody>
+    </>
+  );
+}
+
+function CubeWorld({
+  reducedMotion,
+  pointerRef,
+}: {
+  reducedMotion: boolean;
+  pointerRef: RefObject<PointerState>;
+}) {
+  const { size } = useThree();
+  const compact = size.width < 720;
+  const landingRef = useRef<LandingState>({
+    id: 0,
+    x: 0,
+    z: 0,
+    scale: 1,
+    visible: false,
+  });
+  const landingArmedRef = useRef(false);
+
+  if (compact) {
+    return <CompactCube reducedMotion={reducedMotion} />;
+  }
+
+  return (
+    <Physics gravity={[0, -6.2, 0]} timeStep={1 / 60} interpolate>
+      <Arena />
+      <FloorShadow />
+      <LandingWeb landingRef={landingRef} />
+      <CnuCube
+        reducedMotion={reducedMotion}
+        pointerRef={pointerRef}
+        landingRef={landingRef}
+        landingArmedRef={landingArmedRef}
+      />
+    </Physics>
   );
 }
 
 export function HomeHeroScene() {
   const reducedMotion = useReducedMotion();
-  const pointer = useRef({ x: 0, y: 0 });
-  const clickImpulseRef = useRef(0);
-  const fallTriggerRef = useRef(0);
-  const fallSeedRef = useRef(0);
-  const clickCountRef = useRef(0);
-  const lastFallTimeRef = useRef(Number.NEGATIVE_INFINITY);
+  const pointerRef = useRef<PointerState>({ active: false, x: 0, y: 0, revision: 0 });
 
   useEffect(() => {
-    if (reducedMotion) return;
-
     const handlePointerMove = (event: PointerEvent) => {
-      pointer.current = {
-        x: (event.clientX / window.innerWidth) * 2 - 1,
-        y: (event.clientY / window.innerHeight) * 2 - 1,
+      const target = event.target;
+      const hero = target instanceof Element
+        ? target.closest<HTMLElement>("[data-home-hero]")
+        : null;
+
+      if (!hero) {
+        pointerRef.current = {
+          ...pointerRef.current,
+          active: false,
+          revision: pointerRef.current.revision + 1,
+        };
+        return;
+      }
+
+      const bounds = hero.getBoundingClientRect();
+
+      pointerRef.current = {
+        active: true,
+        x: ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+        y: -(((event.clientY - bounds.top) / bounds.height) * 2 - 1),
+        revision: pointerRef.current.revision + 1,
       };
     };
 
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
     return () => window.removeEventListener("pointermove", handlePointerMove);
-  }, [reducedMotion]);
-
-  useEffect(() => {
-    if (reducedMotion) return;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element) || !target.closest("[data-home-hero]")) return;
-      clickImpulseRef.current = 1;
-      clickCountRef.current += 1;
-
-      const canFall = event.timeStamp - lastFallTimeRef.current >= 5_000;
-      if (clickCountRef.current % 3 === 0 && canFall) {
-        fallSeedRef.current = Math.random() * 10_000;
-        fallTriggerRef.current += 1;
-        lastFallTimeRef.current = event.timeStamp;
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown, { passive: true });
-    return () => window.removeEventListener("pointerdown", handlePointerDown);
-  }, [reducedMotion]);
+  }, []);
 
   return (
     <div className="pointer-events-none absolute inset-0" aria-hidden="true">
       <Canvas
+        shadows
         camera={{ position: [0, 0, 8.4], fov: 40 }}
         dpr={[1, 1.5]}
         frameloop={reducedMotion ? "demand" : "always"}
         gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
       >
-        <ambientLight intensity={1.25} />
-        <hemisphereLight args={["#d8eadf", "#203e2f", 1.7]} />
-        <directionalLight position={[-4, 5, 6]} intensity={3.2} color="#f6fff9" />
-        <pointLight position={[3, -2, 4]} intensity={8} color="#5eaa7f" distance={9} />
-        <pointLight position={[-3, 1, 3]} intensity={5} color="#c5dfcd" distance={8} />
-        <fog attach="fog" args={["#14231b", 7.8, 13]} />
-        <LivingTree
-          reducedMotion={reducedMotion}
-          pointer={pointer}
-          clickImpulseRef={clickImpulseRef}
-          fallTriggerRef={fallTriggerRef}
-          fallSeedRef={fallSeedRef}
+        <ambientLight intensity={1.05} />
+        <hemisphereLight args={["#e2f3e8", "#172b21", 1.65]} />
+        <directionalLight
+          castShadow
+          position={[-4, 6, 6]}
+          intensity={3.5}
+          color="#f7fffa"
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
         />
+        <pointLight position={[3, -1, 4]} intensity={8} color="#5fc391" distance={10} />
+        <pointLight position={[-3, 1, 3]} intensity={4} color="#c2ead0" distance={9} />
+        <fog attach="fog" args={["#14231b", 8.7, 13.8]} />
+        <Suspense fallback={null}>
+          <CubeWorld
+            reducedMotion={reducedMotion}
+            pointerRef={pointerRef}
+          />
+        </Suspense>
       </Canvas>
     </div>
   );

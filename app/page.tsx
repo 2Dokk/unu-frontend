@@ -271,7 +271,7 @@ export default function Home() {
 
       <section
         id="contact"
-        className="scroll-mt-16 px-5 py-16 sm:min-h-[1350px] sm:px-8 sm:pt-[53px]"
+        className="scroll-mt-16 px-5 pt-16 pb-12 sm:px-8 sm:pt-[53px] sm:pb-16"
       >
         <div className="mx-auto w-full max-w-[1062px]">
           <ScrollReveal>
