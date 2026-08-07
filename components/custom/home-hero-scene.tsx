@@ -353,8 +353,17 @@ function CubeVisual({ cubeSize }: { cubeSize: number }) {
   );
 }
 
-function CompactCube({ reducedMotion }: { reducedMotion: boolean }) {
+function CompactCube({
+  reducedMotion,
+  narrow,
+}: {
+  reducedMotion: boolean;
+  narrow: boolean;
+}) {
   const groupRef = useRef<THREE.Group>(null);
+  const positionX = narrow ? -0.86 : -1.55;
+  const positionY = narrow ? 1.82 : 1.88;
+  const cubeScale = narrow ? 0.5 : 0.58;
   const rotationAxis = useMemo(
     () => new THREE.Vector3(0.72, 1, 0.38).normalize(),
     [],
@@ -370,12 +379,13 @@ function CompactCube({ reducedMotion }: { reducedMotion: boolean }) {
 
     spinRotation.setFromAxisAngle(rotationAxis, clock.elapsedTime * 0.38);
     groupRef.current.quaternion.copy(baseRotation).premultiply(spinRotation);
-    groupRef.current.position.y = 1.88 + Math.sin(clock.elapsedTime * 0.7) * 0.06;
+    groupRef.current.position.y =
+      positionY + Math.sin(clock.elapsedTime * 0.7) * 0.06;
   });
 
   return (
-    <group ref={groupRef} position={[-2.20, 1.88, -0.3]}>
-      <CubeVisual cubeSize={CUBE_SIZE * 0.68} />
+    <group ref={groupRef} position={[positionX, positionY, -0.3]}>
+      <CubeVisual cubeSize={CUBE_SIZE * cubeScale} />
     </group>
   );
 }
@@ -726,12 +736,14 @@ function CnuCube({
 function CubeWorld({
   reducedMotion,
   pointerRef,
+  viewportWidth,
+  touchOnlyDevice,
 }: {
   reducedMotion: boolean;
   pointerRef: RefObject<PointerState>;
+  viewportWidth: number | null;
+  touchOnlyDevice: boolean | null;
 }) {
-  const { size } = useThree();
-  const compact = size.width < 720;
   const landingRef = useRef<LandingState>({
     id: 0,
     x: 0,
@@ -741,8 +753,25 @@ function CubeWorld({
   });
   const landingArmedRef = useRef(false);
 
+  if (viewportWidth === null || touchOnlyDevice === null) {
+    return null;
+  }
+
+  const compact = viewportWidth < 720 || touchOnlyDevice;
+  const hideCompactCube = viewportWidth < 375;
+  const narrowCompactCube = viewportWidth < 480;
+
+  if (hideCompactCube) {
+    return null;
+  }
+
   if (compact) {
-    return <CompactCube reducedMotion={reducedMotion} />;
+    return (
+      <CompactCube
+        reducedMotion={reducedMotion}
+        narrow={narrowCompactCube}
+      />
+    );
   }
 
   return (
@@ -762,7 +791,24 @@ function CubeWorld({
 
 export function HomeHeroScene() {
   const reducedMotion = useReducedMotion();
+  const [viewportWidth, setViewportWidth] = useState<number | null>(null);
+  const [touchOnlyDevice, setTouchOnlyDevice] = useState<boolean | null>(null);
   const pointerRef = useRef<PointerState>({ active: false, x: 0, y: 0, revision: 0 });
+
+  useEffect(() => {
+    const updateViewportWidth = () => setViewportWidth(window.innerWidth);
+    const touchOnlyQuery = window.matchMedia("(pointer: coarse) and (hover: none)");
+    const updateTouchOnlyDevice = () => setTouchOnlyDevice(touchOnlyQuery.matches);
+
+    updateViewportWidth();
+    updateTouchOnlyDevice();
+    window.addEventListener("resize", updateViewportWidth, { passive: true });
+    touchOnlyQuery.addEventListener("change", updateTouchOnlyDevice);
+    return () => {
+      window.removeEventListener("resize", updateViewportWidth);
+      touchOnlyQuery.removeEventListener("change", updateTouchOnlyDevice);
+    };
+  }, []);
 
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
@@ -795,7 +841,10 @@ export function HomeHeroScene() {
   }, []);
 
   return (
-    <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+    <div
+      className="pointer-events-none absolute inset-0 [&_canvas]:h-full [&_canvas]:w-full"
+      aria-hidden="true"
+    >
       <Canvas
         shadows
         camera={{ position: [0, 0, 8.4], fov: 40 }}
@@ -820,6 +869,8 @@ export function HomeHeroScene() {
           <CubeWorld
             reducedMotion={reducedMotion}
             pointerRef={pointerRef}
+            viewportWidth={viewportWidth}
+            touchOnlyDevice={touchOnlyDevice}
           />
         </Suspense>
       </Canvas>
