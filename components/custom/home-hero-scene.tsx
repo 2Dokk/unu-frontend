@@ -35,6 +35,29 @@ type LandingState = {
 
 const FACE_LETTERS = ["U", "U", "N", "N", "C", "C"];
 const CUBE_SIZE = 1.24;
+
+// 컴팩트(폰/태블릿) 큐브 스케일: 뷰포트 폭에 비례해 매끄럽게 커지도록 구간별로 선형 보간한다.
+// 이전에는 폭 구간마다 스케일이 뚝뚝 끊겨 바뀌었고, 특히 태블릿(터치+720px 이상) 구간에서
+// 오히려 폰보다 작아지는 역전 현상이 있었다 — 폭이 커질수록 항상 커지도록 단조 증가하게 맞춘다.
+const COMPACT_CUBE_SCALE_STOPS: [width: number, scale: number][] = [
+  [375, 0.5],
+  [720, 0.58],
+  [1024, 0.7],
+];
+
+function getCompactCubeScale(viewportWidth: number): number {
+  const stops = COMPACT_CUBE_SCALE_STOPS;
+  if (viewportWidth <= stops[0][0]) return stops[0][1];
+  for (let i = 1; i < stops.length; i++) {
+    const [prevWidth, prevScale] = stops[i - 1];
+    const [width, scale] = stops[i];
+    if (viewportWidth <= width) {
+      const t = (viewportWidth - prevWidth) / (width - prevWidth);
+      return prevScale + t * (scale - prevScale);
+    }
+  }
+  return stops[stops.length - 1][1];
+}
 const CUBE_START_POSITION: [number, number, number] = [-2.35, 0.41, -0.1];
 const CUBE_START_ROTATION: [number, number, number] = [0.34, -0.55, 0];
 const CUBE_INTRO_START_X = 5.2;
@@ -355,27 +378,31 @@ function CubeVisual({ cubeSize }: { cubeSize: number }) {
 
 function CompactCube({
   reducedMotion,
-  narrow,
-  desktopSiteMode,
+  viewportWidth,
+  anchorNDC,
 }: {
   reducedMotion: boolean;
-  narrow: boolean;
-  desktopSiteMode: boolean;
+  viewportWidth: number;
+  anchorNDC: { x: number; y: number } | null;
 }) {
   const groupRef = useRef<THREE.Group>(null);
-  const { viewport } = useThree();
-  const cubeScale = desktopSiteMode ? 0.26 : narrow ? 0.5 : 0.58;
+  const { camera } = useThree();
+  const cubeScale = getCompactCubeScale(viewportWidth);
   const cubeSize = CUBE_SIZE * cubeScale;
-  const positionX = desktopSiteMode
-    ? viewport.width * -0.15 - cubeSize
-    : narrow
-      ? -0.86
-      : -1.55;
-  const positionY = desktopSiteMode
-    ? viewport.height * 0.035 + cubeSize
-    : narrow
-      ? 1.82
-      : 1.88;
+
+  // anchorNDC("WEB DEVELOPMENT..." 텍스트 시작 지점의 화면 좌표, -1~1)를 z=-0.3 평면 위
+  // 월드 좌표로 환산한다. 뷰포트 비율에 비례하는 고정 오프셋 대신 실제 텍스트 위치를 따라가므로
+  // 폰/태블릿처럼 화면 비율이 크게 다른 기기에서도 항상 텍스트 옆에 위치한다.
+  const basePosition = useMemo(() => {
+    if (!anchorNDC) return null;
+    const targetZ = -0.3;
+    const near = new THREE.Vector3(anchorNDC.x, anchorNDC.y, 0).unproject(camera);
+    const far = new THREE.Vector3(anchorNDC.x, anchorNDC.y, 1).unproject(camera);
+    const direction = far.sub(near).normalize();
+    const distance = (targetZ - near.z) / direction.z;
+    return near.add(direction.multiplyScalar(distance));
+  }, [anchorNDC, camera]);
+
   const rotationAxis = useMemo(
     () => new THREE.Vector3(0.72, 1, 0.38).normalize(),
     [],
@@ -387,16 +414,18 @@ function CompactCube({
   const spinRotation = useMemo(() => new THREE.Quaternion(), []);
 
   useFrame(({ clock }) => {
-    if (!groupRef.current || reducedMotion) return;
+    if (!groupRef.current || reducedMotion || !basePosition) return;
 
     spinRotation.setFromAxisAngle(rotationAxis, clock.elapsedTime * 0.38);
     groupRef.current.quaternion.copy(baseRotation).premultiply(spinRotation);
     groupRef.current.position.y =
-      positionY + Math.sin(clock.elapsedTime * 0.7) * 0.06;
+      basePosition.y + Math.sin(clock.elapsedTime * 0.7) * 0.06;
   });
 
+  if (!basePosition) return null;
+
   return (
-    <group ref={groupRef} position={[positionX, positionY, -0.3]}>
+    <group ref={groupRef} position={[basePosition.x, basePosition.y, basePosition.z]}>
       <CubeVisual cubeSize={cubeSize} />
     </group>
   );
@@ -781,20 +810,20 @@ function CubeWorld({
   pointerRef,
   viewportWidth,
   mobileLikeDevice,
+  anchorNDC,
 }: {
   reducedMotion: boolean;
   pointerRef: RefObject<PointerState>;
   viewportWidth: number | null;
   mobileLikeDevice: boolean | null;
+  anchorNDC: { x: number; y: number } | null;
 }) {
   if (viewportWidth === null || mobileLikeDevice === null) {
     return null;
   }
 
-  const desktopSiteMode = mobileLikeDevice && viewportWidth >= 720;
   const compact = viewportWidth < 720 || mobileLikeDevice;
   const hideCompactCube = viewportWidth < 375;
-  const narrowCompactCube = viewportWidth < 480;
 
   if (hideCompactCube) {
     return null;
@@ -804,8 +833,8 @@ function CubeWorld({
     return (
       <CompactCube
         reducedMotion={reducedMotion}
-        narrow={narrowCompactCube}
-        desktopSiteMode={desktopSiteMode}
+        viewportWidth={viewportWidth}
+        anchorNDC={anchorNDC}
       />
     );
   }
@@ -817,6 +846,10 @@ export function HomeHeroScene() {
   const reducedMotion = useReducedMotion();
   const [viewportWidth, setViewportWidth] = useState<number | null>(null);
   const [mobileLikeDevice, setMobileLikeDevice] = useState<boolean | null>(null);
+  // [data-hero-anchor]("WEB DEVELOPMENT..." 텍스트) 시작 지점의 화면 좌표를 -1~1 NDC로 담아둔다.
+  // 태블릿처럼 화면 비율이 폰과 크게 다른 기기에서도 실제 텍스트 위치를 그대로 따라가게 하기 위함
+  // (뷰포트 비율에 비례하는 고정 오프셋 방식은 종횡비가 달라지면 어긋난다).
+  const [anchorNDC, setAnchorNDC] = useState<{ x: number; y: number } | null>(null);
   const pointerRef = useRef<PointerState>({ active: false, x: 0, y: 0, revision: 0 });
 
   useEffect(() => {
@@ -829,15 +862,36 @@ export function HomeHeroScene() {
 
       setMobileLikeDevice(touchOnlyQuery.matches || smallTouchScreen);
     };
+    const updateAnchor = () => {
+      const anchorEl = document.querySelector<HTMLElement>("[data-hero-anchor]");
+      const heroEl = anchorEl?.closest<HTMLElement>("[data-home-hero]");
+      if (!anchorEl || !heroEl) {
+        setAnchorNDC(null);
+        return;
+      }
+      const anchorRect = anchorEl.getBoundingClientRect();
+      const heroRect = heroEl.getBoundingClientRect();
+      const px = anchorRect.left - heroRect.left;
+      const py = anchorRect.top - heroRect.top + anchorRect.height / 2;
+      setAnchorNDC({
+        x: (px / heroRect.width) * 2 - 1,
+        y: -((py / heroRect.height) * 2 - 1),
+      });
+    };
 
     updateViewportWidth();
     updateMobileLikeDevice();
+    updateAnchor();
     window.addEventListener("resize", updateViewportWidth, { passive: true });
+    window.addEventListener("resize", updateAnchor, { passive: true });
     window.addEventListener("orientationchange", updateMobileLikeDevice);
+    window.addEventListener("orientationchange", updateAnchor);
     touchOnlyQuery.addEventListener("change", updateMobileLikeDevice);
     return () => {
       window.removeEventListener("resize", updateViewportWidth);
+      window.removeEventListener("resize", updateAnchor);
       window.removeEventListener("orientationchange", updateMobileLikeDevice);
+      window.removeEventListener("orientationchange", updateAnchor);
       touchOnlyQuery.removeEventListener("change", updateMobileLikeDevice);
     };
   }, []);
@@ -903,6 +957,7 @@ export function HomeHeroScene() {
             pointerRef={pointerRef}
             viewportWidth={viewportWidth}
             mobileLikeDevice={mobileLikeDevice}
+            anchorNDC={anchorNDC}
           />
         </Suspense>
       </Canvas>

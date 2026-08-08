@@ -12,6 +12,7 @@ import {
   UserRound,
   UserRoundPlus,
   UsersRound,
+  Activity,
   Clock,
 } from "lucide-react";
 
@@ -37,10 +38,16 @@ export const menuConfig: MenuConfig = {
   // 모든 로그인 사용자에게 공통으로 표시되는 메뉴
   common: [
     {
+      label : "내 프로필",
+      href: "/profile",
+      icon: UserRound, 
+    },
+    {
       label: "내 활동",
       href: "/home",
-      icon: UserRound,
+      icon: Activity,
     },
+
   ],
 
   // MEMBER 권한 사용자에게만 표시되는 메뉴

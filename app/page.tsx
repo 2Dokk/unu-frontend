@@ -148,7 +148,10 @@ export default function Home() {
 
           <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-[1219px] items-center justify-center px-5 py-10 text-center text-white sm:px-8 sm:py-12 2xl:max-w-[1236px] 2xl:px-0">
             <div className="flex w-full flex-col items-center">
-              <p className="font-cnu-body text-sm font-semibold text-[#b4e2c9] [text-shadow:0_2px_12px_rgba(0,0,0,0.72)] sm:text-2xl">
+              <p
+                data-hero-anchor
+                className="font-cnu-body text-sm font-semibold text-[#b4e2c9] [text-shadow:0_2px_12px_rgba(0,0,0,0.72)] sm:text-2xl"
+              >
                 WEB DEVELOPMENT &amp; SOFTWARE SYSTEM COMMUNITY
               </p>
               <h1 className="font-cnu-body mt-2 text-7xl leading-none font-bold tracking-[0.45px] [text-shadow:0_3px_22px_rgba(0,0,0,0.82)] sm:text-8xl lg:text-[140px] lg:leading-none">
