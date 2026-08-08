@@ -48,10 +48,7 @@ function formatDDayLabel(dDay: number): string {
 type RecruitmentCTAStatus = "none" | "upcoming" | "open";
 
 async function RecruitmentCTA() {
-  const recruitment = await getClosestRecruitment().catch((err) => {
-    console.error("서버 패칭 문제?", err);
-    return null;
-  });
+  const recruitment = await getClosestRecruitment().catch(() => null);
 
   const now = new Date();
   const startAt = recruitment ? new Date(recruitment.startAt) : null;
