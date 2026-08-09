@@ -63,6 +63,10 @@ const CATEGORY_MAP: Record<string, { label: string; color: string }> = {
     label: "온라인 강좌",
     color: "bg-amber-50 text-amber-700 border-amber-200",
   },
+  LECTURE: {
+    label: "인강",
+    color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
 };
 
 // Generate color for activity type by index

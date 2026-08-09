@@ -16,6 +16,7 @@ import {
   MoreVertical,
   PlusSquare,
   SquarePlus,
+  UserPlus,
   X,
   Search,
 } from "lucide-react";
@@ -67,7 +68,10 @@ import {
   getActivityParticipantsByActivityId,
   updateActivityParticipantStatus,
   updateActivityParticipantCompleted,
+  createActivityParticipant,
 } from "@/lib/api/activity-participant";
+import { getAllUsers } from "@/lib/api/user";
+import { UserResponseDto } from "@/lib/interfaces/auth";
 import {
   getActivitySessionsByActivityId,
   createActivitySession,
@@ -254,6 +258,12 @@ export default function ActivityDetailManagePage() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  // 멤버 직접 추가 states
+  const [allUsers, setAllUsers] = useState<UserResponseDto[]>([]);
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [addMemberSearch, setAddMemberSearch] = useState("");
+  const [addingUserId, setAddingUserId] = useState<string | null>(null);
+
   // Session & Attendance states
   const [sessions, setSessions] = useState<ActivitySessionResponseDto[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -331,13 +341,15 @@ export default function ActivityDetailManagePage() {
     async function fetchData() {
       setLoading(true);
       try {
-        const [activityData, participantsData] = await Promise.all([
+        const [activityData, participantsData, usersData] = await Promise.all([
           getActivityById(activityId),
           getActivityParticipantsByActivityId({ activityId }),
+          getAllUsers(),
         ]);
         setActivity(activityData);
         setParticipants(participantsData);
         setFilteredParticipants(participantsData);
+        setAllUsers(usersData);
       } catch (error: any) {
         console.error("Failed to fetch activity data:", error);
       } finally {
@@ -347,6 +359,24 @@ export default function ActivityDetailManagePage() {
 
     fetchData();
   }, [activityId]);
+
+  async function handleAddMember(userId: string) {
+    setAddingUserId(userId);
+    try {
+      const newParticipant = await createActivityParticipant({
+        activityId,
+        userId,
+        status: "APPROVED",
+      });
+      setParticipants((prev) => [...prev, newParticipant]);
+      toast.success("참여자로 추가되었습니다.");
+    } catch (error: any) {
+      console.error("Failed to add participant:", error);
+      toast.error(error.response?.data || "참여자 추가에 실패했습니다.");
+    } finally {
+      setAddingUserId(null);
+    }
+  }
 
   // Load sessions when attendance tab is accessed
   async function loadSessions() {
@@ -1273,12 +1303,22 @@ export default function ActivityDetailManagePage() {
           {/* 신청 내역 Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex justify-between">
-                신청 내역
-                <span className="text-sm text-muted-foreground">
-                  총 {filteredParticipants.length}건
-                </span>
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3">
+                  신청 내역
+                  <span className="text-sm font-normal text-muted-foreground">
+                    총 {filteredParticipants.length}건
+                  </span>
+                </CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddMemberDialog(true)}
+                >
+                  <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                  멤버 추가
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Filters / Bulk Toolbar Toggle */}
@@ -1414,6 +1454,81 @@ export default function ActivityDetailManagePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* 멤버 직접 추가 Dialog */}
+          <Dialog
+            open={showAddMemberDialog}
+            onOpenChange={(open) => {
+              setShowAddMemberDialog(open);
+              if (!open) setAddMemberSearch("");
+            }}
+          >
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>멤버 직접 추가</DialogTitle>
+                <DialogDescription>
+                  선택하면 신청 절차 없이 바로 참여 확정 상태로 추가됩니다.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <input
+                  autoFocus
+                  placeholder="이름 또는 학번으로 검색"
+                  value={addMemberSearch}
+                  onChange={(e) => setAddMemberSearch(e.target.value)}
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </div>
+              <div className="h-72 overflow-y-auto rounded-md border divide-y">
+                {(() => {
+                  const existingUserIds = new Set(
+                    participants.map((p) => p.user?.id),
+                  );
+                  const q = addMemberSearch.trim().toLowerCase();
+                  const addableUsers = allUsers
+                    .filter((u) => !existingUserIds.has(u.id))
+                    .filter(
+                      (u) =>
+                        !q ||
+                        u.name?.toLowerCase().includes(q) ||
+                        u.username?.toLowerCase().includes(q) ||
+                        u.studentId?.toLowerCase().includes(q),
+                    );
+
+                  if (addableUsers.length === 0) {
+                    return (
+                      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                        {allUsers.length === 0
+                          ? "불러오는 중..."
+                          : "추가할 수 있는 학회원이 없습니다"}
+                      </div>
+                    );
+                  }
+
+                  return addableUsers.map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => handleAddMember(user.id)}
+                      disabled={addingUserId === user.id}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-muted/40 disabled:opacity-50"
+                    >
+                      <span className="flex-1 font-medium">
+                        {user.name || user.username}
+                      </span>
+                      {user.studentId && (
+                        <span className="text-xs text-muted-foreground">
+                          {user.studentId}
+                        </span>
+                      )}
+                      <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  ));
+                })()}
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
         <TabsContent value="schedule" className="space-y-4">
           {/* 진행 일정 Card */}

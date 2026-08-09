@@ -50,4 +50,5 @@ export interface ActivityTypeReponse {
 
 export interface ActivityTypeRequest {
   name: string;
+  code: string;
 }

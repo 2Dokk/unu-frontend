@@ -36,23 +36,22 @@ type LandingState = {
 const FACE_LETTERS = ["U", "U", "N", "N", "C", "C"];
 const CUBE_SIZE = 1.24;
 
-// 컴팩트(폰/태블릿) 큐브 스케일: 뷰포트 폭에 비례해 매끄럽게 커지도록 구간별로 선형 보간한다.
-// 이전에는 폭 구간마다 스케일이 뚝뚝 끊겨 바뀌었고, 특히 태블릿(터치+720px 이상) 구간에서
-// 오히려 폰보다 작아지는 역전 현상이 있었다 — 폭이 커질수록 항상 커지도록 단조 증가하게 맞춘다.
-const COMPACT_CUBE_SCALE_STOPS: [width: number, scale: number][] = [
-  [375, 0.5],
-  [720, 0.58],
-  [1024, 0.7],
+const ANCHOR_FONT_SCALE_STOPS: [fontSizePx: number, scale: number][] = [
+  [12.6, 0.5],
+  [21.6, 0.58],
 ];
+const DEFAULT_CUBE_SCALE = ANCHOR_FONT_SCALE_STOPS[0][1];
 
-function getCompactCubeScale(viewportWidth: number): number {
-  const stops = COMPACT_CUBE_SCALE_STOPS;
-  if (viewportWidth <= stops[0][0]) return stops[0][1];
+function getFontSizeCubeScale(fontSizePx: number | null): number {
+  if (fontSizePx === null) return DEFAULT_CUBE_SCALE;
+
+  const stops = ANCHOR_FONT_SCALE_STOPS;
+  if (fontSizePx <= stops[0][0]) return stops[0][1];
   for (let i = 1; i < stops.length; i++) {
-    const [prevWidth, prevScale] = stops[i - 1];
-    const [width, scale] = stops[i];
-    if (viewportWidth <= width) {
-      const t = (viewportWidth - prevWidth) / (width - prevWidth);
+    const [prevSize, prevScale] = stops[i - 1];
+    const [size, scale] = stops[i];
+    if (fontSizePx <= size) {
+      const t = (fontSizePx - prevSize) / (size - prevSize);
       return prevScale + t * (scale - prevScale);
     }
   }
@@ -378,21 +377,19 @@ function CubeVisual({ cubeSize }: { cubeSize: number }) {
 
 function CompactCube({
   reducedMotion,
-  viewportWidth,
+  anchorFontSizePx,
   anchorNDC,
 }: {
   reducedMotion: boolean;
-  viewportWidth: number;
+  anchorFontSizePx: number | null;
   anchorNDC: { x: number; y: number } | null;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
-  const cubeScale = getCompactCubeScale(viewportWidth);
+  const cubeScale = getFontSizeCubeScale(anchorFontSizePx);
   const cubeSize = CUBE_SIZE * cubeScale;
 
-  // anchorNDC("WEB DEVELOPMENT..." 텍스트 시작 지점의 화면 좌표, -1~1)를 z=-0.3 평면 위
-  // 월드 좌표로 환산한다. 뷰포트 비율에 비례하는 고정 오프셋 대신 실제 텍스트 위치를 따라가므로
-  // 폰/태블릿처럼 화면 비율이 크게 다른 기기에서도 항상 텍스트 옆에 위치한다.
+
   const basePosition = useMemo(() => {
     if (!anchorNDC) return null;
     const targetZ = -0.3;
@@ -811,12 +808,14 @@ function CubeWorld({
   viewportWidth,
   mobileLikeDevice,
   anchorNDC,
+  anchorFontSizePx,
 }: {
   reducedMotion: boolean;
   pointerRef: RefObject<PointerState>;
   viewportWidth: number | null;
   mobileLikeDevice: boolean | null;
   anchorNDC: { x: number; y: number } | null;
+  anchorFontSizePx: number | null;
 }) {
   if (viewportWidth === null || mobileLikeDevice === null) {
     return null;
@@ -833,7 +832,7 @@ function CubeWorld({
     return (
       <CompactCube
         reducedMotion={reducedMotion}
-        viewportWidth={viewportWidth}
+        anchorFontSizePx={anchorFontSizePx}
         anchorNDC={anchorNDC}
       />
     );
@@ -846,10 +845,9 @@ export function HomeHeroScene() {
   const reducedMotion = useReducedMotion();
   const [viewportWidth, setViewportWidth] = useState<number | null>(null);
   const [mobileLikeDevice, setMobileLikeDevice] = useState<boolean | null>(null);
-  // [data-hero-anchor]("WEB DEVELOPMENT..." 텍스트) 시작 지점의 화면 좌표를 -1~1 NDC로 담아둔다.
-  // 태블릿처럼 화면 비율이 폰과 크게 다른 기기에서도 실제 텍스트 위치를 그대로 따라가게 하기 위함
-  // (뷰포트 비율에 비례하는 고정 오프셋 방식은 종횡비가 달라지면 어긋난다).
+
   const [anchorNDC, setAnchorNDC] = useState<{ x: number; y: number } | null>(null);
+  const [anchorFontSizePx, setAnchorFontSizePx] = useState<number | null>(null);
   const pointerRef = useRef<PointerState>({ active: false, x: 0, y: 0, revision: 0 });
 
   useEffect(() => {
@@ -867,6 +865,7 @@ export function HomeHeroScene() {
       const heroEl = anchorEl?.closest<HTMLElement>("[data-home-hero]");
       if (!anchorEl || !heroEl) {
         setAnchorNDC(null);
+        setAnchorFontSizePx(null);
         return;
       }
       const anchorRect = anchorEl.getBoundingClientRect();
@@ -877,6 +876,7 @@ export function HomeHeroScene() {
         x: (px / heroRect.width) * 2 - 1,
         y: -((py / heroRect.height) * 2 - 1),
       });
+      setAnchorFontSizePx(parseFloat(getComputedStyle(anchorEl).fontSize));
     };
 
     updateViewportWidth();
@@ -958,6 +958,7 @@ export function HomeHeroScene() {
             viewportWidth={viewportWidth}
             mobileLikeDevice={mobileLikeDevice}
             anchorNDC={anchorNDC}
+            anchorFontSizePx={anchorFontSizePx}
           />
         </Suspense>
       </Canvas>

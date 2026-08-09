@@ -14,6 +14,7 @@ import {
   UsersRound,
   Activity,
   Clock,
+  MonitorPlay,
 } from "lucide-react";
 
 export type MenuItem =
@@ -61,6 +62,11 @@ export const menuConfig: MenuConfig = {
       label: "학회실 관리",
       href: "/manage/lecture-room",
       icon: Clock,
+    },
+    {
+      label: "인강 예약",
+      href: "/online-lecture",
+      icon: MonitorPlay,
     },
   ],
 
