@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 type ScrollRevealProps = ComponentPropsWithoutRef<"div"> & {
   delay?: number;
   distance?: number;
+  eager?: boolean;
 };
 
 export function ScrollReveal({
@@ -13,6 +14,7 @@ export function ScrollReveal({
   className,
   delay = 0,
   distance = 24,
+  eager = false,
   style,
   ...props
 }: ScrollRevealProps) {
@@ -23,9 +25,12 @@ export function ScrollReveal({
     const element = ref.current;
     if (!element) return;
 
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setRevealed(true);
-      return;
+    if (
+      eager ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      const frame = window.requestAnimationFrame(() => setRevealed(true));
+      return () => window.cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(
@@ -40,7 +45,7 @@ export function ScrollReveal({
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [eager]);
 
   return (
     <div
@@ -52,7 +57,7 @@ export function ScrollReveal({
       style={{
         ...style,
         opacity: revealed ? 1 : 0,
-        transform: revealed ? "translateY(0)" : `translateY(${distance}px)`,
+        transform: revealed ? "none" : `translateY(${distance}px)`,
         transitionDelay: revealed ? `${delay}ms` : "0ms",
       }}
       {...props}

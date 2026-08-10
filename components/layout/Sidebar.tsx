@@ -14,11 +14,11 @@ import { useLectureParticipation } from "@/lib/hooks/useLectureParticipation";
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { userRole, hasRole } = useAuth();
+  const { userRole, roles, hasRole } = useAuth();
   const { loading: lectureLoading, participant: lectureParticipant } =
     useLectureParticipation();
   const canSeeOnlineLecture = hasRole("MANAGER") || (!lectureLoading && !!lectureParticipant);
-  const menuItems = getMenuByRole(userRole).filter((item) => {
+  const menuItems = getMenuByRole(userRole, roles).filter((item) => {
     if (item.type === "separator") return true;
     // 운영자/관리자는 항상 보이고, 그 외엔 인강 신청자(참여 확정)일 때만 보인다.
     if (item.href === "/online-lecture") {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ChevronRight, UserCheck, UserX } from "lucide-react";
+import { Search, ChevronRight, UserCheck, UserX, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,7 @@ export default function MembersManagementPage() {
   const { hasRole } = useAuth();
 
   const [members, setMembers] = useState<UserResponseDto[]>([]);
+  const [totalMemberCount, setTotalMemberCount] = useState<number | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +71,22 @@ export default function MembersManagementPage() {
     }
     loadQuarters();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    searchUsers({})
+      .then((results) => {
+        if (!cancelled) setTotalMemberCount(results.length);
+      })
+      .catch((err) => {
+        console.error("Failed to load total member count:", err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshToken]);
 
   // Debounce text inputs (500ms)
   useEffect(() => {
@@ -167,7 +184,16 @@ export default function MembersManagementPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>학회원 목록</CardTitle>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle>학회원 목록</CardTitle>
+            <div
+              className="flex items-center gap-1.5 text-sm text-muted-foreground"
+              aria-live="polite"
+            >
+              <Users className="size-4" aria-hidden="true" />
+              <span>총 {totalMemberCount ?? "-"}명</span>
+            </div>
+          </div>
 
           {/* Filters */}
           <div className="flex flex-col gap-3 mt-4">

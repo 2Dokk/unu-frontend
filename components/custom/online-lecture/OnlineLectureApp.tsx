@@ -13,10 +13,8 @@ import type {
   Reservation,
   ReservationCartItem,
   Screen,
-  User,
 } from "@/lib/online-lecture/types";
 
-import AuthScreen from "./AuthScreen";
 import MainScreen from "./MainScreen";
 import DetailScreen from "./DetailScreen";
 import ConfirmScreen from "./ConfirmScreen";
@@ -26,9 +24,6 @@ const CONTINUOUS_SLOT_LIMIT = 4;
 const WEEKLY_SLOT_LIMIT = 8; 
 const SLOT_REFRESH_INTERVAL_MS = 5000;
 const SCREENS: Screen[] = ["auth", "main", "detail", "confirm", "my"];
-
-/** unu 활동으로 인강 참여가 확정된 회원은 이 코드로 자동 인증한다. 실제 값은 .env.local에서 설정. */
-const AUTO_LOGIN_ACCESS_CODE = process.env.NEXT_PUBLIC_ONLINE_LECTURE_ACCESS_CODE ?? "";
 
 type ToastTone = "info" | "success" | "error";
 
@@ -62,17 +57,11 @@ function sameTimes(a: string[], b: string[]): boolean {
   return left.every((time, index) => time === right[index]);
 }
 
-interface OnlineLectureAppProps {
-  /** 호출한 쪽(page.tsx)이 이미 "인강 참여 확정" 여부를 서버에서 확인했을 때만 넘긴다. */
-  autoLogin?: { studentId: string; name: string } | null;
-}
-
-export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
+export default function OnlineLectureApp() {
   const [screen, setScreen] = useState<Screen>("auth");
-  const [user, setUser] = useState<User | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  /** 자동 로그인 시도가 끝났는지. 끝나기 전엔 인증 화면을 깜빡이지 않게 숨긴다. */
-  const [autoLoginChecked, setAutoLoginChecked] = useState(!autoLogin);
 
   const [lectures, setLectures] = useState<Lecture[]>([]);
   const [myReservations, setMyReservations] = useState<Reservation[]>([]);
@@ -159,8 +148,8 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  const refreshMine = useCallback(async (u: User) => {
-    setMyReservations(await api.getMyReservations(u.sid, u.name, u.accessCode));
+  const refreshMine = useCallback(async () => {
+    setMyReservations(await api.getMyReservations());
   }, []);
 
   /** 이 강의·날짜에 찬 시간(내 것 포함)을 다시 읽는다. 저장 후 명령형으로 호출한다. */
@@ -172,52 +161,29 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
     }
   }, []);
 
-  // ── 인증 ───────────────────────────────────────────────────────────────────
-  const handleVerify = async (sid: string, name: string, accessCode: string) => {
+  // ── 서버 인증 및 초기 데이터 ────────────────────────────────────────────────
+  const initialize = useCallback(async () => {
     setLoading(true);
+    setInitializationError(null);
     try {
-      if (!(await api.verifyMember(sid, name, accessCode))) {
-        showToast("학번, 이름, 인증 코드를 다시 확인해주세요.", "error");
-        return;
-      }
-
-      const u = { sid, name, accessCode };
-      const [ls] = await Promise.all([
-        api.getLecturesForMember(sid, name, accessCode),
-        refreshMine(u),
-      ]);
-      setUser(u);
-      setLectures(ls);
+      const data = await api.bootstrap();
+      setLectures(data.lectures);
+      setMyReservations(data.reservations);
+      setInitialized(true);
       go("main", "replace");
     } catch (err) {
-      showToast(messageFor(err, "학번, 이름, 인증 코드를 다시 확인해주세요."), "error");
+      setInitialized(false);
+      setInitializationError(
+        messageFor(err, "인강 예약 정보를 불러오지 못했습니다."),
+      );
     } finally {
       setLoading(false);
     }
-  };
-
+  }, [go]);
 
   useEffect(() => {
-    if (!autoLogin || !AUTO_LOGIN_ACCESS_CODE) {
-      setAutoLoginChecked(true);
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        await handleVerify(autoLogin.studentId, autoLogin.name, AUTO_LOGIN_ACCESS_CODE);
-      } finally {
-        if (!cancelled) setAutoLoginChecked(true);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void initialize();
+  }, [initialize]);
 
   // ── 강의 선택 ──────────────────────────────────────────────────────────────
   const openLecture = (l: Lecture) => {
@@ -503,7 +469,6 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
   };
 
   const buildBookingItem = async (
-    u: User,
     lectureName: string,
     date: string,
     finalTimes: string[],
@@ -513,7 +478,7 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
     let account = null;
     let accountError = null;
     try {
-      account = await api.getLectureAccount(u.sid, u.name, u.accessCode, lectureName, date);
+      account = await api.getLectureAccount(lectureName, date);
     } catch (err) {
       accountError = messageFor(err, "계정 정보를 불러오지 못했습니다.");
     }
@@ -530,7 +495,7 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
   };
 
   const submitCart = async () => {
-    if (!user) return;
+    if (!initialized) return;
 
     const items = [...cartItems];
 
@@ -575,14 +540,14 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
 
     setLoading(true);
     try {
-      await api.saveReservationCart(user.sid, user.name, user.accessCode, items);
+      await api.saveReservationCart(items);
 
-      await refreshMine(user);
+      await refreshMine();
       if (lecture) await refreshReservedSlots(lecture.name, selectedDate);
 
       const bookingItems = await Promise.all(
         items.map((item) =>
-          buildBookingItem(user, item.lecture, item.date, item.times, item.addTimes, item.removeTimes),
+          buildBookingItem(item.lecture, item.date, item.times, item.addTimes, item.removeTimes),
         ),
       );
       const first = bookingItems[0];
@@ -606,7 +571,7 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
 
   // ── 취소
   const handleCancel = async (ids: number[], confirmMessage = "선택하신 예약을 취소하시겠습니까?") => {
-    if (!user || ids.length === 0) return false;
+    if (!initialized || ids.length === 0) return false;
     if (
       !(await askConfirm(confirmMessage, {
         title: "예약 취소",
@@ -619,10 +584,10 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
 
     setLoading(true);
     try {
-      const deleted = await api.cancelReservations(user.sid, user.name, user.accessCode, ids);
+      const deleted = await api.cancelReservations(ids);
       if (deleted === 0) showToast("취소된 예약이 없습니다. 목록을 새로고침합니다.", "info");
       else showToast("선택하신 예약이 취소되었습니다.", "success");
-      await refreshMine(user);
+      await refreshMine();
       return true;
     } catch (err) {
       showToast(messageFor(err, "취소 중 오류가 발생했습니다."), "error");
@@ -663,7 +628,7 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
   }, [myReservations, lecture]);
 
   useEffect(() => {
-    if (screen !== "my" || !user || upcoming.length === 0) {
+    if (screen !== "my" || !initialized || upcoming.length === 0) {
       setAccountByLecture({});
       return;
     }
@@ -687,9 +652,6 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
         [...firstReservationByLecture.values()].map(async (reservation) => {
           try {
             const account = await api.getLectureAccount(
-              user.sid,
-              user.name,
-              user.accessCode,
               reservation.lecture,
               reservation.res_date,
             );
@@ -712,7 +674,7 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
     return () => {
       cancelled = true;
     };
-  }, [screen, user, upcoming]);
+  }, [screen, initialized, upcoming]);
 
   const sortedLectures = useMemo(
     () => [...lectures].sort((a, b) => Number(b.enrolled) - Number(a.enrolled)),
@@ -721,14 +683,21 @@ export default function OnlineLectureApp({ autoLogin }: OnlineLectureAppProps) {
 
   return (
     <div className="min-h-full bg-canvas">
-      {screen === "auth" && !autoLoginChecked && (
-        <div className="flex min-h-[60vh] items-center justify-center text-sm font-semibold text-hint">
-          확인 중…
+      {screen === "auth" && (
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-5 text-center">
+          <p className="text-sm font-semibold text-hint">
+            {loading ? "확인 중…" : initializationError}
+          </p>
+          {!loading && initializationError && (
+            <button
+              type="button"
+              onClick={() => void initialize()}
+              className="rounded-lg bg-brand-dark px-4 py-2 text-sm font-bold text-white hover:bg-brand"
+            >
+              다시 시도
+            </button>
+          )}
         </div>
-      )}
-
-      {screen === "auth" && autoLoginChecked && (
-        <AuthScreen loading={loading} onVerify={handleVerify} />
       )}
 
       {screen === "main" && (

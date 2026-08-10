@@ -18,6 +18,11 @@ import { getPortfolios } from "@/lib/api/portfolio";
 
 const NAV_ITEMS = [
   {
+    label: "소개",
+    href: "/about",
+    width: "w-[126px]",
+  },
+  {
     label: "활동",
     href: "/portfolio",
     width: "w-[126px]",

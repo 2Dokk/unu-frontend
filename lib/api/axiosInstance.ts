@@ -1,5 +1,6 @@
 import axios from "axios";
 import Cookies from "js-cookie";
+import { setAuthCookies } from "@/lib/utils/auth-cookies";
 
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
@@ -107,9 +108,7 @@ axiosInstance.interceptors.response.use(
             throw new Error("No access token in refresh response");
           }
 
-          // store tokens (adjust options as needed: expires, secure, sameSite)
-          Cookies.set("token", newAccessToken);
-          if (newRefreshToken) Cookies.set("refreshToken", newRefreshToken);
+          setAuthCookies(newAccessToken, newRefreshToken);
 
           // update default header for subsequent requests
           axiosInstance.defaults.headers["Authorization"] =

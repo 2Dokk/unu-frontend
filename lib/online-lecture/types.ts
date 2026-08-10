@@ -1,11 +1,5 @@
 export type Screen = "auth" | "main" | "detail" | "confirm" | "my";
 
-export interface User {
-  sid: string;
-  name: string;
-  accessCode: string;
-}
-
 /** get_lectures_for_member RPC 반환 행 */
 export interface Lecture {
   id: number;

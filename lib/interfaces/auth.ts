@@ -36,6 +36,12 @@ export interface UserResponseDto {
   userRoles: UserRoleResponse[];
 }
 
+export interface UserSummaryDto {
+  id: string;
+  name: string;
+  studentId: string;
+}
+
 export interface UserInfoResponseDto {
   username: string;
   email: string;

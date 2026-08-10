@@ -1,16 +1,27 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
+import { setAuthCookies } from "@/lib/utils/auth-cookies";
+
+// 30분간 활동이 없으면 자동 로그아웃
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+const IDLE_EVENTS = ["mousemove", "keydown", "click", "scroll", "touchstart"] as const;
 
 interface DecodedToken {
   sub?: string;
   email?: string;
   roles?: string[];
   exp?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export type UserRole = "ADMIN" | "MANAGER" | "LECTURE_ROOM_MANAGER" | "MEMBER" | "GUEST";
@@ -102,7 +113,7 @@ function extractRoleFromToken(token: string): UserRole {
     }
 
     return "GUEST";
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to decode token:", error);
     return "GUEST";
   }
@@ -116,57 +127,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // 초기 인증 상태 확인
-  useEffect(() => {
-    const initAuth = () => {
-      const token = Cookies.get("token");
-
-      if (!token) {
-        setIsAuthenticated(false);
-        setUserRole("GUEST");
-        setRoles([]);
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const role = extractRoleFromToken(token);
-
-        if (role === "GUEST") {
-          // 토큰이 만료되었거나 유효하지 않음
-          Cookies.remove("token");
-          Cookies.remove("refreshToken");
-          setIsAuthenticated(false);
-          setUserRole("GUEST");
-          setRoles([]);
-          setUserId(null);
-        } else {
-          const decoded = jwtDecode<DecodedToken>(token);
-          setIsAuthenticated(true);
-          setUserRole(role);
-          setRoles(extractRolesFromToken(token));
-          setUserId(decoded.sub ?? null);
-        }
-      } catch (error: any) {
-        console.error("Auth initialization error:", error);
-        Cookies.remove("token");
-        Cookies.remove("refreshToken");
-        setIsAuthenticated(false);
-        setUserRole("GUEST");
-        setRoles([]);
-      }
-
-      setIsLoading(false);
-    };
-
-    initAuth();
+  const clearAuthState = useCallback(() => {
+    setIsAuthenticated(false);
+    setUserRole("GUEST");
+    setRoles([]);
+    setUserId(null);
   }, []);
 
-  const login = (token: string, refreshToken?: string) => {
-    Cookies.set("token", token, { expires: 7 }); // 7일
-    if (refreshToken) {
-      Cookies.set("refreshToken", refreshToken, { expires: 30 }); // 30일
+  const syncAuthState = useCallback(() => {
+    const token = Cookies.get("token");
+
+    if (!token) {
+      clearAuthState();
+      setIsLoading(false);
+      return;
     }
+
+    try {
+      const role = extractRoleFromToken(token);
+
+      if (role === "GUEST") {
+        Cookies.remove("token");
+        Cookies.remove("refreshToken");
+        clearAuthState();
+      } else {
+        const decoded = jwtDecode<DecodedToken>(token);
+        setIsAuthenticated(true);
+        setUserRole(role);
+        setRoles(extractRolesFromToken(token));
+        setUserId(decoded.sub ?? null);
+      }
+    } catch (error) {
+      console.error("Auth synchronization error:", error);
+      Cookies.remove("token");
+      Cookies.remove("refreshToken");
+      clearAuthState();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [clearAuthState]);
+
+  // 최초 진입과 브라우저 캐시 복원, 다른 탭에서의 인증 변경을 함께 반영한다.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") syncAuthState();
+    };
+
+    syncAuthState();
+    window.addEventListener("focus", syncAuthState);
+    window.addEventListener("pageshow", syncAuthState);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", syncAuthState);
+      window.removeEventListener("pageshow", syncAuthState);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [syncAuthState]);
+
+  const login = (token: string, refreshToken?: string) => {
+    setAuthCookies(token, refreshToken);
 
     const role = extractRoleFromToken(token);
     const decoded = jwtDecode<DecodedToken>(token);
@@ -176,18 +196,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserId(decoded.sub ?? null);
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     Cookies.remove("token");
     Cookies.remove("refreshToken");
-    setIsAuthenticated(false);
-    setUserRole("GUEST");
-    setRoles([]);
-    setUserId(null);
+    clearAuthState();
 
     if (typeof window !== "undefined") {
-      router.push("/login");
+      router.replace("/login");
     }
-  };
+  }, [clearAuthState, router]);
+
+  // 비활동 자동 로그아웃
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let timer: ReturnType<typeof setTimeout>;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(logout, IDLE_TIMEOUT_MS);
+    };
+
+    IDLE_EVENTS.forEach((event) => window.addEventListener(event, resetTimer));
+    resetTimer();
+
+    return () => {
+      clearTimeout(timer);
+      IDLE_EVENTS.forEach((event) => window.removeEventListener(event, resetTimer));
+    };
+  }, [isAuthenticated, logout]);
 
   const getAuthToken = (): string | undefined => {
     return Cookies.get("token");

@@ -5,9 +5,11 @@ import { Suspense } from "react";
 import { ArrowRight, Code2, Rocket, Users } from "lucide-react";
 import { formatDate } from "@/lib/utils/date-utils";
 import { getClosestRecruitment } from "@/lib/api/recruitment";
+import { getPublicNotices } from "@/lib/api/notice";
 import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
 import { ScrollReveal } from "@/components/custom/scroll-reveal";
 import { HomeHeroScene } from "@/components/custom/home-hero-scene";
+import { NewsList } from "@/components/custom/news-list";
 
 const STATS = [
   { value: "240+", label: "누적 학회원" },
@@ -22,16 +24,23 @@ const FEATURES = [
   { title: "Community", description: "개발자 네트워크와 협업 문화", Icon: Users },
 ];
 
-const NEWS_ITEMS = [
-  { tag: "행사", title: "[08.29] CNU 선배와의 만남", date: "2026.08.18" },
-  {
-    tag: "활동",
-    title: "[07.13 ~] 26 Summer 활동 시작 ",
-    date: "2026.07.13",
-  },
-  { tag: "모집", title: "26 Summer 신입 학회원 모집 [~ 06.30]", date: "2026.06.25" },
-  { tag: "행사", title: "[06.24] 26 Spring 종강총회", date: "2026.06.24" }
-];
+async function NewsSection() {
+  const { notices } = await getPublicNotices(4).catch(() => ({ notices: [], total: 0 }));
+  return <NewsList notices={notices} />;
+}
+
+function NewsSectionSkeleton() {
+  return (
+    <div className="mx-auto mt-10 w-[90%] max-w-[1045px] overflow-hidden rounded-[26px] bg-white/50 shadow-[0_1px_73px_rgba(0,0,0,0.25)] backdrop-blur-xl">
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="min-h-[77px] animate-pulse border-b border-[#d8d8d8] bg-white/40 last:border-b-0 sm:min-h-[89px]"
+        />
+      ))}
+    </div>
+  );
+}
 
 function calculateDDay(endDate: string): number {
   const end = new Date(endDate);
@@ -222,6 +231,16 @@ export default function Home() {
                 </ScrollReveal>
               ))}
             </div>
+
+            <ScrollReveal delay={120} className="mt-12">
+              <Link
+                href="/about"
+                className="mx-auto inline-flex h-12 items-center justify-center gap-3 rounded-full bg-white px-6 text-base font-semibold text-[#14231b] transition-colors hover:text-[#40795B] sm:text-lg"
+              >
+                더 알아보기
+                <ArrowRight className="size-5" />
+              </Link>
+            </ScrollReveal>
           </div>
 
           <div className="pt-28 pb-24 sm:pt-36 sm:pb-[119px]">
@@ -229,22 +248,9 @@ export default function Home() {
               <h2 className="mx-auto w-[90%] max-w-[1045px] text-4xl font-semibold sm:text-5xl">
                 학회 소식
               </h2>
-              <div className="mx-auto mt-10 w-[90%] max-w-[1045px] overflow-hidden rounded-[26px] bg-white/50 shadow-[0_1px_73px_rgba(0,0,0,0.25)] backdrop-blur-xl">
-                {NEWS_ITEMS.map((item) => (
-                  <div
-                    key={item.title}
-                    className="grid min-h-[77px] grid-cols-[59px_minmax(0,1fr)] items-center gap-3.5 border-b border-[#d8d8d8] px-4 last:border-b-0 sm:min-h-[89px] sm:grid-cols-[81px_minmax(0,1fr)_178px] sm:gap-8 sm:px-[41px]"
-                  >
-                    <span className="flex h-9 items-center justify-center rounded-full bg-[#37825d] text-xs text-white sm:h-[37px] sm:text-lg">
-                      {item.tag}
-                    </span>
-                    <span className="truncate text-sm sm:text-xl">{item.title}</span>
-                    <span className="hidden text-center text-xl text-[#929191] sm:block">
-                      {item.date}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <Suspense fallback={<NewsSectionSkeleton />}>
+                <NewsSection />
+              </Suspense>
             </ScrollReveal>
           </div>
         </div>
@@ -268,7 +274,7 @@ export default function Home() {
         <ScrollReveal className="relative mx-auto h-full w-full max-w-[1062px] px-5">
           <div className="absolute top-1/2 left-5 -translate-y-1/2 sm:left-0">
             <h2 className="font-cnu-display text-4xl font-bold tracking-[-0.45px] transition-colors group-hover:text-white sm:text-[61px] sm:leading-[54px]">
-              지금까지의 작업
+              지금까지의 활동
             </h2>
             <p className="mt-4 text-base font-bold transition-colors group-hover:text-white sm:text-2xl">
               CNU가 만들어온 활동을 소개합니다.

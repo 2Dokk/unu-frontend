@@ -7,6 +7,11 @@ import type {
   ReservationCartItem,
 } from "./types";
 
+interface BootstrapResponse {
+  lectures: Lecture[];
+  reservations: Reservation[];
+}
+
 /**
  * RPC가 RAISE EXCEPTION으로 던진 도메인 코드를 뽑아낸다.
  * Postgres 예외는 PostgREST를 거치면서 message 안에 코드 문자열로 실려온다.
@@ -40,6 +45,21 @@ function toApiError(error: { message?: string } | null): ApiError {
   const message = error?.message ?? "알 수 없는 오류";
   const code = DOMAIN_CODES.find((c) => message.includes(c)) ?? null;
   return new ApiError(message, code);
+}
+
+async function request<T>(body: Record<string, unknown>): Promise<T> {
+  const response = await fetch("/api/online-lecture", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const result = (await response.json().catch(() => ({}))) as {
+    data?: T;
+    error?: string;
+  };
+
+  if (!response.ok) throw toApiError({ message: result.error });
+  return result.data as T;
 }
 
 /** 도메인 에러 코드를 사용자에게 보여줄 문구로 */
@@ -77,39 +97,8 @@ export function messageFor(err: unknown, fallback = "요청을 처리하지 못�
   }
 }
 
-/** IP 기준 1분 10회 시도 제한. false면 잠시 후 재시도해야 한다. */
-export async function checkGlobalLimit(): Promise<boolean> {
-  const { data, error } = await supabase.rpc("check_global_limit");
-  if (error) throw toApiError(error);
-  return data === true;
-}
-
-export async function verifyMember(
-  sid: string,
-  name: string,
-  accessCode: string,
-): Promise<boolean> {
-  const { data, error } = await supabase.rpc("verify_member_access", {
-    p_student_id: sid,
-    p_name: name,
-    p_access_code: accessCode,
-  });
-  if (error) throw toApiError(error);
-  return data === true;
-}
-
-export async function getLecturesForMember(
-  sid: string,
-  name: string,
-  accessCode: string,
-): Promise<Lecture[]> {
-  const { data, error } = await supabase.rpc("get_lectures_for_member", {
-    p_student_id: sid,
-    p_name: name,
-    p_access_code: accessCode,
-  });
-  if (error) throw toApiError(error);
-  return (data ?? []) as Lecture[];
+export async function bootstrap(): Promise<BootstrapResponse> {
+  return request<BootstrapResponse>({ action: "bootstrap" });
 }
 
 /** 특정 강의/날짜에 이미 찬 시간들. */
@@ -122,115 +111,33 @@ export async function getReservedSlots(lecture: string, date: string): Promise<s
   return ((data ?? []) as { res_time: string }[]).map((r) => r.res_time);
 }
 
-export async function getMyReservations(
-  sid: string,
-  name: string,
-  accessCode: string,
-): Promise<Reservation[]> {
-  const { data, error } = await supabase.rpc("get_my_reservations", {
-    p_student_id: sid,
-    p_name: name,
-    p_access_code: accessCode,
-  });
-  if (error) throw toApiError(error);
-  return (data ?? []) as Reservation[];
+export async function getMyReservations(): Promise<Reservation[]> {
+  return request<Reservation[]>({ action: "my-reservations" });
 }
 
 export async function getLectureAccount(
-  sid: string,
-  name: string,
-  accessCode: string,
   lecture: string,
   date: string,
 ): Promise<LectureAccount | null> {
-  const { data, error } = await supabase.rpc("get_lecture_account", {
-    p_student_id: sid,
-    p_name: name,
-    p_access_code: accessCode,
-    p_lecture: lecture,
-    p_date: date,
+  return request<LectureAccount | null>({
+    action: "lecture-account",
+    lecture,
+    date,
   });
-  if (error) throw toApiError(error);
-  return ((data ?? []) as LectureAccount[])[0] ?? null;
-}
-
-/**
- * 한 강의 · 한 날짜의 여러 시간을 한 번에 예약한다.
- * RPC 호출 1회 = 트랜잭션 1회라, 일부만 들어가고 나머지가 실패하는 일이 없다.
- */
-export async function createReservations(
-  sid: string,
-  name: string,
-  accessCode: string,
-  lecture: string,
-  date: string,
-  times: string[],
-): Promise<void> {
-  const { error } = await supabase.rpc("create_reservations", {
-    p_student_id: Number(sid),
-    p_name: name,
-    p_access_code: accessCode,
-    p_lecture: lecture,
-    p_date: date,
-    p_times: times,
-  });
-  if (error) throw toApiError(error);
-}
-
-
-export async function saveReservations(
-  sid: string,
-  name: string,
-  accessCode: string,
-  lecture: string,
-  date: string,
-  times: string[],
-): Promise<void> {
-  const { error } = await supabase.rpc("save_reservations", {
-    p_student_id: Number(sid),
-    p_name: name,
-    p_access_code: accessCode,
-    p_lecture: lecture,
-    p_date: date,
-    p_times: times,
-  });
-  if (error) throw toApiError(error);
 }
 
 export async function saveReservationCart(
-  sid: string,
-  name: string,
-  accessCode: string,
   items: ReservationCartItem[],
 ): Promise<void> {
-  const { error } = await supabase.rpc("save_reservation_cart", {
-    p_student_id: Number(sid),
-    p_name: name,
-    p_access_code: accessCode,
-    p_items: items.map((item) => ({
-      lecture: item.lecture,
-      date: item.date,
-      times: item.times,
-      addTimes: item.addTimes,
-      removeTimes: item.removeTimes,
-    })),
+  await request<null>({
+    action: "save-cart",
+    items,
   });
-  if (error) throw toApiError(error);
 }
 
 /** 삭제된 행 수를 반환한다. 0이면 아무것도 지워지지 않은 것. */
 export async function cancelReservations(
-  sid: string,
-  name: string,
-  accessCode: string,
   ids: number[],
 ): Promise<number> {
-  const { data, error } = await supabase.rpc("cancel_reservations", {
-    p_student_id: Number(sid),
-    p_name: name,
-    p_access_code: accessCode,
-    p_ids: ids,
-  });
-  if (error) throw toApiError(error);
-  return (data as number) ?? 0;
+  return request<number>({ action: "cancel", ids });
 }

@@ -25,7 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Loader2, X, Check } from "lucide-react";
 import { getAllQuarters, getCurrentQuarter } from "@/lib/api/quarter";
-import { searchUsers } from "@/lib/api/user";
+import { searchUserSummaries } from "@/lib/api/user";
 import {
   getLectureRoomSchedulesByQuarter,
   createLectureRoomSchedule,
@@ -33,7 +33,7 @@ import {
   deleteLectureRoomSchedule,
 } from "@/lib/api/lecture-room-schedule";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
-import { UserResponseDto } from "@/lib/interfaces/auth";
+import { UserSummaryDto } from "@/lib/interfaces/auth";
 import { LectureRoomScheduleResponseDto } from "@/lib/interfaces/lecture-room-schedule";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -114,10 +114,10 @@ export default function LectureRoomSchedulePage() {
 
   // User search (canAssign only)
   const [userSearchQuery, setUserSearchQuery] = useState("");
-  const [userSearchResults, setUserSearchResults] = useState<UserResponseDto[]>(
+  const [userSearchResults, setUserSearchResults] = useState<UserSummaryDto[]>(
     [],
   );
-  const [selectedUsers, setSelectedUsers] = useState<UserResponseDto[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<UserSummaryDto[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
 
   // Filter
@@ -126,7 +126,8 @@ export default function LectureRoomSchedulePage() {
   const toggleUserVisibility = (uid: string) => {
     setHiddenUserIds((prev) => {
       const next = new Set(prev);
-      next.has(uid) ? next.delete(uid) : next.add(uid);
+      if (next.has(uid)) next.delete(uid);
+      else next.add(uid);
       return next;
     });
   };
@@ -271,14 +272,16 @@ export default function LectureRoomSchedulePage() {
     if (!userSearchQuery.trim()) return;
     setSearchingUsers(true);
     try {
-      const results = await searchUsers({ name: userSearchQuery.trim() });
+      const results = await searchUserSummaries({
+        name: userSearchQuery.trim(),
+      });
       setUserSearchResults(results);
     } finally {
       setSearchingUsers(false);
     }
   };
 
-  const toggleUser = (u: UserResponseDto) => {
+  const toggleUser = (u: UserSummaryDto) => {
     setSelectedUsers((prev) =>
       prev.some((p) => p.id === u.id)
         ? prev.filter((p) => p.id !== u.id)

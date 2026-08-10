@@ -57,13 +57,7 @@ export default function OnlineLecturePage() {
       {activeTab === "admin" ? (
         <LectureAdminView />
       ) : (
-        <OnlineLectureApp
-          autoLogin={
-            participant
-              ? { studentId: participant.user.studentId, name: participant.user.name }
-              : null
-          }
-        />
+        <OnlineLectureApp />
       )}
     </>
   );

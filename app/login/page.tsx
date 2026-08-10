@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,8 +23,10 @@ import { LoginRequest } from "@/lib/interfaces/auth";
 import { useState } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 
-const LoginPage = () => {
+const LoginForm = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,8 +50,8 @@ const LoginPage = () => {
       // AuthContext를 통해 로그인 상태 업데이트
       login(response.token, response.refreshToken);
 
-      // Redirect to dashboard after successful login
-      router.push("/home");
+      // 로그인이 필요해서 여기로 밀려왔다면 원래 가려던 곳으로, 아니면 홈으로
+      router.push(redirectTo || "/home");
     } catch (error: any) {
       const serverMessage = error?.response?.data;
       setError(
@@ -84,6 +87,11 @@ const LoginPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {redirectTo && (
+            <div className="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+              로그인이 필요한 페이지입니다. 로그인 후 이어서 진행해주세요.
+            </div>
+          )}
           <form onSubmit={handleSubmit}>
             <FieldGroup>
               <Field>
@@ -134,5 +142,11 @@ const LoginPage = () => {
     </div>
   );
 };
+
+const LoginPage = () => (
+  <Suspense fallback={null}>
+    <LoginForm />
+  </Suspense>
+);
 
 export default LoginPage;
