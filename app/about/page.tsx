@@ -105,14 +105,14 @@ export default function AboutPage() {
                 aria-hidden="true"
                 className="pointer-events-none absolute top-0 right-[14%] size-[72px] sm:top-1/2 sm:right-[12%] sm:size-[118px] sm:-translate-y-1/2 lg:top-[42%] lg:right-[24%] lg:size-[148px]"
               >
-                <ScrollReveal
+                {/* <ScrollReveal
                   eager
                   delay={180}
                   distance={12}
                   className="size-full"
                 >
                   <CnuStaticCube />
-                </ScrollReveal>
+                </ScrollReveal> */}
               </div>
             </section>
           </div>
