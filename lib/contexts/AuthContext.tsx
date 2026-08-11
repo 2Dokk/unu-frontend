@@ -10,7 +10,11 @@ import React, {
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
-import { setAuthCookies } from "@/lib/utils/auth-cookies";
+import {
+  AUTH_STATE_CHANGED_EVENT,
+  clearAuthCookies,
+  setAuthCookies,
+} from "@/lib/utils/auth-cookies";
 
 // 30분간 활동이 없으면 자동 로그아웃
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
@@ -124,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole>("GUEST");
   const [roles, setRoles] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -132,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserRole("GUEST");
     setRoles([]);
     setUserId(null);
+    setTokenExpiresAt(null);
   }, []);
 
   const syncAuthState = useCallback(() => {
@@ -147,8 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const role = extractRoleFromToken(token);
 
       if (role === "GUEST") {
-        Cookies.remove("token");
-        Cookies.remove("refreshToken");
+        clearAuthCookies();
         clearAuthState();
       } else {
         const decoded = jwtDecode<DecodedToken>(token);
@@ -156,11 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserRole(role);
         setRoles(extractRolesFromToken(token));
         setUserId(decoded.sub ?? null);
+        setTokenExpiresAt(decoded.exp ? decoded.exp * 1000 : null);
       }
     } catch (error) {
       console.error("Auth synchronization error:", error);
-      Cookies.remove("token");
-      Cookies.remove("refreshToken");
+      clearAuthCookies();
       clearAuthState();
     } finally {
       setIsLoading(false);
@@ -176,11 +181,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     syncAuthState();
     window.addEventListener("focus", syncAuthState);
     window.addEventListener("pageshow", syncAuthState);
+    window.addEventListener(AUTH_STATE_CHANGED_EVENT, syncAuthState);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("focus", syncAuthState);
       window.removeEventListener("pageshow", syncAuthState);
+      window.removeEventListener(AUTH_STATE_CHANGED_EVENT, syncAuthState);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [syncAuthState]);
@@ -194,17 +201,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserRole(role);
     setRoles(extractRolesFromToken(token));
     setUserId(decoded.sub ?? null);
+    setTokenExpiresAt(decoded.exp ? decoded.exp * 1000 : null);
   };
 
   const logout = useCallback(() => {
-    Cookies.remove("token");
-    Cookies.remove("refreshToken");
+    clearAuthCookies();
     clearAuthState();
 
     if (typeof window !== "undefined") {
       router.replace("/login");
     }
   }, [clearAuthState, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated || tokenExpiresAt === null) return;
+
+    const timer = window.setTimeout(
+      logout,
+      Math.max(0, tokenExpiresAt - Date.now()),
+    );
+    return () => window.clearTimeout(timer);
+  }, [isAuthenticated, logout, tokenExpiresAt]);
 
   // 비활동 자동 로그아웃
   useEffect(() => {

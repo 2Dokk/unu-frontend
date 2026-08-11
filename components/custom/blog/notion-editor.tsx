@@ -3,6 +3,7 @@
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   createRef,
@@ -39,8 +40,15 @@ import {
   Code2,
   Image as ImageLucide,
   AlignLeft,
+  Check,
+  Unlink2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/popover";
 
 // ─── Markdown ↔ HTML (I/O only, never during editing) ────────────────────────
 
@@ -128,6 +136,7 @@ interface SlashItem {
   description: string;
   icon: React.ReactNode;
   command: (editor: Editor) => void;
+  kind?: "image";
 }
 
 const SLASH_ITEMS: SlashItem[] = [
@@ -185,18 +194,59 @@ const SLASH_ITEMS: SlashItem[] = [
     icon: <Minus className="h-4 w-4" />,
     command: (e) => e.chain().focus().setHorizontalRule().run(),
   },
+  {
+    label: "이미지",
+    description: "이미지 파일 업로드",
+    icon: <ImageLucide className="h-4 w-4" />,
+    command: (e) => e.chain().focus().run(),
+    kind: "image",
+  },
 ];
 
 // Dropdown rendered via portal (keeps it outside the editor DOM tree)
 interface SlashMenuProps {
   items: SlashItem[];
   selectedIndex: number;
-  position: { x: number; y: number };
+  position: { x: number; top: number; bottom: number };
   onSelect: (item: SlashItem) => void;
 }
 
 function SlashMenu({ items, selectedIndex, position, onSelect }: SlashMenuProps) {
   const listRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const menu = listRef.current;
+    if (!menu) return;
+
+    const viewportGap = 8;
+    const cursorGap = 4;
+    const spaceAbove = Math.max(0, position.top - viewportGap);
+    const spaceBelow = Math.max(
+      0,
+      window.innerHeight - position.bottom - viewportGap,
+    );
+
+    menu.style.maxHeight = `${Math.max(
+      48,
+      Math.min(288, Math.max(spaceAbove, spaceBelow)),
+    )}px`;
+
+    const { width, height } = menu.getBoundingClientRect();
+    const openAbove = spaceBelow < height && spaceAbove > spaceBelow;
+    const top = openAbove
+      ? Math.max(viewportGap, position.top - cursorGap - height)
+      : Math.min(
+          position.bottom + cursorGap,
+          window.innerHeight - viewportGap - height,
+        );
+    const left = Math.min(
+      Math.max(viewportGap, position.x),
+      window.innerWidth - viewportGap - width,
+    );
+
+    menu.style.top = `${top}px`;
+    menu.style.left = `${Math.max(viewportGap, left)}px`;
+  }, [items, position]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -209,7 +259,7 @@ function SlashMenu({ items, selectedIndex, position, onSelect }: SlashMenuProps)
   return createPortal(
     <div
       ref={listRef}
-      style={{ top: position.y, left: position.x }}
+      style={{ top: position.bottom + 4, left: position.x }}
       className="fixed z-50 min-w-56 max-h-72 overflow-y-auto rounded-lg border bg-popover text-popover-foreground shadow-md py-1"
     >
       {items.map((item, i) => (
@@ -245,9 +295,14 @@ function SlashMenu({ items, selectedIndex, position, onSelect }: SlashMenuProps)
 
 // Slash command Tiptap extension
 function buildSlashExtension(
-  onOpen: (props: { items: SlashItem[]; pos: { x: number; y: number } }) => void,
+  onOpen: (props: {
+    items: SlashItem[];
+    pos: { x: number; top: number; bottom: number };
+    select: (item: SlashItem) => void;
+  }) => void,
   onClose: () => void,
-  onKeyDown: (e: KeyboardEvent) => boolean
+  onKeyDown: (e: KeyboardEvent) => boolean,
+  canUploadImage: () => boolean,
 ) {
   return Extension.create({
     name: "slashCommand",
@@ -267,8 +322,9 @@ function buildSlashExtension(
             const q = query.toLowerCase();
             return SLASH_ITEMS.filter(
               (i) =>
-                i.label.toLowerCase().includes(q) ||
-                i.description.toLowerCase().includes(q)
+                (i.kind !== "image" || canUploadImage()) &&
+                (i.label.toLowerCase().includes(q) ||
+                  i.description.toLowerCase().includes(q))
             );
           },
           render() {
@@ -278,7 +334,8 @@ function buildSlashExtension(
                 if (!rect) return;
                 onOpen({
                   items: props.items as SlashItem[],
-                  pos: { x: rect.left, y: rect.bottom + 4 },
+                  pos: { x: rect.left, top: rect.top, bottom: rect.bottom },
+                  select: (item) => props.command(item),
                 });
               },
               onUpdate(props) {
@@ -286,7 +343,8 @@ function buildSlashExtension(
                 if (!rect) return;
                 onOpen({
                   items: props.items as SlashItem[],
-                  pos: { x: rect.left, y: rect.bottom + 4 },
+                  pos: { x: rect.left, top: rect.top, bottom: rect.bottom },
+                  select: (item) => props.command(item),
                 });
               },
               onKeyDown({ event }) {
@@ -325,19 +383,6 @@ const CustomShortcuts = Extension.create({
       },
       "Mod-`": () => this.editor.chain().focus().toggleCode().run(),
       "Mod-Shift-s": () => this.editor.chain().focus().toggleStrike().run(),
-      "Mod-k": () => {
-        const { editor } = this;
-        const prev =
-          (editor.getAttributes("link").href as string | undefined) ?? "";
-        const url = window.prompt("URL을 입력하세요:", prev || "https://");
-        if (url === null) return true;
-        if (!url.trim()) {
-          editor.chain().focus().unsetLink().run();
-          return true;
-        }
-        editor.chain().focus().setLink({ href: url.trim() }).run();
-        return true;
-      },
     };
   },
 });
@@ -385,6 +430,22 @@ interface NotionEditorProps {
   onChange: (md: string) => void;
   onImageUpload?: (file: File) => Promise<{ id: string; url: string }>;
   onImageUploaded?: (id: string, url: string) => void;
+  onImageUrlsChange?: (urls: string[]) => void;
+}
+
+function getEditorImageUrls(editor: Editor): string[] {
+  const urls: string[] = [];
+  const seen = new Set<string>();
+
+  editor.state.doc.descendants((node) => {
+    if (node.type.name !== "image") return;
+    const src = typeof node.attrs.src === "string" ? node.attrs.src : "";
+    if (!src || seen.has(src)) return;
+    seen.add(src);
+    urls.push(src);
+  });
+
+  return urls;
 }
 
 export function NotionEditor({
@@ -392,22 +453,39 @@ export function NotionEditor({
   onChange,
   onImageUpload,
   onImageUploaded,
+  onImageUrlsChange,
 }: NotionEditorProps) {
   const [uploading, setUploading] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("https://");
+  const [hasExistingLink, setHasExistingLink] = useState(false);
 
   // Slash menu state
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashItems, setSlashItems] = useState<SlashItem[]>([]);
-  const [slashPos, setSlashPos] = useState({ x: 0, y: 0 });
+  const [slashPos, setSlashPos] = useState({ x: 0, top: 0, bottom: 0 });
   const [slashIndex, setSlashIndex] = useState(0);
 
   // Stable refs
-  const propsRef = useRef({ onImageUpload, onImageUploaded, onChange });
+  const propsRef = useRef({
+    onImageUpload,
+    onImageUploaded,
+    onImageUrlsChange,
+    onChange,
+  });
   useEffect(() => {
-    propsRef.current = { onImageUpload, onImageUploaded, onChange };
+    propsRef.current = {
+      onImageUpload,
+      onImageUploaded,
+      onImageUrlsChange,
+      onChange,
+    };
   });
 
   const editorRef = useRef<Editor | null>(null);
+  const linkInputRef = useRef<HTMLInputElement>(null);
+  const linkSelectionRef = useRef<{ from: number; to: number } | null>(null);
+  const linkWasActiveRef = useRef(false);
   const lastHtml = useRef("");
   // Last markdown emitted BY the editor itself (via onChange). Used to tell
   // "value changed because we typed" apart from "value changed externally" —
@@ -416,61 +494,50 @@ export function NotionEditor({
   // external changes and resets the document (and cursor) on every keystroke.
   const lastMd = useRef("");
 
-  // Slash callbacks (stable refs to avoid re-creating the extension)
-  const slashCallbacksRef = useRef({
-    onOpen: (_: { items: SlashItem[]; pos: { x: number; y: number } }) => {},
-    onClose: () => {},
-    onKeyDown: (_: KeyboardEvent) => false as boolean,
-  });
+  const openLinkPopover = useCallback(() => {
+    const ed = editorRef.current;
+    if (!ed) return false;
 
-  slashCallbacksRef.current = {
-    onOpen({ items, pos }) {
-      setSlashItems(items);
-      setSlashPos(pos);
-      setSlashIndex(0);
-      setSlashOpen(true);
-    },
-    onClose() {
-      setSlashOpen(false);
-      setSlashItems([]);
-      setSlashIndex(0);
-    },
-    onKeyDown(event) {
-      if (!slashOpen) return false;
-      if (event.key === "ArrowDown") {
-        setSlashIndex((i) => (i + 1) % slashItems.length);
-        return true;
-      }
-      if (event.key === "ArrowUp") {
-        setSlashIndex((i) => (i - 1 + slashItems.length) % slashItems.length);
-        return true;
-      }
-      if (event.key === "Enter") {
-        const item = slashItems[slashIndex];
-        if (item && editorRef.current) {
-          // The suggestion plugin handles the command + range deletion
-          // We just need to select the item — this is done via the command config
-        }
-        return false; // let suggestion plugin handle Enter
-      }
-      if (event.key === "Escape") {
-        setSlashOpen(false);
-        return true;
-      }
-      return false;
-    },
-  };
+    const href = (ed.getAttributes("link").href as string | undefined) ?? "";
+    linkSelectionRef.current = {
+      from: ed.state.selection.from,
+      to: ed.state.selection.to,
+    };
+    linkWasActiveRef.current = Boolean(href);
+    setLinkUrl(href || "https://");
+    setHasExistingLink(Boolean(href));
+    setLinkOpen(true);
+    return true;
+  }, []);
 
-  // Stable slash extension (created once, uses ref callbacks)
-  const slashExtensionRef = useRef(
-    buildSlashExtension(
-      (p) => slashCallbacksRef.current.onOpen(p),
-      () => slashCallbacksRef.current.onClose(),
-      (e) => slashCallbacksRef.current.onKeyDown(e)
-    )
-  );
+  const openLinkPopoverRef = useRef(openLinkPopover);
+  openLinkPopoverRef.current = openLinkPopover;
 
-  // Stable image upload
+  const applyLink = useCallback(() => {
+    const ed = editorRef.current;
+    const selection = linkSelectionRef.current;
+    if (!ed || !selection) return;
+
+    const chain = ed.chain().focus().setTextSelection(selection);
+    if (linkWasActiveRef.current) chain.extendMarkRange("link");
+
+    const href = linkUrl.trim();
+    if (href) chain.setLink({ href }).run();
+    else chain.unsetLink().run();
+    setLinkOpen(false);
+  }, [linkUrl]);
+
+  const removeLink = useCallback(() => {
+    const ed = editorRef.current;
+    const selection = linkSelectionRef.current;
+    if (!ed || !selection) return;
+
+    const chain = ed.chain().focus().setTextSelection(selection);
+    if (linkWasActiveRef.current) chain.extendMarkRange("link");
+    chain.unsetLink().run();
+    setLinkOpen(false);
+  }, []);
+
   const uploadFile = useCallback(async (file: File) => {
     if (!propsRef.current.onImageUpload) return;
     setUploading(true);
@@ -484,6 +551,82 @@ export function NotionEditor({
       setUploading(false);
     }
   }, []);
+
+  const openImagePicker = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (file) uploadFile(file);
+    };
+    input.click();
+  }, [uploadFile]);
+
+  const slashSelectRef = useRef<(item: SlashItem) => void>(() => {});
+
+  // Slash callbacks (stable refs to avoid re-creating the extension)
+  const slashCallbacksRef = useRef({
+    onOpen: (_: {
+      items: SlashItem[];
+      pos: { x: number; top: number; bottom: number };
+      select: (item: SlashItem) => void;
+    }) => {},
+    onClose: () => {},
+    onKeyDown: (_: KeyboardEvent) => false as boolean,
+  });
+
+  slashCallbacksRef.current = {
+    onOpen({ items, pos, select }) {
+      slashSelectRef.current = (item) => {
+        select(item);
+        if (item.kind === "image") openImagePicker();
+      };
+      setSlashItems(items);
+      setSlashPos(pos);
+      setSlashIndex(0);
+      setSlashOpen(true);
+    },
+    onClose() {
+      slashSelectRef.current = () => {};
+      setSlashOpen(false);
+      setSlashItems([]);
+      setSlashIndex(0);
+    },
+    onKeyDown(event) {
+      if (!slashOpen) return false;
+      if (event.key === "Escape") {
+        setSlashOpen(false);
+        return true;
+      }
+      if (slashItems.length === 0) return false;
+      if (event.key === "ArrowDown") {
+        setSlashIndex((i) => (i + 1) % slashItems.length);
+        return true;
+      }
+      if (event.key === "ArrowUp") {
+        setSlashIndex((i) => (i - 1 + slashItems.length) % slashItems.length);
+        return true;
+      }
+      if (event.key === "Enter") {
+        const item = slashItems[slashIndex];
+        if (!item) return false;
+        slashSelectRef.current(item);
+        return true;
+      }
+      return false;
+    },
+  };
+
+  // Stable slash extension (created once, uses ref callbacks)
+  const slashExtensionRef = useRef(
+    buildSlashExtension(
+      (p) => slashCallbacksRef.current.onOpen(p),
+      () => slashCallbacksRef.current.onClose(),
+      (e) => slashCallbacksRef.current.onKeyDown(e),
+      () => Boolean(propsRef.current.onImageUpload),
+    )
+  );
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -499,8 +642,10 @@ export function NotionEditor({
         },
       }),
       Placeholder.configure({
-        placeholder: "내용을 입력하거나 / 를 눌러 블록을 추가하세요",
+        placeholder: "명령어는 '/'를 입력하세요",
+        showOnlyCurrent: true,
         emptyEditorClass: "is-editor-empty",
+        emptyNodeClass: "is-empty",
       }),
       ImageExtension.configure({
         HTMLAttributes: { class: "max-w-full rounded-lg" },
@@ -538,6 +683,17 @@ export function NotionEditor({
         }
         return false;
       },
+      handleKeyDown(_view, event) {
+        if (
+          (event.metaKey || event.ctrlKey) &&
+          !event.altKey &&
+          event.key.toLowerCase() === "k"
+        ) {
+          event.preventDefault();
+          return openLinkPopoverRef.current();
+        }
+        return false;
+      },
     },
     onUpdate({ editor }) {
       const html = editor.getHTML();
@@ -546,6 +702,7 @@ export function NotionEditor({
       const md = htmlToMd(html);
       lastMd.current = md;
       propsRef.current.onChange(md);
+      propsRef.current.onImageUrlsChange?.(getEditorImageUrls(editor));
     },
   });
 
@@ -560,6 +717,7 @@ export function NotionEditor({
     lastHtml.current = html;
     lastMd.current = value;
     editor.commands.setContent(html, { emitUpdate: false });
+    propsRef.current.onImageUrlsChange?.(getEditorImageUrls(editor));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
@@ -573,41 +731,26 @@ export function NotionEditor({
     lastHtml.current = html;
     lastMd.current = value;
     editor.commands.setContent(html, { emitUpdate: false });
+    propsRef.current.onImageUrlsChange?.(getEditorImageUrls(editor));
   }, [value, editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+    onImageUrlsChange?.(getEditorImageUrls(editor));
+  }, [editor, onImageUrlsChange]);
 
   // Slash item selected
   const handleSlashSelect = useCallback((item: SlashItem) => {
-    const ed = editorRef.current;
-    if (!ed) return;
-    item.command(ed);
+    slashSelectRef.current(item);
     setSlashOpen(false);
   }, []);
-
-  // Link prompt
-  const handleLink = useCallback(() => {
-    const ed = editorRef.current;
-    if (!ed) return;
-    const prev = (ed.getAttributes("link").href as string | undefined) ?? "";
-    const url = window.prompt("URL을 입력하세요:", prev || "https://");
-    if (url === null) return;
-    if (!url.trim()) { ed.chain().focus().unsetLink().run(); return; }
-    ed.chain().focus().setLink({ href: url.trim() }).run();
-  }, []);
-
-  // Image button
-  const handleImageBtn = useCallback(() => {
-    const input = document.createElement("input");
-    input.type = "file"; input.accept = "image/*";
-    input.onchange = () => { const f = input.files?.[0]; if (f) uploadFile(f); };
-    input.click();
-  }, [uploadFile]);
 
   if (!editor) return null;
 
   return (
     <div className="flex flex-col">
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-0.5 border-b pb-2 mb-4">
+      <div className="sticky top-16 z-30 mb-4 flex flex-wrap items-center gap-0.5 border-b bg-background py-2">
         <TBtn active={editor.isActive("paragraph")} onClick={() => editor.chain().focus().clearNodes().run()} title="본문">P</TBtn>
         <TBtn active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="제목 1">H1</TBtn>
         <TBtn active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="제목 2">H2</TBtn>
@@ -621,11 +764,70 @@ export function NotionEditor({
         <TBtn active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} title="기울임 (Ctrl+I)"><Italic className="h-3.5 w-3.5" /></TBtn>
         <TBtn active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()} title="취소선 (Ctrl+Shift+S)"><Strikethrough className="h-3.5 w-3.5" /></TBtn>
         <TBtn active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()} title="인라인 코드 (Ctrl+`)"><Code className="h-3.5 w-3.5" /></TBtn>
-        <TBtn active={editor.isActive("link")} onClick={handleLink} title="링크 (Ctrl+K)"><Link2 className="h-3.5 w-3.5" /></TBtn>
+        <Popover open={linkOpen} onOpenChange={setLinkOpen}>
+          <PopoverAnchor asChild>
+            <span className="inline-flex">
+              <TBtn active={editor.isActive("link")} onClick={openLinkPopover} title="링크 (Cmd/Ctrl+K)"><Link2 className="h-3.5 w-3.5" /></TBtn>
+            </span>
+          </PopoverAnchor>
+          <PopoverContent
+            align="end"
+            sideOffset={8}
+            className="flex w-80 max-w-[calc(100vw-2rem)] items-center gap-1.5 p-2"
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              requestAnimationFrame(() => {
+                linkInputRef.current?.focus();
+                linkInputRef.current?.select();
+              });
+            }}
+            onCloseAutoFocus={(event) => event.preventDefault()}
+          >
+            <input
+              ref={linkInputRef}
+              type="url"
+              value={linkUrl}
+              onChange={(event) => setLinkUrl(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyLink();
+                } else if (event.key === "Escape") {
+                  event.preventDefault();
+                  setLinkOpen(false);
+                  editorRef.current?.commands.focus();
+                }
+              }}
+              placeholder="https://example.com"
+              aria-label="링크 URL"
+              className="h-9 min-w-0 flex-1 rounded-md border bg-background px-3 text-sm outline-none focus:border-[#2383e2] focus:ring-2 focus:ring-[#2383e2]/15"
+            />
+            {hasExistingLink && (
+              <button
+                type="button"
+                onClick={removeLink}
+                title="링크 제거"
+                aria-label="링크 제거"
+                className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <Unlink2 className="size-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={applyLink}
+              title="링크 적용"
+              aria-label="링크 적용"
+              className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#14231b] text-white transition-colors hover:bg-[#264638]"
+            >
+              <Check className="size-4" />
+            </button>
+          </PopoverContent>
+        </Popover>
         <Sep />
         <TBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="구분선"><Minus className="h-3.5 w-3.5" /></TBtn>
         {onImageUpload && (
-          <TBtn onClick={handleImageBtn} title="이미지 업로드" disabled={uploading}>
+          <TBtn onClick={openImagePicker} title="이미지 업로드" disabled={uploading}>
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
           </TBtn>
         )}
@@ -644,13 +846,6 @@ export function NotionEditor({
         />
       )}
 
-      {/* ── Hints ────────────────────────────────────────────────────────── */}
-      <p className="mt-4 text-xs text-muted-foreground/40 px-0.5 select-none">
-        <kbd className="font-mono">/</kbd> 블록변경 ·{" "}
-        <kbd className="font-mono">Ctrl+B</kbd> 굵게 ·{" "}
-        <kbd className="font-mono">Ctrl+I</kbd> 기울임 ·{" "}
-        <kbd className="font-mono">Ctrl+K</kbd> 링크
-      </p>
     </div>
   );
 }

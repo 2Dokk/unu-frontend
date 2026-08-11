@@ -1,6 +1,6 @@
 import axios from "axios";
 import Cookies from "js-cookie";
-import { setAuthCookies } from "@/lib/utils/auth-cookies";
+import { clearAuthCookies, setAuthCookies } from "@/lib/utils/auth-cookies";
 
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
@@ -63,8 +63,7 @@ axiosInstance.interceptors.response.use(
     // prevent infinite loop when refresh endpoint itself returns 401
     if (originalRequest && originalRequest._retry) {
       // already retried -> logout
-      Cookies.remove("token");
-      Cookies.remove("refreshToken");
+      clearAuthCookies();
       if (typeof window !== "undefined") window.location.href = "/login";
       return Promise.reject(error);
     }
@@ -72,7 +71,7 @@ axiosInstance.interceptors.response.use(
     // if no refresh token, logout immediately
     const refreshToken = Cookies.get("refreshToken");
     if (!refreshToken) {
-      Cookies.remove("token");
+      clearAuthCookies();
       if (typeof window !== "undefined") window.location.href = "/login";
       return Promise.reject(error);
     }
@@ -123,8 +122,7 @@ axiosInstance.interceptors.response.use(
         })
         .catch((err) => {
           processQueue(err, null);
-          Cookies.remove("token");
-          Cookies.remove("refreshToken");
+          clearAuthCookies();
           if (typeof window !== "undefined") window.location.href = "/login";
           reject(err);
         });

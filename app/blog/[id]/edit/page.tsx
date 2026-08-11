@@ -98,6 +98,32 @@ export default function BlogEditPage() {
     setShowImagePicker(true);
   }, []);
 
+  const handleBodyImageUrlsChange = useCallback((imageUrls: string[]) => {
+    const imageUrlSet = new Set(imageUrls);
+
+    setUploadedImages((prev) =>
+      imageUrls.map(
+        (url, index) =>
+          prev.find((image) => image.url === url) ?? {
+            id: `content-${index}-${url}`,
+            url,
+          },
+      ),
+    );
+    if (imageUrls.length === 0) setShowImagePicker(false);
+    setForm((prev) =>
+      prev
+        ? {
+            ...prev,
+            thumbnailUrl:
+              prev.thumbnailUrl && !imageUrlSet.has(prev.thumbnailUrl)
+                ? (imageUrls[0] ?? "")
+                : prev.thumbnailUrl,
+          }
+        : prev,
+    );
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form) return;
@@ -164,19 +190,21 @@ export default function BlogEditPage() {
           </div>
 
           {/* Thumbnail toggle */}
-          <button
-            type="button"
-            onClick={() => setShowImagePicker((v) => !v)}
-            className={cn(
-              "flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors",
-              showImagePicker
-                ? "text-foreground bg-muted"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <ImageIcon className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">대표이미지</span>
-          </button>
+          {uploadedImages.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowImagePicker((v) => !v)}
+              className={cn(
+                "flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors",
+                showImagePicker
+                  ? "text-foreground bg-muted"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <ImageIcon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">대표이미지</span>
+            </button>
+          )}
 
           <Button type="submit" size="sm" disabled={submitting}>
             {submitting ? "저장 중..." : "저장"}
@@ -214,29 +242,13 @@ export default function BlogEditPage() {
       </div>
 
       {/* Thumbnail picker (toggle) */}
-      {showImagePicker && (
+      {showImagePicker && uploadedImages.length > 0 && (
         <div className="mt-4">
-          {uploadedImages.length > 0 ? (
-            <UploadedImagePicker
-              images={uploadedImages}
-              selectedUrl={form.thumbnailUrl}
-              onSelect={(url) => set("thumbnailUrl", url)}
-            />
-          ) : (
-            <div className="flex items-center gap-3">
-              {form.thumbnailUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={form.thumbnailUrl}
-                  alt="현재 대표 이미지"
-                  className="h-14 w-14 rounded-md object-cover border"
-                />
-              )}
-              <p className="text-xs text-muted-foreground">
-                에디터에서 이미지를 업로드하면 여기서 선택할 수 있습니다.
-              </p>
-            </div>
-          )}
+          <UploadedImagePicker
+            images={uploadedImages}
+            selectedUrl={form.thumbnailUrl}
+            onSelect={(url) => set("thumbnailUrl", url)}
+          />
         </div>
       )}
 
@@ -246,9 +258,10 @@ export default function BlogEditPage() {
       {/* Body editor */}
       <NotionEditor
         value={form.description}
-        onChange={(v) => set("description", v)}
+        onChange={(description) => set("description", description)}
         onImageUpload={uploadImage}
         onImageUploaded={handleImageUploaded}
+        onImageUrlsChange={handleBodyImageUrlsChange}
       />
     </form>
   );

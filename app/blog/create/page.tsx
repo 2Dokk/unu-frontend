@@ -84,6 +84,28 @@ export default function BlogCreatePage() {
     setShowImagePicker(true);
   }, []);
 
+  const handleBodyImageUrlsChange = useCallback((imageUrls: string[]) => {
+    const imageUrlSet = new Set(imageUrls);
+
+    setUploadedImages((prev) =>
+      imageUrls.map(
+        (url, index) =>
+          prev.find((image) => image.url === url) ?? {
+            id: `content-${index}-${url}`,
+            url,
+          },
+      ),
+    );
+    if (imageUrls.length === 0) setShowImagePicker(false);
+    setForm((prev) => ({
+      ...prev,
+      thumbnailUrl:
+        prev.thumbnailUrl && !imageUrlSet.has(prev.thumbnailUrl)
+          ? (imageUrls[0] ?? "")
+          : prev.thumbnailUrl,
+    }));
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) {
@@ -142,19 +164,21 @@ export default function BlogCreatePage() {
           </div>
 
           {/* Thumbnail toggle */}
-          <button
-            type="button"
-            onClick={() => setShowImagePicker((v) => !v)}
-            className={cn(
-              "flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors",
-              showImagePicker
-                ? "text-foreground bg-muted"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <ImageIcon className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">대표이미지</span>
-          </button>
+          {uploadedImages.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowImagePicker((v) => !v)}
+              className={cn(
+                "flex items-center gap-1 text-xs px-2 py-1 rounded-md transition-colors",
+                showImagePicker
+                  ? "text-foreground bg-muted"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <ImageIcon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">대표이미지</span>
+            </button>
+          )}
 
           <Button type="submit" size="sm" disabled={submitting}>
             {submitting ? "저장 중..." : "게시"}
@@ -192,7 +216,7 @@ export default function BlogCreatePage() {
       </div>
 
       {/* Thumbnail picker (toggle) */}
-      {showImagePicker && (
+      {showImagePicker && uploadedImages.length > 0 && (
         <div className="mt-4">
           <UploadedImagePicker
             images={uploadedImages}
@@ -209,9 +233,10 @@ export default function BlogCreatePage() {
       <div className="[&_.ProseMirror]:min-h-[60vh]">
         <NotionEditor
           value={form.description}
-          onChange={(v) => set("description", v)}
+          onChange={(description) => set("description", description)}
           onImageUpload={uploadImage}
           onImageUploaded={handleImageUploaded}
+          onImageUrlsChange={handleBodyImageUrlsChange}
         />
       </div>
     </form>

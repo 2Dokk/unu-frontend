@@ -176,11 +176,11 @@ html body[data-scroll-locked] {
 }
 
 /* Placeholder */
-.ProseMirror p.is-editor-empty:first-child::before {
+.ProseMirror .is-empty[data-placeholder]::before {
   content: attr(data-placeholder);
   float: left;
   color: var(--muted-foreground);
-  opacity: 0.4;
+  opacity: 0.55;
   pointer-events: none;
   height: 0;
 }
@@ -191,4 +191,11 @@ html body[data-scroll-locked] {
   border-radius: 0.5rem;
   display: block;
   margin: 0.5rem 0;
+  cursor: pointer;
+  transition: box-shadow 120ms ease;
+}
+
+.ProseMirror img.ProseMirror-selectednode {
+  outline: none;
+  box-shadow: 0 0 0 2px #2383e2;
 }
