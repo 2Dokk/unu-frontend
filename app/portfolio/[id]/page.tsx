@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Pin, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, ArrowRight, Pencil, Pin, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   getPortfolioById,
   getCachedPortfolioById,
+  getCachedPortfolios,
+  getPortfolios,
   deletePortfolio,
   setPortfolioPinned,
 } from "@/lib/api/portfolio";
@@ -25,6 +28,12 @@ export default function PortfolioDetailPage() {
   const [loading, setLoading] = useState(
     () => !getCachedPortfolioById(id),
   );
+  const [otherPortfolios, setOtherPortfolios] = useState<PortfolioResponse[]>(
+    () =>
+      (getCachedPortfolios()?.portfolios ?? [])
+        .filter((item) => item.id !== id)
+        .slice(0, 3),
+  );
 
   useEffect(() => {
     const cached = getCachedPortfolioById(id);
@@ -34,6 +43,23 @@ export default function PortfolioDetailPage() {
     getPortfolioById(id)
       .then(setPortfolio)
       .finally(() => setLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getPortfolios()
+      .then(({ portfolios }) => {
+        if (cancelled) return;
+        setOtherPortfolios(
+          portfolios.filter((item) => item.id !== id).slice(0, 3),
+        );
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const handleDelete = async () => {
@@ -197,6 +223,75 @@ export default function PortfolioDetailPage() {
           hiddenImageUrl={portfolio.thumbnailUrl || undefined}
         />
       </article>
+
+      <div className="pt-12 sm:pt-16">
+        {otherPortfolios.length > 0 && (
+          <section
+            className="border-t border-black/15 pt-8"
+            aria-labelledby="other-portfolios-heading"
+          >
+            <h2
+              id="other-portfolios-heading"
+              className="font-cnu-display text-3xl font-bold sm:text-4xl"
+            >
+              다른 활동
+            </h2>
+
+            <div className="mt-5 divide-y divide-black/10 border-y border-black/10">
+              {otherPortfolios.map((item) => {
+                const itemPeriod = item.endQuarterName
+                  ? `${item.startQuarterName} ~ ${item.endQuarterName}`
+                  : `${item.startQuarterName} ~ 진행 중`;
+                const contributorNames = item.contributors
+                  .map((contributor) => contributor.name)
+                  .join(", ");
+                const itemDate = new Date(item.createdAt).toLocaleDateString(
+                  "ko-KR",
+                  { year: "numeric", month: "long", day: "numeric" },
+                );
+
+                return (
+                  <Link
+                    key={item.id}
+                    href={`/portfolio/${item.id}`}
+                    className="group flex min-w-0 items-center gap-4 py-5 sm:gap-6"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span className="font-medium text-[#2d6f50]">
+                          {itemPeriod}
+                        </span>
+                        {contributorNames && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span className="truncate">{contributorNames}</span>
+                          </>
+                        )}
+                        <span aria-hidden="true">·</span>
+                        <span>{itemDate}</span>
+                      </div>
+                      <h3 className="mt-2 line-clamp-2 text-lg leading-snug font-semibold transition-colors group-hover:text-[#2d6f50] sm:text-xl">
+                        {item.title}
+                      </h3>
+                    </div>
+                    <ArrowRight className="size-5 shrink-0 text-[#2d6f50] transition-transform group-hover:translate-x-1" />
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        <div className="flex justify-center pt-10">
+          <Link
+            href="/portfolio"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#14231b] bg-white px-7 text-sm font-semibold text-[#14231b] transition-colors hover:bg-[#14231b] hover:text-white sm:text-base"
+          >
+            <ArrowLeft className="size-4" />
+            활동 목록으로
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }
