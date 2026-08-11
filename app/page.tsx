@@ -80,7 +80,7 @@ async function RecruitmentCTA() {
   const supportingText =
     status === "open" && recruitment ? (
       <>
-        지원 기간은 {formatDate(recruitment.startAt)}부터 {formatDate(recruitment.endAt)}까지입니다.{" "}
+        지원 기간 - {formatDate(recruitment.startAt)}부터 {formatDate(recruitment.endAt)}까지{" "}
       </>
     ) : status === "upcoming" && recruitment ? (
       <>

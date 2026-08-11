@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ChevronRight, UserCheck, UserX, Users } from "lucide-react";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  UserCheck,
+  UserX,
+  Users,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,6 +41,14 @@ import { MemberCreateDialog } from "@/components/custom/member/member-create-dia
 type RoleFilter = "ALL" | "MEMBER" | "MANAGER" | "ADMIN";
 type ActiveFilter = "ALL" | "ACTIVE" | "INACTIVE";
 
+const MEMBERS_PER_PAGE = 10;
+const SEASON_ORDER: Record<string, number> = {
+  WINTER: 1,
+  SPRING: 2,
+  SUMMER: 3,
+  FALL: 4,
+};
+
 export default function MembersManagementPage() {
   const router = useRouter();
   const { hasRole } = useAuth();
@@ -42,6 +58,7 @@ export default function MembersManagementPage() {
   const [refreshToken, setRefreshToken] = useState(0);
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("ALL");
@@ -51,13 +68,6 @@ export default function MembersManagementPage() {
 
   const [debouncedName, setDebouncedName] = useState("");
   const [debouncedStudentId, setDebouncedStudentId] = useState("");
-
-  const seasonOrder: Record<string, number> = {
-    WINTER: 1,
-    SPRING: 2,
-    SUMMER: 3,
-    FALL: 4,
-  };
 
   // Load quarters on mount
   useEffect(() => {
@@ -121,27 +131,27 @@ export default function MembersManagementPage() {
           params.studentId = debouncedStudentId.trim();
         const results = await searchUsers(params);
 
-      const sortedResults = results.sort((a, b) => {
-        const qA = a.joinedQuarter?.name; 
-        const qB = b.joinedQuarter?.name;
+        results.sort((a, b) => {
+          const qA = a.joinedQuarter?.name;
+          const qB = b.joinedQuarter?.name;
 
-        if (!qA && !qB) return 0;
-       
-        if (!qA) return 1; 
-        if (!qB) return -1;
+          if (!qA && !qB) return 0;
+          if (!qA) return 1;
+          if (!qB) return -1;
 
-        const [yearA, seasonA] = qA.split(" ");
-        const [yearB, seasonB] = qB.split(" ");
+          const [yearA, seasonA] = qA.split(" ");
+          const [yearB, seasonB] = qB.split(" ");
 
-        if (yearA !== yearB) {
-          return Number(yearB) - Number(yearA);
-        }
-        const orderA = seasonOrder[seasonA.toUpperCase()] || 0;
-        const orderB = seasonOrder[seasonB.toUpperCase()] || 0;
-        return orderB - orderA; 
-      });
+          if (yearA !== yearB) {
+            return Number(yearB) - Number(yearA);
+          }
+          const orderA = SEASON_ORDER[seasonA.toUpperCase()] || 0;
+          const orderB = SEASON_ORDER[seasonB.toUpperCase()] || 0;
+          return orderB - orderA;
+        });
 
         setMembers(results);
+        setCurrentPage(1);
       } catch (err) {
         console.error("Search failed:", err);
       } finally {
@@ -165,8 +175,17 @@ export default function MembersManagementPage() {
     nameSearch.trim() !== "" ||
     studentIdSearch.trim() !== "";
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(members.length / MEMBERS_PER_PAGE),
+  );
+  const paginatedMembers = members.slice(
+    (currentPage - 1) * MEMBERS_PER_PAGE,
+    currentPage * MEMBERS_PER_PAGE,
+  );
+
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+    <div className="mx-auto w-full max-w-7xl space-y-8 px-6 py-8">
       {/* Page Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
@@ -198,7 +217,7 @@ export default function MembersManagementPage() {
           {/* Filters */}
           <div className="flex flex-col gap-3 mt-4">
             {/* Row 1: Search inputs */}
-            <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex flex-col gap-3 xl:flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -222,7 +241,7 @@ export default function MembersManagementPage() {
                 value={roleFilter}
                 onValueChange={(value) => setRoleFilter(value as RoleFilter)}
               >
-                <SelectTrigger className="w-full md:w-35 text-xs">
+                <SelectTrigger className="w-full text-xs xl:w-35">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -253,7 +272,7 @@ export default function MembersManagementPage() {
                   setActiveFilter(value as ActiveFilter)
                 }
               >
-                <SelectTrigger className="w-full md:w-35 text-xs">
+                <SelectTrigger className="w-full text-xs xl:w-35">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -273,7 +292,7 @@ export default function MembersManagementPage() {
                 value={joinedQuarterFilter}
                 onValueChange={setJoinedQuarterFilter}
               >
-                <SelectTrigger className="w-full md:w-35 text-xs">
+                <SelectTrigger className="w-full text-xs xl:w-35">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -309,83 +328,123 @@ export default function MembersManagementPage() {
                 : "아직 등록된 학회원이 없습니다"}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>이름</TableHead>
-                  <TableHead className="hidden sm:table-cell text-center">
-                    학번
-                  </TableHead>
-                  <TableHead className="hidden md:table-cell text-center">
-                    아이디
-                  </TableHead>
-                  <TableHead className="hidden sm:table-cell text-center">
-                    역할
-                  </TableHead>
-                  <TableHead className="hidden sm:table-cell text-center">
-                    상태
-                  </TableHead>
-                  <TableHead className="hidden lg:table-cell text-center">
-                    가입 분기
-                  </TableHead>
-                  <TableHead className="hidden lg:table-cell text-center">
-                    이메일
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((member) => (
-                  <TableRow
-                    key={member.id}
-                    className="cursor-pointer"
-                    onClick={() => router.push(`/manage/members/${member.id}`)}
-                  >
-                    <TableCell className="font-medium">
-                      {member.name || "—"}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {member.studentId || "—"}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">
-                      {member.username}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell space-x-0.5 pt-4 pb-4">
-                      {member.userRoles?.length ? (
-                        member.userRoles.map((role) => (
-                          <Badge
-                            key={role.id}
-                            variant={getRoleBadgeVariant(role.role.name)}
-                          >
-                            {getRoleLabel(role.role.name)}
-                          </Badge>
-                        ))
-                      ) : (
-                        <Badge variant="outline">없음</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {member.isCurrentQuarterActive ? (
-                        <Badge variant="default" className="gap-1">
-                          <UserCheck className="h-3 w-3" />
-                          활동 중
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="gap-1">
-                          <UserX className="h-3 w-3" />
-                          활동 안 함
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-muted-foreground">
-                      {member.joinedQuarter?.name || "—"}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
-                      {member.email}
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>이름</TableHead>
+                    <TableHead className="hidden text-center lg:table-cell">
+                      학번
+                    </TableHead>
+                    <TableHead className="hidden text-center xl:table-cell">
+                      아이디
+                    </TableHead>
+                    <TableHead className="hidden text-center lg:table-cell">
+                      역할
+                    </TableHead>
+                    <TableHead className="hidden text-center lg:table-cell">
+                      상태
+                    </TableHead>
+                    <TableHead className="hidden text-center xl:table-cell">
+                      가입 분기
+                    </TableHead>
+                    <TableHead className="hidden text-center xl:table-cell">
+                      이메일
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedMembers.map((member) => (
+                    <TableRow
+                      key={member.id}
+                      className="cursor-pointer"
+                      onClick={() =>
+                        router.push(`/manage/members/${member.id}`)
+                      }
+                    >
+                      <TableCell className="font-medium">
+                        {member.name || "—"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {member.studentId || "—"}
+                      </TableCell>
+                      <TableCell className="hidden text-muted-foreground xl:table-cell">
+                        {member.username}
+                      </TableCell>
+                      <TableCell className="hidden whitespace-normal pt-4 pb-4 lg:table-cell">
+                        {member.userRoles?.length ? (
+                          <div className="flex flex-wrap gap-1">
+                            {member.userRoles.map((role) => (
+                              <Badge
+                                key={role.id}
+                                variant={getRoleBadgeVariant(role.role.name)}
+                              >
+                                {getRoleLabel(role.role.name)}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <Badge variant="outline">없음</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {member.isCurrentQuarterActive ? (
+                          <Badge variant="default" className="gap-1">
+                            <UserCheck className="h-3 w-3" />
+                            활동 중
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="gap-1">
+                            <UserX className="h-3 w-3" />
+                            활동 안 함
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden text-muted-foreground xl:table-cell">
+                        {member.joinedQuarter?.name || "—"}
+                      </TableCell>
+                      <TableCell className="hidden whitespace-normal break-all text-sm text-muted-foreground xl:table-cell">
+                        {member.email}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {totalPages > 1 && (
+                <div className="mt-5 flex items-center justify-center gap-3 border-t pt-5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    aria-label="이전 페이지"
+                    onClick={() =>
+                      setCurrentPage((page) => Math.max(1, page - 1))
+                    }
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft />
+                  </Button>
+                  <span className="min-w-16 text-center text-sm font-medium text-muted-foreground">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    aria-label="다음 페이지"
+                    onClick={() =>
+                      setCurrentPage((page) =>
+                        Math.min(totalPages, page + 1),
+                      )
+                    }
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight />
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

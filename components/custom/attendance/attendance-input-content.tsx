@@ -27,7 +27,6 @@ interface AttendanceInputContentProps {
   selectedParticipants: Set<string>;
   attendanceSearchQuery: string;
   attendanceStatusTab: "present" | "absent" | "excused";
-  isEditingAttendance: boolean;
   onToggleSelection: (id: string) => void;
   onBulkAssignStatus: (status: "present" | "absent" | "excused") => void;
   onMoveParticipant: (
@@ -48,7 +47,6 @@ export function AttendanceInputContent({
   selectedParticipants,
   attendanceSearchQuery,
   attendanceStatusTab,
-  isEditingAttendance,
   onToggleSelection,
   onBulkAssignStatus,
   onMoveParticipant,
@@ -58,7 +56,6 @@ export function AttendanceInputContent({
   onSelectAll,
   onClear,
 }: AttendanceInputContentProps) {
-  console.log(participants);
   const approvedParticipants = participants.filter(
     (p) => p.status === "APPROVED",
   );

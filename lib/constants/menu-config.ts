@@ -10,6 +10,9 @@ import {
   Activity,
   Clock,
   MonitorPlay,
+  FilePen,
+  ClipboardCheck,
+  LibraryBig,
 } from "lucide-react";
 
 export type MenuItem =
@@ -44,6 +47,11 @@ export const menuConfig: MenuConfig = {
       href: "/home",
       icon: Activity,
     },
+    {
+      label: "강의자료",
+      href: "/lecture-materials",
+      icon: LibraryBig,
+    },
 
   ],
 
@@ -73,14 +81,29 @@ export const menuConfig: MenuConfig = {
   // MANAGER 권한 사용자에게만 표시되는 메뉴
   manager: [
     {
-      label: "일정 관리",
-      href: "/manage",
-      icon: Calendar,
-    },
-    {
       label: "학회원 관리",
       href: "/manage/members",
       icon: UsersRound,
+    },
+    {
+      label: "모집 관리",
+      href: "/manage/recruitments",
+      icon: UserRoundPlus,
+    },
+    {
+      label: "활동 관리",
+      href: "/manage/activities",
+      icon: FilePen,
+    },
+    {
+      label: "개설 신청 관리",
+      href: "/manage/activity-opening-requests",
+      icon: ClipboardCheck,
+    },
+    {
+      label: "일정 관리",
+      href: "/manage",
+      icon: Calendar,
     },
     {
       label: "신청서 관리",
@@ -91,16 +114,6 @@ export const menuConfig: MenuConfig = {
       label: "공지 관리",
       href: "/manage/notices",
       icon: Bell,
-    },
-    {
-      label: "모집 관리",
-      href: "/manage/recruitments",
-      icon: UserRoundPlus,
-    },
-    {
-      label: "활동 관리",
-      href: "/manage/activities",
-      icon: Calendar,
     },
   ],
 

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CalendarDays, FileText, Info, Clock } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +12,6 @@ import { getActiveRecruitment } from "@/lib/api/recruitment";
 import { getCurrentQuarter } from "@/lib/api/quarter";
 import { ApiError } from "@/lib/api/publicClient";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
-import { FormResponse } from "@/lib/interfaces/form";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 
 function formatQuarterLabel(quarter: QuarterResponse): string {
@@ -27,18 +26,13 @@ export default function ApplyPage() {
   const [recruitment, setRecruitment] = useState<RecruitmentResponse | null>(
     null,
   );
-  const [form, setForm] = useState<FormResponse | null>(null);
   const [quarter, setQuarter] = useState<QuarterResponse | null>(null);
   const [currentQuarter, setCurrentQuarter] =
     useState<QuarterResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadActiveRecruitment();
-  }, []);
-
-  async function loadActiveRecruitment() {
+  const loadActiveRecruitment = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     setRecruitment(null);
@@ -55,7 +49,6 @@ export default function ApplyPage() {
     if (recruitmentResult.status === "fulfilled") {
       const recruitmentData = recruitmentResult.value;
       setRecruitment(recruitmentData);
-      setForm(recruitmentData.form);
       setQuarter(recruitmentData.quarter);
     } else {
       const reason = recruitmentResult.reason;
@@ -67,7 +60,14 @@ export default function ApplyPage() {
     }
 
     setIsLoading(false);
-  }
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadActiveRecruitment();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [loadActiveRecruitment]);
 
   function getRecruitmentStatus(): RecruitmentStatus {
     if (!recruitment) return "모집 마감";
@@ -275,8 +275,8 @@ export default function ApplyPage() {
             {/* Key Info */}
             {canApply && (
               <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between py-2 border-b">
-                  <span className="text-muted-foreground flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b py-2">
+                  <span className="flex shrink-0 items-center gap-2" >
                     <Clock className="h-4 w-4" />
                     모집 마감
                   </span>
@@ -300,9 +300,9 @@ export default function ApplyPage() {
 
               {/* Secondary Action */}
               <Button
-                size="default"
+                size="lg"
                 variant="outline"
-                className="w-full"
+                className="w-full border-foreground/40 text-base font-semibold"
                 onClick={() => router.push("/apply/my")}
               >
                 <FileText className="mr-2 h-4 w-4" />내 지원서 조회
@@ -328,7 +328,7 @@ export default function ApplyPage() {
                 제출 후 내용 확인 및 수정은 &quot;내 지원서 조회&quot; 메뉴를
                 이용해주세요.
               </li>
-              <li>문의사항이 있으시면 학회 관리자에게 연락해주세요.</li>
+              <li>문의사항이 있으시면 admin@cnu.team으로 연락해주세요.</li>
             </ul>
           </div>
         </div>

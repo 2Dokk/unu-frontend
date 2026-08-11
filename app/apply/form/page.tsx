@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,20 +15,27 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   getActiveRecruitment,
-  getRecruitmentById,
 } from "@/lib/api/recruitment";
-import { getFormById } from "@/lib/api/form";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
-import { FormResponse } from "@/lib/interfaces/form";
+import { ApplicationAnswers } from "@/lib/interfaces/application";
 import {
   FormSchema,
   parseSchema,
   Question,
+  validateRequiredAnswers,
 } from "@/lib/interfaces/form-builder";
 import { createApplication } from "@/lib/api/application";
+import { getPublicApiErrorMessage } from "@/lib/api/publicClient";
 import { toast } from "sonner";
 
 type RecruitmentStatus = "모집중" | "모집 예정" | "모집 마감";
+
+function formatPhoneNumber(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+}
 
 export default function ApplicationFormPage() {
   const router = useRouter();
@@ -51,9 +58,11 @@ export default function ApplicationFormPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
   // Answers state (dynamic)
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [answers, setAnswers] = useState<ApplicationAnswers>({});
 
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -73,7 +82,7 @@ export default function ApplicationFormPage() {
 
       const parsedSchema = parseSchema(recruitmentData.form.schema);
       setSchema(parsedSchema);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to load form:", error);
       setError("지원서를 불러오는데 실패했습니다.");
     } finally {
@@ -104,10 +113,12 @@ export default function ApplicationFormPage() {
 
     // Validate basic info
     if (!name.trim()) newErrors.name = "이름을 입력해주세요.";
-    if (!studentId.trim()) newErrors.studentId = "학번을 입력해주세요.";
+    if (!/^\d{8}$/.test(studentId))
+      newErrors.studentId = "학번은 숫자 8자리로 입력해주세요.";
     if (!major.trim()) newErrors.major = "전공을 입력해주세요.";
     if (!email.trim()) newErrors.email = "이메일을 입력해주세요.";
-    if (!phoneNumber.trim()) newErrors.phoneNumber = "연락처를 입력해주세요.";
+    if (!/^\d{3}-\d{4}-\d{4}$/.test(phoneNumber))
+      newErrors.phoneNumber = "연락처를 000-0000-0000 형식으로 입력해주세요.";
     if (!password.trim()) newErrors.password = "비밀번호를 입력해주세요.";
     else if (password.length < 6)
       newErrors.password = "비밀번호는 6자 이상이어야 합니다.";
@@ -116,21 +127,8 @@ export default function ApplicationFormPage() {
     else if (password !== passwordConfirm)
       newErrors.passwordConfirm = "비밀번호가 일치하지 않습니다.";
 
-    // Validate required questions
     if (schema) {
-      schema.questions.forEach((question) => {
-        if (question.required) {
-          const answer = answers[question.id];
-          if (
-            answer === undefined ||
-            answer === null ||
-            answer === "" ||
-            (Array.isArray(answer) && answer.length === 0)
-          ) {
-            newErrors[`q_${question.id}`] = "필수 질문입니다.";
-          }
-        }
-      });
+      Object.assign(newErrors, validateRequiredAnswers(schema, answers));
     }
 
     setErrors(newErrors);
@@ -146,7 +144,7 @@ export default function ApplicationFormPage() {
     }
 
     if (!validateForm()) {
-      toast.error("필수 항목을 모두 입력해주세요.");
+      toast.error("입력 항목을 다시 확인해주세요.");
       return;
     }
 
@@ -168,14 +166,19 @@ export default function ApplicationFormPage() {
 
       // Navigate to success page
       router.push("/apply/complete");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to submit application:", error);
-      toast.error(error.response?.data || "지원서 제출에 실패했습니다. 다시 시도해주세요.");
+      toast.error(
+        getPublicApiErrorMessage(
+          error,
+          "지원서 제출에 실패했습니다. 다시 시도해주세요.",
+        ),
+      );
       setIsSubmitting(false);
     }
   }
 
-  function handleAnswerChange(questionId: string, value: any) {
+  function handleAnswerChange(questionId: string, value: string | string[]) {
     setAnswers((prev) => ({
       ...prev,
       [questionId]: value,
@@ -193,6 +196,7 @@ export default function ApplicationFormPage() {
   function renderQuestion(question: Question, index: number) {
     const questionKey = `q_${question.id}`;
     const hasError = !!errors[questionKey];
+    const currentAnswer = answers[question.id];
 
     return (
       <div key={question.id} className="space-y-3">
@@ -231,7 +235,9 @@ export default function ApplicationFormPage() {
 
         {question.type === "SINGLE_CHOICE" && question.options && (
           <RadioGroup
-            value={answers[question.id] || ""}
+            value={
+              typeof currentAnswer === "string" ? currentAnswer : ""
+            }
             onValueChange={(value) => handleAnswerChange(question.id, value)}
             disabled={!canSubmit()}
           >
@@ -352,7 +358,11 @@ export default function ApplicationFormPage() {
         돌아가기
       </Button>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form
+        onSubmit={handleSubmit}
+        autoComplete="off"
+        className="space-y-6"
+      >
         {/* Header */}
         <div className="space-y-3">
           <div className="flex min-w-0 items-start justify-between gap-4">
@@ -413,7 +423,7 @@ export default function ApplicationFormPage() {
                       });
                     }
                   }}
-                  placeholder="홍길동"
+                  placeholder=""
                   disabled={!canSubmitForm}
                   className={`text-sm${errors.name ? " border-destructive" : ""}`}
                 />
@@ -430,7 +440,7 @@ export default function ApplicationFormPage() {
                   id="studentId"
                   value={studentId}
                   onChange={(e) => {
-                    setStudentId(e.target.value);
+                    setStudentId(e.target.value.replace(/\D/g, "").slice(0, 8));
                     if (errors.studentId) {
                       setErrors((prev) => {
                         const newErrors = { ...prev };
@@ -439,7 +449,10 @@ export default function ApplicationFormPage() {
                       });
                     }
                   }}
-                  placeholder="2021000000"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={8}
+                  placeholder=""
                   disabled={!canSubmitForm}
                   className={`text-sm${errors.studentId ? " border-destructive" : ""}`}
                 />
@@ -467,7 +480,7 @@ export default function ApplicationFormPage() {
                       });
                     }
                   }}
-                  placeholder="컴퓨터공학과"
+                  placeholder=""
                   disabled={!canSubmitForm}
                   className={`text-sm${errors.major ? " border-destructive" : ""}`}
                 />
@@ -495,7 +508,9 @@ export default function ApplicationFormPage() {
               </Label>
               <Input
                 id="email"
+                name="application-email"
                 type="email"
+                autoComplete="off"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -526,7 +541,7 @@ export default function ApplicationFormPage() {
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => {
-                    setPhoneNumber(e.target.value);
+                    setPhoneNumber(formatPhoneNumber(e.target.value));
                     if (errors.phoneNumber) {
                       setErrors((prev) => {
                         const newErrors = { ...prev };
@@ -535,6 +550,8 @@ export default function ApplicationFormPage() {
                       });
                     }
                   }}
+                  inputMode="tel"
+                  maxLength={13}
                   placeholder="010-0000-0000"
                   disabled={!canSubmitForm}
                   className={`text-sm${errors.phoneNumber ? " border-destructive" : ""}`}
@@ -564,24 +581,42 @@ export default function ApplicationFormPage() {
                 <Label htmlFor="password">
                   비밀번호 <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (errors.password) {
-                      setErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors.password;
-                        return newErrors;
-                      });
-                    }
-                  }}
-                  placeholder="6자 이상"
-                  disabled={!canSubmitForm}
-                  className={`text-sm${errors.password ? " border-destructive" : ""}`}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="application-password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) {
+                        setErrors((prev) => {
+                          const newErrors = { ...prev };
+                          delete newErrors.password;
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    placeholder="6자 이상"
+                    disabled={!canSubmitForm}
+                    className={`pr-10 text-sm${errors.password ? " border-destructive" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    disabled={!canSubmitForm}
+                    aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                    title={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                    className="absolute right-0 top-0 flex h-full w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-sm text-destructive">{errors.password}</p>
                 )}
@@ -594,24 +629,52 @@ export default function ApplicationFormPage() {
                 <Label htmlFor="passwordConfirm">
                   비밀번호 확인 <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="passwordConfirm"
-                  type="password"
-                  value={passwordConfirm}
-                  onChange={(e) => {
-                    setPasswordConfirm(e.target.value);
-                    if (errors.passwordConfirm) {
-                      setErrors((prev) => {
-                        const newErrors = { ...prev };
-                        delete newErrors.passwordConfirm;
-                        return newErrors;
-                      });
+                <div className="relative">
+                  <Input
+                    id="passwordConfirm"
+                    name="application-password-confirm"
+                    type={showPasswordConfirm ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={passwordConfirm}
+                    onChange={(e) => {
+                      setPasswordConfirm(e.target.value);
+                      if (errors.passwordConfirm) {
+                        setErrors((prev) => {
+                          const newErrors = { ...prev };
+                          delete newErrors.passwordConfirm;
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    placeholder="비밀번호 재입력"
+                    disabled={!canSubmitForm}
+                    className={`pr-10 text-sm${errors.passwordConfirm ? " border-destructive" : ""}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowPasswordConfirm((visible) => !visible)
                     }
-                  }}
-                  placeholder="비밀번호 재입력"
-                  disabled={!canSubmitForm}
-                  className={`text-sm${errors.passwordConfirm ? " border-destructive" : ""}`}
-                />
+                    disabled={!canSubmitForm}
+                    aria-label={
+                      showPasswordConfirm
+                        ? "비밀번호 확인 숨기기"
+                        : "비밀번호 확인 보기"
+                    }
+                    title={
+                      showPasswordConfirm
+                        ? "비밀번호 확인 숨기기"
+                        : "비밀번호 확인 보기"
+                    }
+                    className="absolute right-0 top-0 flex h-full w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {showPasswordConfirm ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 {errors.passwordConfirm && (
                   <p className="text-sm text-destructive">
                     {errors.passwordConfirm}

@@ -32,7 +32,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import { reviewApplication } from "@/lib/api/application";
-import ApplicationStatusDropdown from "./application-status-dropdown";
 import { toast } from "sonner";
 
 const BULK_STATUS_OPTIONS = [
@@ -90,19 +89,6 @@ function getStatusBadge(status: string) {
   }
 }
 
-function getStatusLabel(status: string): string {
-  const statusMap: Record<string, string> = {
-    APPLIED: "신청",
-    IN_PROGRESS: "검토중",
-    WAITING: "대기",
-    HOLD: "보류",
-    PASSED: "합격",
-    REJECTED: "불합격",
-    CANCELED: "취소",
-  };
-  return statusMap[status] || status;
-}
-
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -121,8 +107,6 @@ export default function ApplicationsTable({
   const [applications, setApplications] = useState(initialApplications);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
-  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
-
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkTargetStatus, setBulkTargetStatus] = useState<string>("");
@@ -154,31 +138,10 @@ export default function ApplicationsTable({
     });
   }, [applications, statusFilter, search]);
 
-  async function handleStatusChange(applicationId: string, newStatus: string) {
-    // Optimistic update
-    setUpdatingIds((prev) => new Set(prev).add(applicationId));
-
-    try {
-      const updated = await reviewApplication(applicationId, newStatus);
-
-      // Update local state
-      setApplications((prev) =>
-        prev.map((app) => (app.id === applicationId ? updated : app)),
-      );
-    } catch (error: any) {
-      console.error("Failed to update application status:", error);
-      toast.error(error.response?.data || "상태 변경에 실패했습니다.");
-    } finally {
-      setUpdatingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(applicationId);
-        return next;
-      });
-    }
-  }
-
   // Bulk selection helpers
-  const filteredIds = filteredApplications.map((a) => a.id);
+  const filteredIds = filteredApplications
+    .filter((application) => application.status !== "CANCELED")
+    .map((application) => application.id);
   const allFilteredSelected =
     filteredIds.length > 0 && filteredIds.every((id) => selectedIds.has(id));
 
@@ -197,7 +160,8 @@ export default function ApplicationsTable({
   function handleSelectOne(id: string, checked: boolean) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      checked ? next.add(id) : next.delete(id);
+      if (checked) next.add(id);
+      else next.delete(id);
       return next;
     });
   }
@@ -210,20 +174,36 @@ export default function ApplicationsTable({
   async function handleBulkStatusChange() {
     setBulkUpdating(true);
     try {
-      const results = await Promise.all(
-        Array.from(selectedIds).map((id) =>
+      const ids = Array.from(selectedIds);
+      const results = await Promise.allSettled(
+        ids.map((id) =>
           reviewApplication(id, bulkTargetStatus),
         ),
       );
+      const updatedApplications = results.flatMap((result) =>
+        result.status === "fulfilled" ? [result.value] : [],
+      );
+      const failedIds = ids.filter(
+        (_, index) => results[index].status === "rejected",
+      );
+
       setApplications((prev) =>
         prev.map((app) => {
-          const updated = results.find((r) => r.id === app.id);
+          const updated = updatedApplications.find((item) => item.id === app.id);
           return updated ?? app;
         }),
       );
-      setSelectedIds(new Set());
-    } catch (error: any) {
-      toast.error(error.response?.data || "일괄 상태 변경에 실패했습니다.");
+      setSelectedIds(new Set(failedIds));
+
+      if (failedIds.length === 0) {
+        toast.success(`${updatedApplications.length}명의 상태를 변경했습니다.`);
+      } else if (updatedApplications.length === 0) {
+        toast.error("선택한 지원자의 상태를 변경하지 못했습니다.");
+      } else {
+        toast.warning(
+          `${updatedApplications.length}명은 변경했고, ${failedIds.length}명은 변경하지 못했습니다.`,
+        );
+      }
     } finally {
       setBulkUpdating(false);
       setBulkStatusDialogOpen(false);
@@ -348,8 +328,6 @@ export default function ApplicationsTable({
           </TableHeader>
           <TableBody>
             {filteredApplications.map((application) => {
-              const isUpdating = updatingIds.has(application.id);
-
               return (
                 <TableRow
                   key={application.id}
@@ -361,6 +339,7 @@ export default function ApplicationsTable({
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={selectedIds.has(application.id)}
+                      disabled={application.status === "CANCELED"}
                       onCheckedChange={(checked) =>
                         handleSelectOne(application.id, !!checked)
                       }

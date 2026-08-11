@@ -29,11 +29,13 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { DeleteConfirmDialog } from "@/components/custom/common/delete-confirm-dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -46,9 +48,14 @@ import {
   getMyParticipantByActivityId,
   createMyParticipantByActivityId,
   deleteActivityParticipant,
+  getActivityMemberSummaries,
 } from "@/lib/api/activity-participant";
 import { ActivityResponse } from "@/lib/interfaces/activity";
-import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
+import {
+  ActivityJoinRequest,
+  ActivityParticipantResponse,
+  ActivityParticipantSummary,
+} from "@/lib/interfaces/activity-participant";
 import {
   Calendar,
   User,
@@ -61,6 +68,10 @@ import {
   Trash2,
   ArrowLeft,
   ExternalLink,
+  Users,
+  AlertCircle,
+  Landmark,
+  RotateCcw,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { CourseTimeReservationCard } from "@/components/custom/activity/course-time-reservation";
@@ -176,7 +187,7 @@ function deriveCtaConfig(
 
   if (!participant) {
     return {
-      label: "참여 신청",
+      label: "참여하기",
       variant: "default",
       disabled: !isRecruiting,
       disabledReason: isRecruiting ? undefined : "모집 중이 아닙니다",
@@ -195,7 +206,7 @@ function deriveCtaConfig(
 
   if (participant.status === "APPROVED") {
     return {
-      label: "활동 나가기",
+      label: isRecruiting ? "참여 취소" : "활동 나가기",
       variant: "outline",
       onClick: handlers.onLeave,
       disabled: activity.status === "COMPLETED",
@@ -213,7 +224,7 @@ function deriveCtaConfig(
   }
 
   return {
-    label: "참여 신청",
+    label: "참여하기",
     variant: "default",
     disabled: true,
     onClick: handlers.onApply,
@@ -260,6 +271,9 @@ export default function ActivityDetails() {
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [myParticipant, setMyParticipant] =
     useState<ActivityParticipantResponse | null>(null);
+  const [visibleMembers, setVisibleMembers] = useState<
+    ActivityParticipantSummary[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -268,6 +282,9 @@ export default function ActivityDetails() {
   const [agreedToPolicy, setAgreedToPolicy] = useState(false);
   const [confirmedPayment, setConfirmedPayment] = useState(false);
   const [agreedToPromo, setAgreedToPromo] = useState(false);
+  const [refundBankName, setRefundBankName] = useState("");
+  const [refundAccountNumber, setRefundAccountNumber] = useState("");
+  const [refundAccountHolder, setRefundAccountHolder] = useState("");
 
   const { userRole, hasRole, userId } = useAuth();
 
@@ -279,8 +296,20 @@ export default function ActivityDetails() {
           getActivityById(activityId),
           getMyParticipantByActivityId(activityId),
         ]);
+        const recruitmentClosed =
+          activityData.status === "ONGOING" ||
+          activityData.status === "COMPLETED";
+        let membersData: ActivityParticipantSummary[] = [];
+        if (recruitmentClosed) {
+          try {
+            membersData = await getActivityMemberSummaries(activityId);
+          } catch (memberError) {
+            console.error("Failed to fetch activity members:", memberError);
+          }
+        }
         setActivity(activityData);
         setMyParticipant(participantData);
+        setVisibleMembers(membersData);
       } catch (error: any) {
         console.error("Failed to fetch activity details:", error);
         toast.error(
@@ -294,17 +323,24 @@ export default function ActivityDetails() {
     fetchActivityDetails();
   }, [activityId]);
 
-  const handleApply = async () => {
-    if (!activity) return;
+  const handleApply = async (application?: ActivityJoinRequest) => {
+    if (!activity) return false;
     setActionLoading(true);
     try {
       const newParticipant = await createMyParticipantByActivityId({
         activityId: activity.id,
+        application,
       });
       setMyParticipant(newParticipant);
+      return true;
     } catch (error: any) {
       console.error("Failed to apply for activity:", error);
-      toast.error("참여 신청에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      toast.error(
+        typeof error.response?.data === "string"
+          ? error.response.data
+          : "활동 참여에 실패했습니다. 잠시 후 다시 시도해주세요.",
+      );
+      return false;
     } finally {
       setActionLoading(false);
     }
@@ -354,10 +390,17 @@ export default function ActivityDetails() {
 
   const handleApplyClick = () => {
     if (!activity) return;
-    if (activity.activityType.code === "STUDY") {
+    if (
+      (activity.activityType.code === "STUDY" ||
+        activity.activityType.code === "SPECIAL_LECTURE") &&
+      activity.depositAmount > 0
+    ) {
       setAgreedToPolicy(false);
       setConfirmedPayment(false);
       setAgreedToPromo(false);
+      setRefundBankName("");
+      setRefundAccountNumber("");
+      setRefundAccountHolder("");
       setStudyDepositOpen(true);
     } else {
       handleApply();
@@ -365,8 +408,15 @@ export default function ActivityDetails() {
   };
 
   const handleStudyDepositConfirm = async () => {
-    setStudyDepositOpen(false);
-    await handleApply();
+    const applied = await handleApply({
+      refundBankName: refundBankName.trim(),
+      refundAccountNumber,
+      refundAccountHolder: refundAccountHolder.trim(),
+      agreedToDepositPolicy: agreedToPolicy,
+      confirmedDepositPayment: confirmedPayment,
+      agreedToPromotion: agreedToPromo,
+    });
+    if (applied) setStudyDepositOpen(false);
   };
 
   const handleEdit = () => {
@@ -378,6 +428,16 @@ export default function ActivityDetails() {
     try {
       const updated = await updateActivityStatus(activity.id, newStatus);
       setActivity(updated);
+      if (newStatus === "ONGOING" || newStatus === "COMPLETED") {
+        try {
+          setVisibleMembers(await getActivityMemberSummaries(activity.id));
+        } catch (memberError) {
+          console.error("Failed to fetch activity members:", memberError);
+          setVisibleMembers([]);
+        }
+      } else {
+        setVisibleMembers([]);
+      }
     } catch (error: any) {
       console.error("Failed to update activity status:", error);
       toast.error(
@@ -753,6 +813,35 @@ export default function ActivityDetails() {
         </div>
       </div>
 
+      {(activity.status === "ONGOING" || activity.status === "COMPLETED") && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              참여자
+              <span className="text-sm font-normal text-muted-foreground">
+                {visibleMembers.length}명
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {visibleMembers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                확정된 참여자가 없습니다.
+              </p>
+            ) : (
+              <ul className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+                {visibleMembers.map((member) => (
+                  <li key={member.id} className="text-sm font-medium">
+                    {member.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -782,66 +871,155 @@ export default function ActivityDetails() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Study Deposit Agreement Dialog */}
+      {/* Deposit and refund account dialog */}
       <Dialog
         open={studyDepositOpen}
         onOpenChange={(open) => {
           if (!open) setStudyDepositOpen(false);
         }}
       >
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>스터디 보증금 유의사항</DialogTitle>
+            <DialogTitle>보증금 납부 및 환급 안내</DialogTitle>
+            <DialogDescription>
+              참여 전에 납부 기준을 확인하고 환급받을 계좌를 입력해주세요.
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 text-sm">
-            <ul className="space-y-1.5 list-disc pl-5 text-muted-foreground">
-              <li>스터디 보증금 <strong className="text-foreground">30,000원</strong> 발생</li>
-              <li>신청한 스터디의 수료 조건을 만족할 시, <strong className="text-foreground">전액 환급</strong></li>
-              <li>수료 조건을 만족하지 못하면 환급금 없음</li>
-            </ul>
-
-            <div className="text-xs text-muted-foreground space-y-2 leading-relaxed border-t pt-3">
-              <p>
-                * 환급받지 못한 스터디 보증금은 스터디를 운영하시는 강사님들의 강의비, 스터디 수료자 회식비, CNU 운영비 등으로 활용될 예정이니 참고해주시고 본인이 수료할 수 있을 정도의 스터디를 신청해주세요.
-              </p>
-              <p>* 입금 계좌번호: <strong className="text-foreground">1002-3463-0651 토스뱅크</strong></p>
-              <div>
-                <p className="mb-1">* 입금자명 양식</p>
-                <div className="pl-3 space-y-0.5">
-                  <p>스터디1 신청 시 : 수강자명1</p>
-                  <p>스터디2 신청 시 : 수강자명2</p>
-                  <p>스터디 1, 2 신청 시 : 수강자명12</p>
-                  <p className="mt-1">ex) 천우영 1 &nbsp; 손기령 12 &nbsp; 홍준영 2</p>
+          <div className="space-y-5 text-sm">
+            <div className="rounded-md border p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold d-800">
+                    참여 보증금
+                  </p>
+                  <p className="mt-1 text-2xl font-bold text-emerald-950">
+                    {activity.depositAmount.toLocaleString("ko-KR")}원
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm">
+                  수료 시 전액 환급
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3 border-t pt-4">
-              <label className="flex items-center gap-2.5 cursor-pointer">
+            <section className="space-y-3">
+              <h3 className="flex items-center gap-2 font-semibold">
+                <AlertCircle className="h-4 w-4" />
+                꼭 확인해주세요
+              </h3>
+              <div className="space-y-2 rounded-md border bg-muted/30 p-4 leading-relaxed text-muted-foreground">
+                <p>
+                  수료 조건을 충족하지 못하면 보증금은 환급되지 않습니다.
+                  미환급 보증금은 강의비, 수료자 회식비 및 CNU 운영비로
+                  사용됩니다.
+                </p>
+                <div className="border-t pt-2.5">
+                  <p className="font-medium text-foreground">입금 계좌</p>
+                  <p className="mt-1 text-base font-semibold text-foreground">
+                    토스뱅크 1002-3463-0651 홍준영
+                  </p>
+                </div>
+                <div className="border-t pt-2.5">
+                  <p className="font-medium text-foreground">입금자명</p>
+                  <p className="mt-1">
+                    본인 성함으로 입금자명을 설정해주세요.
+                  </p>
+
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="flex items-center gap-2 font-semibold">
+                <Landmark className="h-4 w-4 text-emerald-700" />
+                환급 계좌 정보
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    은행
+                  </span>
+                  <Input
+                    value={refundBankName}
+                    onChange={(event) => setRefundBankName(event.target.value)}
+                    placeholder="예: 신한은행"
+                    maxLength={50}
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    예금주
+                  </span>
+                  <Input
+                    value={refundAccountHolder}
+                    onChange={(event) =>
+                      setRefundAccountHolder(event.target.value)
+                    }
+                    placeholder="예금주 이름"
+                    maxLength={50}
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="space-y-1.5 sm:col-span-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    계좌번호
+                  </span>
+                  <Input
+                    value={refundAccountNumber}
+                    onChange={(event) =>
+                      setRefundAccountNumber(
+                        event.target.value.replace(/[^0-9-]/g, ""),
+                      )
+                    }
+                    placeholder="숫자 또는 하이픈으로 입력"
+                    inputMode="numeric"
+                    maxLength={24}
+                    autoComplete="off"
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                입력한 정보는 보증금 환급 업무에만 사용됩니다.
+              </p>
+            </section>
+
+            <section className="space-y-3 border-t pt-4">
+              <h3 className="font-semibold">필수 확인</h3>
+              <label className="flex cursor-pointer items-start gap-2.5 leading-relaxed">
                 <Checkbox
+                  className="mt-0.5"
                   checked={agreedToPolicy}
                   onCheckedChange={(v) => setAgreedToPolicy(!!v)}
                 />
-                <span>위 유의사항을 모두 확인하였으며, 동의합니다.</span>
+                <span>보증금 납부 및 환급 기준을 확인했습니다.</span>
               </label>
-              <label className="flex items-center gap-2.5 cursor-pointer">
+              <label className="flex cursor-pointer items-start gap-2.5 leading-relaxed">
                 <Checkbox
+                  className="mt-0.5"
                   checked={confirmedPayment}
                   onCheckedChange={(v) => setConfirmedPayment(!!v)}
                 />
                 <span>보증금 입금을 완료하였습니다.</span>
               </label>
-              <label className="flex items-center gap-2.5 cursor-pointer">
+            </section>
+
+            <section className="space-y-3 border-t pt-4">
+              <h3 className="font-semibold">
+                선택 동의
+              </h3>
+              <label className="flex cursor-pointer items-start gap-2.5 leading-relaxed">
                 <Checkbox
+                  className="mt-0.5"
                   checked={agreedToPromo}
                   onCheckedChange={(v) => setAgreedToPromo(!!v)}
                 />
-                <span className="text-muted-foreground text-xs">
-                  활동 사진 및 결과물이 소식지 등 홍보에 사용될 수 있습니다.
+                <span>
+                  활동 사진 및 결과물의 교내 소식지 등 홍보 활용에 동의합니다.
                 </span>
               </label>
-            </div>
+            </section>
           </div>
 
           <DialogFooter className="mt-2">
@@ -849,10 +1027,17 @@ export default function ActivityDetails() {
               취소
             </Button>
             <Button
-              disabled={!agreedToPolicy || !confirmedPayment || !agreedToPromo || actionLoading}
+              disabled={
+                !refundBankName.trim() ||
+                refundAccountNumber.replace(/\D/g, "").length < 8 ||
+                !refundAccountHolder.trim() ||
+                !agreedToPolicy ||
+                !confirmedPayment ||
+                actionLoading
+              }
               onClick={handleStudyDepositConfirm}
             >
-              {actionLoading ? "처리 중..." : "신청하기"}
+              {actionLoading ? "처리 중..." : "참여하기"}
             </Button>
           </DialogFooter>
         </DialogContent>

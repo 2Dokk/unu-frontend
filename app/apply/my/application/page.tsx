@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Edit, Save, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,17 +26,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   updateApplication,
-  cancelApplicationWithPassword,
+  cancelApplicationByApplicant,
 } from "@/lib/api/application";
 import {
   ApplicationResponse,
-  ApplicationRequest,
+  ApplicationAnswers,
 } from "@/lib/interfaces/application";
 import {
   FormSchema,
-  parseSchema,
   Question,
+  validateRequiredAnswers,
 } from "@/lib/interfaces/form-builder";
+import { getPublicApiErrorMessage } from "@/lib/api/publicClient";
 import { toast } from "sonner";
 
 const STATUS_BADGE_MAP: Record<
@@ -55,7 +56,7 @@ const STATUS_BADGE_MAP: Record<
 export default function ApplicationDetailPage() {
   const router = useRouter();
 
-  const [password, setPassword] = useState("");
+  const [accessToken, setAccessToken] = useState("");
   const [application, setApplication] = useState<ApplicationResponse | null>(
     null,
   );
@@ -67,18 +68,16 @@ export default function ApplicationDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Editable state
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [answers, setAnswers] = useState<ApplicationAnswers>({});
+  const [answerErrors, setAnswerErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    loadFromSession();
-  }, []);
-
-  function loadFromSession() {
+  const loadFromSession = useCallback(() => {
     try {
+      sessionStorage.removeItem("current_application_pwd");
       const storedApp = sessionStorage.getItem("current_application");
-      const storedPwd = sessionStorage.getItem("current_application_pwd");
+      const storedToken = sessionStorage.getItem("current_application_token");
 
-      if (!storedApp || !storedPwd) {
+      if (!storedApp || !storedToken) {
         // No data found, redirect to search page
         router.push("/apply/my");
         return;
@@ -86,7 +85,7 @@ export default function ApplicationDetailPage() {
 
       const appData: ApplicationResponse = JSON.parse(storedApp);
       setApplication(appData);
-      setPassword(storedPwd);
+      setAccessToken(storedToken);
 
       // Parse form schema and answers
       if (appData.formSnapshot && appData.answers) {
@@ -108,11 +107,15 @@ export default function ApplicationDetailPage() {
       }
 
       setIsLoading(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to load from session:", error);
       router.push("/apply/my");
     }
-  }
+  }, [router]);
+
+  useEffect(() => {
+    loadFromSession();
+  }, [loadFromSession]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -120,6 +123,7 @@ export default function ApplicationDetailPage() {
 
   const handleCancelEdit = () => {
     setIsEditing(false);
+    setAnswerErrors({});
     // Reset answers to original
     if (application) {
       try {
@@ -135,8 +139,15 @@ export default function ApplicationDetailPage() {
   };
 
   const handleSave = async () => {
-    if (!password || !application) {
-      setError("비밀번호가 필요합니다.");
+    if (!accessToken || !application || !schema) {
+      setError("지원서 인증이 만료되었습니다. 다시 조회해주세요.");
+      return;
+    }
+
+    const validationErrors = validateRequiredAnswers(schema, answers);
+    setAnswerErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
+      toast.error("필수 질문에 모두 답변해주세요.");
       return;
     }
 
@@ -154,13 +165,13 @@ export default function ApplicationDetailPage() {
         email: application.email,
         githubId: application.githubId || undefined,
         phoneNumber: application.phoneNumber,
-        password: password,
         answers: answers,
       };
 
       const updatedApp = await updateApplication(
         application.id,
         applicationData,
+        accessToken,
       );
       setApplication(updatedApp);
       sessionStorage.setItem("current_application", JSON.stringify(updatedApp));
@@ -168,17 +179,22 @@ export default function ApplicationDetailPage() {
 
       // Show success message
       toast.success("지원서가 성공적으로 수정되었습니다.");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to update application:", error);
-      toast.error(error.response?.data || "지원서 수정에 실패했습니다. 다시 시도해주세요.");
+      toast.error(
+        getPublicApiErrorMessage(
+          error,
+          "지원서 수정에 실패했습니다. 다시 시도해주세요.",
+        ),
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleCancel = async () => {
-    if (!password || !application) {
-      setError("비밀번호가 필요합니다.");
+    if (!accessToken || !application) {
+      setError("지원서 인증이 만료되었습니다. 다시 조회해주세요.");
       return;
     }
 
@@ -186,32 +202,48 @@ export default function ApplicationDetailPage() {
       setIsCanceling(true);
       setError(null);
 
-      await cancelApplicationWithPassword(application.id, password);
+      await cancelApplicationByApplicant(application.id, accessToken);
 
       // Clear session storage
       sessionStorage.removeItem("current_application");
+      sessionStorage.removeItem("current_application_token");
       sessionStorage.removeItem("current_application_pwd");
 
       // Show success and navigate back
       toast.success("지원이 취소되었습니다.");
       router.push("/apply/my");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to cancel application:", error);
-      toast.error(error.response?.data || "지원 취소에 실패했습니다. 다시 시도해주세요.");
+      toast.error(
+        getPublicApiErrorMessage(
+          error,
+          "지원 취소에 실패했습니다. 다시 시도해주세요.",
+        ),
+      );
       setIsCanceling(false);
     }
   };
 
-  const handleAnswerChange = (questionId: string, value: any) => {
+  const handleAnswerChange = (
+    questionId: string,
+    value: string | string[],
+  ) => {
     setAnswers((prev) => ({
       ...prev,
       [questionId]: value,
     }));
+    setAnswerErrors((prev) => {
+      if (!prev[`q_${questionId}`]) return prev;
+      const next = { ...prev };
+      delete next[`q_${questionId}`];
+      return next;
+    });
   };
 
   const handleBack = () => {
     // Clear session storage when going back
     sessionStorage.removeItem("current_application");
+    sessionStorage.removeItem("current_application_token");
     sessionStorage.removeItem("current_application_pwd");
     router.push("/apply/my");
   };
@@ -359,7 +391,7 @@ export default function ApplicationDetailPage() {
           ) : (
             schema.questions.map((question: Question, index: number) => {
               const answer = answers[question.id];
-              if (answer === undefined) return null;
+              if (!isEditing && answer === undefined) return null;
 
               return (
                 <div key={question.id} className="space-y-3">
@@ -402,7 +434,7 @@ export default function ApplicationDetailPage() {
                       )}
                       {question.type === "SINGLE_CHOICE" && (
                         <RadioGroup
-                          value={answer || ""}
+                          value={typeof answer === "string" ? answer : ""}
                           onValueChange={(value) =>
                             handleAnswerChange(question.id, value)
                           }
@@ -462,6 +494,11 @@ export default function ApplicationDetailPage() {
                             );
                           })}
                         </div>
+                      )}
+                      {answerErrors[`q_${question.id}`] && (
+                        <p className="text-sm text-destructive">
+                          {answerErrors[`q_${question.id}`]}
+                        </p>
                       )}
                     </div>
                   ) : (

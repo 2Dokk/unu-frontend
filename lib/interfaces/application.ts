@@ -1,3 +1,5 @@
+export type ApplicationAnswers = Record<string, string | string[]>;
+
 export interface ApplicationRequest {
   recruitmentId: string;
   formId: string;
@@ -8,15 +10,15 @@ export interface ApplicationRequest {
   email: string;
   githubId?: string;
   phoneNumber: string;
-  password: string;
-  answers: Record<string, any>;
+  password?: string;
+  answers: ApplicationAnswers;
 }
 
 export interface ApplicationResponse {
   id: string;
   recruitmentId: string;
   formId: string;
-  formSnapshot: string; // JSON string of form schema snapshot
+  formSnapshot: string | Record<string, unknown>;
   name: string;
   studentId: string;
   major: string;
@@ -24,7 +26,7 @@ export interface ApplicationResponse {
   email: string;
   githubId: string | null;
   phoneNumber: string;
-  answers: string;
+  answers: string | ApplicationAnswers;
   status: string;
   createdAt: string;
   modifiedAt: string;
@@ -41,4 +43,17 @@ export interface ApplicationReviewRequest {
 export interface ApplicationSearchQuery {
   name: string;
   email: string;
+}
+
+export interface ApplicationLookupResponse {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface ApplicationVerificationResponse {
+  application: ApplicationResponse;
+  accessToken: string;
 }

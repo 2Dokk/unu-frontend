@@ -1,0 +1,388 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ExternalLink,
+  FileText,
+  FolderOpen,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import {
+  createLectureMaterial,
+  deleteLectureMaterial,
+  getLectureMaterials,
+  updateLectureMaterial,
+} from "@/lib/api/lecture-material";
+import {
+  LectureMaterial,
+  LectureMaterialRequest,
+} from "@/lib/interfaces/lecture-material";
+import { formatDate } from "@/lib/utils/date-utils";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+const EMPTY_FORM: LectureMaterialRequest = {
+  title: "",
+  description: "",
+  driveUrl: "",
+};
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  return typeof data === "string" && data.trim() ? data : fallback;
+}
+
+function isGoogleDriveUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      ["drive.google.com", "docs.google.com"].includes(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export default function LectureMaterialsPage() {
+  const router = useRouter();
+  const { hasRole, isAuthenticated, isLoading: authLoading } = useAuth();
+  const canManage = hasRole("MANAGER");
+  const [materials, setMaterials] = useState<LectureMaterial[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] =
+    useState<LectureMaterial | null>(null);
+  const [form, setForm] = useState<LectureMaterialRequest>(EMPTY_FORM);
+  const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<LectureMaterial | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const loadMaterials = useCallback(async () => {
+    setLoading(true);
+    try {
+      setMaterials(await getLectureMaterials());
+    } catch (error) {
+      toast.error(getErrorMessage(error, "강의자료를 불러오지 못했습니다."));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      router.replace("/login?redirect=%2Flecture-materials");
+      return;
+    }
+    void loadMaterials();
+  }, [authLoading, isAuthenticated, loadMaterials, router]);
+
+  function openCreateDialog() {
+    setEditingMaterial(null);
+    setForm(EMPTY_FORM);
+    setDialogOpen(true);
+  }
+
+  function openEditDialog(material: LectureMaterial) {
+    setEditingMaterial(material);
+    setForm({
+      title: material.title,
+      description: material.description ?? "",
+      driveUrl: material.driveUrl,
+    });
+    setDialogOpen(true);
+  }
+
+  async function handleSubmit() {
+    if (!form.title.trim()) {
+      toast.error("자료 제목을 입력해주세요.");
+      return;
+    }
+    if (!isGoogleDriveUrl(form.driveUrl.trim())) {
+      toast.error("Google Drive 공유 링크를 확인해주세요.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const request = {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        driveUrl: form.driveUrl.trim(),
+      };
+      if (editingMaterial) {
+        await updateLectureMaterial(editingMaterial.id, request);
+        toast.success("강의자료가 수정되었습니다.");
+      } else {
+        await createLectureMaterial(request);
+        toast.success("강의자료가 등록되었습니다.");
+      }
+      setDialogOpen(false);
+      await loadMaterials();
+    } catch (error) {
+      toast.error(
+        getErrorMessage(
+          error,
+          editingMaterial
+            ? "강의자료를 수정하지 못했습니다."
+            : "강의자료를 등록하지 못했습니다.",
+        ),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteLectureMaterial(deleteTarget.id);
+      toast.success("강의자료가 삭제되었습니다.");
+      setDeleteTarget(null);
+      await loadMaterials();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "강의자료를 삭제하지 못했습니다."));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-6xl space-y-8 px-5 py-8 sm:px-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight">강의자료</h1>
+          <p className="text-sm text-muted-foreground">
+            학회에서 공유하는 강의자료를 확인할 수 있습니다.
+          </p>
+        </div>
+        {canManage && (
+          <Button onClick={openCreateDialog} className="self-start sm:self-auto">
+            <Plus className="mr-2 h-4 w-4" />
+            자료 추가
+          </Button>
+        )}
+      </header>
+
+      {loading || authLoading ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {[1, 2, 3, 4].map((item) => (
+            <Skeleton key={item} className="h-52 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : materials.length === 0 ? (
+        <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed px-6 text-center">
+          <FolderOpen className="mb-4 h-9 w-9 text-muted-foreground" />
+          <p className="font-medium">등록된 강의자료가 없습니다.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            새로운 자료가 등록되면 이곳에서 확인할 수 있습니다.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {materials.map((material) => (
+            <Card key={material.id} className="flex min-h-52 flex-col">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#edf5f1] text-[#174b3a]">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <CardTitle className="break-words text-base leading-6">
+                        {material.title}
+                      </CardTitle>
+                      <CardDescription>
+                        {formatDate(material.createdAt)} 등록
+                      </CardDescription>
+                    </div>
+                  </div>
+                  {canManage && (
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`${material.title} 수정`}
+                        title="수정"
+                        onClick={() => openEditDialog(material)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`${material.title} 삭제`}
+                        title="삭제"
+                        onClick={() => setDeleteTarget(material)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-1 flex-col justify-between gap-5">
+                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
+                  {material.description || "별도의 자료 설명이 없습니다."}
+                </p>
+                <Button variant="outline" className="w-full" asChild>
+                  <a
+                    href={material.driveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Google Drive에서 열기
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => !submitting && setDialogOpen(open)}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingMaterial ? "강의자료 수정" : "강의자료 추가"}
+            </DialogTitle>
+            <DialogDescription>
+              학회원에게 공유할 Google Drive 자료를 등록합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="material-title">자료 제목</Label>
+              <Input
+                id="material-title"
+                maxLength={120}
+                value={form.title}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    title: event.target.value,
+                  }))
+                }
+                placeholder="자료 제목"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="material-description">설명</Label>
+              <Textarea
+                id="material-description"
+                rows={5}
+                maxLength={2000}
+                value={form.description}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    description: event.target.value,
+                  }))
+                }
+                placeholder="자료에 대한 간단한 설명"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="material-drive-url">Google Drive 링크</Label>
+              <Input
+                id="material-drive-url"
+                type="url"
+                maxLength={2048}
+                autoComplete="off"
+                value={form.driveUrl}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    driveUrl: event.target.value,
+                  }))
+                }
+                placeholder="https://drive.google.com/..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={submitting}
+              onClick={() => setDialogOpen(false)}
+            >
+              취소
+            </Button>
+            <Button type="button" disabled={submitting} onClick={handleSubmit}>
+              {submitting ? "저장 중..." : "저장"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>강의자료를 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.title} 자료가 목록에서 삭제됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleDelete();
+              }}
+            >
+              {deleting ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

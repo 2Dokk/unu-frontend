@@ -67,6 +67,10 @@ const CATEGORY_MAP: Record<string, { label: string; color: string }> = {
     label: "인강",
     color: "bg-emerald-50 text-emerald-700 border-emerald-200",
   },
+  SPECIAL_LECTURE: {
+    label: "강의",
+    color: "bg-rose-50 text-rose-700 border-rose-200",
+  },
 };
 
 // Generate color for activity type by index
@@ -515,7 +519,9 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
 
   const attendanceStats = {
     present: attendances.filter((a) => a.status === "PRESENT").length,
-    absent: attendances.filter((a) => a.status === "ABSENT").length,
+    absent: attendances.filter(
+      (a) => a.status === "ABSENT" || a.status === "LATE",
+    ).length,
     excused: attendances.filter((a) => a.status === "EXCUSED").length,
     total: attendances.length,
   };
@@ -607,7 +613,9 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
                     attendance.participant?.user?.name || "이름 없음";
                   const isPresent = attendance.status === "PRESENT";
                   const isExcused = attendance.status === "EXCUSED";
-                  const isAbsent = attendance.status === "ABSENT";
+                  const isAbsent =
+                    attendance.status === "ABSENT" ||
+                    attendance.status === "LATE";
 
                   return (
                     <div

@@ -14,11 +14,12 @@ async function request<T>(
   method: string,
   path: string,
   body?: unknown,
+  headers?: Record<string, string>,
 ): Promise<T> {
   const res = await fetch(`${baseURL}${path}`, {
     method,
     cache: "no-store",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
@@ -36,10 +37,18 @@ async function request<T>(
 }
 
 const publicClient = {
-  get: <T>(path: string) => request<T>("GET", path),
-  post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
-  put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body),
-  patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body),
+  get: <T>(path: string, headers?: Record<string, string>) =>
+    request<T>("GET", path, undefined, headers),
+  post: <T>(path: string, body?: unknown, headers?: Record<string, string>) =>
+    request<T>("POST", path, body, headers),
+  put: <T>(path: string, body?: unknown, headers?: Record<string, string>) =>
+    request<T>("PUT", path, body, headers),
+  patch: <T>(path: string, body?: unknown, headers?: Record<string, string>) =>
+    request<T>("PATCH", path, body, headers),
 };
+
+export function getPublicApiErrorMessage(error: unknown, fallback: string) {
+  return error instanceof ApiError ? error.message : fallback;
+}
 
 export default publicClient;

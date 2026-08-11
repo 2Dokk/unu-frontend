@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,13 +15,22 @@ import {
 } from "@/components/ui/select";
 import { searchActivities } from "@/lib/api/activity";
 import { getAllActivityTypes } from "@/lib/api/activity-type";
-import { getAllQuarters, getCurrentQuarter } from "@/lib/api/quarter";
+import { getCurrentQuarter } from "@/lib/api/quarter";
+import { getCurrentActivityOpeningPeriod } from "@/lib/api/activity-opening-period";
+import { ActivityOpeningPeriodResponse } from "@/lib/interfaces/activity-opening-period";
 import {
   ActivityResponse,
   ActivityTypeResponse,
 } from "@/lib/interfaces/activity";
-import { QuarterResponse } from "@/lib/interfaces/quarter";
-import { Calendar, ChevronRight, Plus, Search, User, X } from "lucide-react";
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Search,
+  User,
+  X,
+} from "lucide-react";
 import { formatDate } from "@/lib/utils/date-utils";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
@@ -105,7 +114,7 @@ function ActivityCard({ activity, onClick }: ActivityCardProps) {
             }}
           >
             <span className="text-xs">
-              {recruiting ? "신청하기" : isClosed ? "종료" : "보기"}
+              {recruiting ? "참여하기" : isClosed ? "종료" : "보기"}
             </span>
             {!isClosed && <ChevronRight className="h-3 w-3 ml-1" />}
           </Button>
@@ -119,14 +128,24 @@ function ActivityCard({ activity, onClick }: ActivityCardProps) {
 // MAIN COMPONENT
 // ========================
 
+const ACTIVITIES_PER_PAGE = 10;
+const ACTIVITY_TYPE_ORDER: Record<string, number> = {
+  SPECIAL_LECTURE: 0,
+  PROJECT: 1,
+  STUDY: 2,
+  LECTURE: 3,
+};
+
 const ActivityPage = () => {
   const router = useRouter();
   const [activities, setActivities] = useState<ActivityResponse[]>([]);
   const [activityTypes, setActivityTypes] = useState<ActivityTypeResponse[]>(
     [],
   );
-  const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
-  const [selectedQuarterId, setSelectedQuarterId] = useState<string>("");
+  const [currentQuarterId, setCurrentQuarterId] = useState<string>("");
+  const [openingPeriod, setOpeningPeriod] =
+    useState<ActivityOpeningPeriodResponse | null>(null);
+  const [openingPeriodLoaded, setOpeningPeriodLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
 
@@ -134,22 +153,17 @@ const ActivityPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchInput, setSearchInput] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [typesData, quartersData, currentQuarter] = await Promise.all([
+        const [typesData, currentQuarter] = await Promise.all([
           getAllActivityTypes(),
-          getAllQuarters(),
-          getCurrentQuarter().catch(() => null),
+          getCurrentQuarter(),
         ]);
         setActivityTypes(typesData);
-        setQuarters(quartersData);
-        if (quartersData.length > 0) {
-          const defaultId =
-            currentQuarter?.id ?? quartersData[0].id;
-          setSelectedQuarterId(defaultId);
-        }
+        setCurrentQuarterId(currentQuarter.id);
       } catch (error: unknown) {
         console.error("Failed to fetch initial data:", error);
         toast.error(
@@ -161,7 +175,14 @@ const ActivityPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!selectedQuarterId) return;
+    getCurrentActivityOpeningPeriod()
+      .then(setOpeningPeriod)
+      .catch(() => setOpeningPeriod(null))
+      .finally(() => setOpeningPeriodLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    if (!currentQuarterId) return;
     const fetchActivities = async () => {
       setLoading(true);
       try {
@@ -170,7 +191,7 @@ const ActivityPage = () => {
           status: statusFilter !== "all" ? statusFilter : undefined,
           activityTypeId:
             activityTypeFilter !== "all" ? activityTypeFilter : undefined,
-          quarterId: selectedQuarterId,
+          quarterId: currentQuarterId,
         });
         setActivities(data);
       } catch (error: unknown) {
@@ -185,7 +206,33 @@ const ActivityPage = () => {
       }
     };
     fetchActivities();
-  }, [activityTypeFilter, statusFilter, searchTerm, selectedQuarterId]);
+  }, [activityTypeFilter, statusFilter, searchTerm, currentQuarterId]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activityTypeFilter, statusFilter, searchTerm, currentQuarterId]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(activities.length / ACTIVITIES_PER_PAGE),
+  );
+  const sortedActivities = useMemo(
+    () =>
+      [...activities].sort(
+        (a, b) =>
+          (ACTIVITY_TYPE_ORDER[a.activityType.code] ?? Number.MAX_SAFE_INTEGER) -
+          (ACTIVITY_TYPE_ORDER[b.activityType.code] ?? Number.MAX_SAFE_INTEGER),
+      ),
+    [activities],
+  );
+  const paginatedActivities = sortedActivities.slice(
+    (currentPage - 1) * ACTIVITIES_PER_PAGE,
+    currentPage * ACTIVITIES_PER_PAGE,
+  );
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
 
   const handleClearFilters = () => {
     setActivityTypeFilter("all");
@@ -197,34 +244,35 @@ const ActivityPage = () => {
   const hasFilters =
     activityTypeFilter !== "all" || statusFilter !== "all" || searchTerm !== "";
 
-  return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-6">
-      {/* Page Header */}
-      <div className="flex justify-between">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">활동 신청하기</h1>
-          <p className="text-sm text-muted-foreground">
-            이번 분기에 개설된 활동을 확인하고 신청하세요
-          </p>
-        </div>
+  const openingPeriodMessage = (() => {
+    if (!openingPeriod) {
+      return openingPeriodLoaded
+        ? "활동 개설 신청 기간을 확인할 수 없습니다."
+        : "활동 개설 신청 기간을 확인하는 중입니다.";
+    }
+    if (openingPeriod.status === "OPEN" && openingPeriod.endAt) {
+      return `${new Date(openingPeriod.endAt).toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" })}까지 개설 신청을 받습니다.`;
+    }
+    if (openingPeriod.status === "UPCOMING" && openingPeriod.startAt) {
+      return `${new Date(openingPeriod.startAt).toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" })}부터 개설 신청이 가능합니다.`;
+    }
+    if (openingPeriod.status === "CLOSED") return "이번 분기 활동 개설 신청이 마감되었습니다.";
+    if (openingPeriod.status === "DISABLED") return "현재 활동 개설 신청 접수가 중지되어 있습니다.";
+    return "활동 개설 신청 기간이 아직 설정되지 않았습니다.";
+  })();
 
-        {/* Semester selector — notion-style page context */}
-        <Select value={selectedQuarterId} onValueChange={setSelectedQuarterId}>
-          <SelectTrigger className="w-auto h-7 border-0 shadow-none bg-transparent px-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-md gap-1 [&>svg]:opacity-50">
-            <SelectValue placeholder="분기 선택" />
-          </SelectTrigger>
-          <SelectContent>
-            {quarters.map((quarter) => (
-              <SelectItem key={quarter.id} value={quarter.id}>
-                {quarter.year} {quarter.season}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+  return (
+    <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-6">
+      {/* Page Header */}
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">모든 활동</h1>
+        <p className="text-sm text-muted-foreground">
+          이번 분기에 개설된 활동을 확인하고 참여하세요
+        </p>
       </div>
 
       {/* Filter row */}
-      <div className="flex justify-between ">
+      <div className="flex flex-col gap-3 lg:flex-row lg:justify-between">
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex items-center w-full sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -289,21 +337,34 @@ const ActivityPage = () => {
             </Button>
           )}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.push("/activities/new")}
-        >
-          <Plus className="h-3 w-3" />
-          <span className="text-xs">활동 만들기</span>
-        </Button>
+        <div className="flex shrink-0 justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/activity-opening/my")}
+          >
+            <span className="text-xs">내 개설 신청</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            title={openingPeriodMessage}
+            disabled={!openingPeriod?.canApply}
+            onClick={() => router.push("/activity-opening/apply")}
+          >
+            <Plus className="h-3 w-3" />
+            <span className="text-xs">
+              {openingPeriod?.status === "CLOSED" ? "신청 마감" : openingPeriod?.status === "UPCOMING" ? "신청 예정" : "활동 개설 신청"}
+            </span>
+          </Button>
+        </div>
       </div>
 
       {/* Loading skeleton */}
       {loading && initialLoad && (
-        <div className="grid grid-cols-1 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="p-0">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {Array.from({ length: ACTIVITIES_PER_PAGE }, (_, index) => (
+            <Card key={index} className="p-0">
               <CardContent className="p-5 space-y-3">
                 <div className="flex justify-between">
                   <Skeleton className="h-5 w-16 rounded-full" />
@@ -352,14 +413,44 @@ const ActivityPage = () => {
 
       {/* Activity grid */}
       {!loading && activities.length > 0 && (
-        <div className="grid grid-cols-1 gap-4">
-          {activities.map((activity) => (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {paginatedActivities.map((activity) => (
             <ActivityCard
               key={activity.id}
               activity={activity}
               onClick={(id) => router.push(`/activities/${id}`)}
             />
           ))}
+        </div>
+      )}
+
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 border-t pt-5">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            aria-label="이전 페이지"
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft />
+          </Button>
+          <span className="min-w-16 text-center text-sm font-medium text-muted-foreground">
+            {currentPage} / {totalPages}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            aria-label="다음 페이지"
+            onClick={() =>
+              setCurrentPage((page) => Math.min(totalPages, page + 1))
+            }
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight />
+          </Button>
         </div>
       )}
     </div>

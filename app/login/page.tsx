@@ -27,6 +27,10 @@ const LoginForm = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect");
+  const safeRedirect =
+    redirectTo?.startsWith("/") && !redirectTo.startsWith("//")
+      ? redirectTo
+      : null;
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -51,9 +55,11 @@ const LoginForm = () => {
       login(response.token, response.refreshToken);
 
       // 로그인이 필요해서 여기로 밀려왔다면 원래 가려던 곳으로, 아니면 홈으로
-      router.push(redirectTo || "/home");
-    } catch (error: any) {
-      const serverMessage = error?.response?.data;
+      router.push(safeRedirect || "/home");
+    } catch (error: unknown) {
+      const serverMessage = (
+        error as { response?: { data?: string } }
+      )?.response?.data;
       setError(
         serverMessage ??
           (error instanceof Error
@@ -87,7 +93,7 @@ const LoginForm = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {redirectTo && (
+          {safeRedirect && (
             <div className="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
               로그인이 필요한 페이지입니다. 로그인 후 이어서 진행해주세요.
             </div>

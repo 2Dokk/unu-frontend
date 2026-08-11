@@ -158,7 +158,7 @@ export default function AdminRecruitmentsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+    <div className="mx-auto w-full max-w-7xl space-y-8 px-6 py-8">
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">모집 관리</h1>
@@ -182,7 +182,7 @@ export default function AdminRecruitmentsPage() {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-4 mt-4">
+          <div className="mt-4 flex flex-col gap-3 xl:flex-row">
             {/* Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -201,7 +201,7 @@ export default function AdminRecruitmentsPage() {
                 setStatusFilter(value as RecruitmentStatus)
               }
             >
-              <SelectTrigger className="w-full md:w-35 text-xs">
+              <SelectTrigger className="w-full text-xs xl:w-35">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -225,7 +225,7 @@ export default function AdminRecruitmentsPage() {
               value={activeFilter}
               onValueChange={(value) => setActiveFilter(value as ActiveFilter)}
             >
-              <SelectTrigger className="w-full md:w-35 text-xs">
+              <SelectTrigger className="w-full text-xs xl:w-35">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -257,22 +257,21 @@ export default function AdminRecruitmentsPage() {
                 : "아직 모집이 없습니다"}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>제목</TableHead>
-                    <TableHead className="hidden md:table-cell text-center">
+                    <TableHead className="hidden text-center lg:table-cell">
                       기간
                     </TableHead>
-                    <TableHead className="hidden lg:table-cell text-center">
+                    <TableHead className="hidden text-center xl:table-cell">
                       지원서
                     </TableHead>
-                    <TableHead className="hidden lg:table-cell text-center">
+                    <TableHead className="hidden text-center xl:table-cell">
                       분기
                     </TableHead>
                     <TableHead className="w-25 text-center">상태</TableHead>
-                    <TableHead className="hidden xl:table-cell text-center">
+                    <TableHead className="hidden text-center xl:table-cell">
                       생성일
                     </TableHead>
                     <TableHead className="w-20 text-center">작업</TableHead>
@@ -286,7 +285,7 @@ export default function AdminRecruitmentsPage() {
                         router.push(`/manage/recruitments/${recruitment.id}`)
                       }
                     >
-                      <TableCell>
+                      <TableCell className="whitespace-normal">
                         <div className="font-medium">{recruitment.title}</div>
                         {recruitment.description && (
                           <div className="text-xs text-muted-foreground truncate max-w-75">
@@ -294,14 +293,14 @@ export default function AdminRecruitmentsPage() {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-center text-muted-foreground text-sm">
+                      <TableCell className="hidden text-center text-sm text-muted-foreground lg:table-cell">
                         {formatDate(recruitment.startAt)} -{" "}
                         {formatDate(recruitment.endAt)}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-muted-foreground">
+                      <TableCell className="hidden max-w-48 whitespace-normal break-words text-muted-foreground xl:table-cell">
                         {recruitment.form.title}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-muted-foreground text-center">
+                      <TableCell className="hidden text-center text-muted-foreground xl:table-cell">
                         {recruitment.quarter.name}
                       </TableCell>
                       <TableCell>
@@ -314,7 +313,7 @@ export default function AdminRecruitmentsPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="hidden xl:table-cell text-muted-foreground text-sm text-center">
+                      <TableCell className="hidden text-center text-sm text-muted-foreground xl:table-cell">
                         {formatDate(recruitment.createdAt)}
                       </TableCell>
                       <TableCell className="text-center">
@@ -355,8 +354,7 @@ export default function AdminRecruitmentsPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           )}
         </CardContent>
       </Card>

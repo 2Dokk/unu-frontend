@@ -7,6 +7,25 @@ export interface ActivitySessionRequestDto {
   description: string;
 }
 
+export type ActivitySessionWeekday =
+  | "MONDAY"
+  | "TUESDAY"
+  | "WEDNESDAY"
+  | "THURSDAY"
+  | "FRIDAY"
+  | "SATURDAY"
+  | "SUNDAY";
+
+export interface ActivitySessionBulkRequestDto {
+  activityId: string;
+  startDate: string;
+  endDate: string;
+  weekdays: ActivitySessionWeekday[];
+  intervalWeeks: number;
+  excludedDates: string[];
+  description: string;
+}
+
 export interface ActivitySessionResponseDto {
   id: string;
   activity: ActivityResponse;

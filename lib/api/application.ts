@@ -2,6 +2,8 @@ import {
   ApplicationRequest,
   ApplicationResponse,
   ApplicationSearchQuery,
+  ApplicationLookupResponse,
+  ApplicationVerificationResponse,
 } from "../interfaces/application";
 import axiosInstance from "./axiosInstance";
 import publicClient from "./publicClient";
@@ -25,8 +27,8 @@ export async function createApplication(
  */
 export async function lookupApplication(
   query: ApplicationSearchQuery,
-): Promise<ApplicationResponse> {
-  return publicClient.post<ApplicationResponse>(
+): Promise<ApplicationLookupResponse> {
+  return publicClient.post<ApplicationLookupResponse>(
     "/public/applications/lookup",
     query,
   );
@@ -39,10 +41,12 @@ export async function lookupApplication(
 export async function updateApplication(
   id: string,
   data: ApplicationRequest,
+  accessToken: string,
 ): Promise<ApplicationResponse> {
   return publicClient.put<ApplicationResponse>(
     `/public/applications/${id}`,
     data,
+    { "X-Application-Token": accessToken },
   );
 }
 
@@ -50,11 +54,15 @@ export async function updateApplication(
  * 지원서 취소 (비밀번호 인증)
  * PATCH /api/public/applications/{id}/cancel
  */
-export async function cancelApplicationWithPassword(
+export async function cancelApplicationByApplicant(
   id: string,
-  password: string,
+  accessToken: string,
 ): Promise<void> {
-  await publicClient.patch(`/public/applications/${id}/cancel`, { password });
+  await publicClient.patch(
+    `/public/applications/${id}/cancel`,
+    undefined,
+    { "X-Application-Token": accessToken },
+  );
 }
 
 /**
@@ -64,8 +72,8 @@ export async function cancelApplicationWithPassword(
 export async function verifyApplication(
   id: string,
   password: string,
-): Promise<ApplicationResponse> {
-  return publicClient.post<ApplicationResponse>(
+): Promise<ApplicationVerificationResponse> {
+  return publicClient.post<ApplicationVerificationResponse>(
     `/public/applications/${id}/verify`,
     { password },
   );

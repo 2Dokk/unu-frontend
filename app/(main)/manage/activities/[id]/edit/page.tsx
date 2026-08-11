@@ -54,6 +54,7 @@ import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participa
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import { ParticipantsCard } from "@/components/custom/activity/participants-card";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 // ========================
 // HELPER FUNCTIONS
@@ -100,6 +101,10 @@ export default function ActivityEditPage() {
   const params = useParams();
   const router = useRouter();
   const activityId = params.id as string;
+  const { roles } = useAuth();
+  const canEditDeposit = roles.some(
+    (role) => role === "ADMIN" || role === "MANAGER",
+  );
 
   // Data state
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
@@ -130,7 +135,15 @@ export default function ActivityEditPage() {
     quarterId: "",
     startDate: "",
     endDate: "",
+    depositAmount: "30000",
   });
+
+  const selectedActivityType = activityTypes.find(
+    (type) => type.id === formData.activityTypeId,
+  );
+  const requiresDeposit =
+    selectedActivityType?.code === "STUDY" ||
+    selectedActivityType?.code === "SPECIAL_LECTURE";
 
   // Dirty tracking
   const [isDirty, setIsDirty] = useState(false);
@@ -174,6 +187,7 @@ export default function ActivityEditPage() {
         quarterId: activityData.quarter.id,
         startDate: toDateInputValue(activityData.startDate),
         endDate: toDateInputValue(activityData.endDate),
+        depositAmount: String(activityData.depositAmount ?? 30000),
       });
     } catch (err) {
       console.error("Failed to load activity:", err);
@@ -209,6 +223,18 @@ export default function ActivityEditPage() {
       return "분기를 선택해주세요.";
     }
 
+    const depositAmount = Number(formData.depositAmount);
+    if (
+      canEditDeposit &&
+      requiresDeposit &&
+      (!formData.depositAmount ||
+        !Number.isInteger(depositAmount) ||
+        depositAmount < 0 ||
+        depositAmount > 1_000_000)
+    ) {
+      return "참여 보증금은 0원 이상 1,000,000원 이하로 입력해주세요.";
+    }
+
     return null;
   }
 
@@ -231,6 +257,10 @@ export default function ActivityEditPage() {
         quarterId: formData.quarterId,
         startDate: formData.startDate,
         endDate: formData.endDate,
+        depositAmount:
+          canEditDeposit && requiresDeposit
+            ? Number(formData.depositAmount)
+            : undefined,
       };
 
       await updateActivity(activityId, updateData);
@@ -335,9 +365,19 @@ export default function ActivityEditPage() {
                   </Label>
                   <Select
                     value={formData.activityTypeId}
-                    onValueChange={(value) =>
-                      handleInputChange("activityTypeId", value)
-                    }
+                    onValueChange={(value) => {
+                      handleInputChange("activityTypeId", value);
+                      const type = activityTypes.find(
+                        (item) => item.id === value,
+                      );
+                      if (
+                        (type?.code === "STUDY" ||
+                          type?.code === "SPECIAL_LECTURE") &&
+                        !formData.depositAmount
+                      ) {
+                        handleInputChange("depositAmount", "30000");
+                      }
+                    }}
                   >
                     <SelectTrigger id="activityType" className="w-48">
                       <SelectValue placeholder="유형 선택" />
@@ -351,6 +391,33 @@ export default function ActivityEditPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {canEditDeposit && requiresDeposit && (
+                  <div className="space-y-2">
+                    <Label htmlFor="depositAmount">참여 보증금</Label>
+                    <div className="relative w-48">
+                      <Input
+                        id="depositAmount"
+                        value={formData.depositAmount}
+                        onChange={(event) =>
+                          handleInputChange(
+                            "depositAmount",
+                            event.target.value.replace(/\D/g, ""),
+                          )
+                        }
+                        inputMode="numeric"
+                        className="pr-9"
+                        maxLength={7}
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        원
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      0원으로 설정하면 보증금 절차를 사용하지 않습니다.
+                    </p>
+                  </div>
+                )}
 
                 {/* Quarter */}
                 <div className="space-y-2">

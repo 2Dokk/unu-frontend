@@ -4,12 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { getMyActivityParticipants } from "@/lib/api/activity-participant";
+import { getActivityParticipantsByActivityId } from "@/lib/api/activity-participant";
+import { getMyHostedActivities } from "@/lib/api/activity";
 import { getAttendanceStatsByParticipantId } from "@/lib/api/attendance";
 import { getActivitySessionsByActivityId } from "@/lib/api/activity-session";
 import { getCurrentQuarter } from "@/lib/api/quarter";
 import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
 import { AttendanceStatsResponseDto } from "@/lib/interfaces/attendance";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
+import { ActivityResponse } from "@/lib/interfaces/activity";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -21,15 +24,25 @@ import {
   TrendingUp,
   Calendar,
   Clock,
+  Users,
+  ArrowRight,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
+import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
+import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
+import { formatDate } from "@/lib/utils/date-utils";
 
 interface ParticipationWithStats {
   participant: ActivityParticipantResponse;
   attendanceStats: AttendanceStatsResponseDto;
   totalSessions: number;
   attendanceRate: number;
+}
+
+interface HostedActivityWithParticipants {
+  activity: ActivityResponse;
+  participantCount: number;
 }
 
 export default function HomePage() {
@@ -40,6 +53,9 @@ export default function HomePage() {
   );
   const [participations, setParticipations] = useState<
     ParticipationWithStats[]
+  >([]);
+  const [hostedActivities, setHostedActivities] = useState<
+    HostedActivityWithParticipants[]
   >([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,23 +73,32 @@ export default function HomePage() {
         setLoading(true);
 
         // Fetch current quarter and participations in parallel
-        const [quarterData, participantData] = await Promise.all([
+        const [quarterData, participantData, hostedData] = await Promise.all([
           getCurrentQuarter(),
           getMyActivityParticipants(),
+          getMyHostedActivities(),
         ]);
 
         setCurrentQuarter(quarterData);
 
         // Fetch stats for each participation
-        const enrichedData = await Promise.all(
-          participantData.map(async (participant) => {
+        const [enrichedData, hostedWithParticipants] = await Promise.all([
+          Promise.all(participantData.map(async (participant) => {
             try {
               const [attendanceStats, sessions] = await Promise.all([
                 getAttendanceStatsByParticipantId(participant.id),
                 getActivitySessionsByActivityId(participant.activity.id),
               ]);
 
-              const totalSessions = sessions.length;
+              const today = new Date();
+              const todayValue = [
+                today.getFullYear(),
+                String(today.getMonth() + 1).padStart(2, "0"),
+                String(today.getDate()).padStart(2, "0"),
+              ].join("-");
+              const totalSessions = sessions.filter(
+                (session) => session.date <= todayValue,
+              ).length;
               const attendedSessions =
                 attendanceStats.presentCount + attendanceStats.excusedCount;
               const attendanceRate =
@@ -103,10 +128,35 @@ export default function HomePage() {
                 attendanceRate: 0,
               };
             }
-          }),
-        );
+          })),
+          Promise.all(hostedData.map(async (activity) => {
+            try {
+              const activityParticipants =
+                await getActivityParticipantsByActivityId({
+                  activityId: activity.id,
+                });
+              return {
+                activity,
+                participantCount: activityParticipants.filter(
+                  (participant) => participant.status === "APPROVED",
+                ).length,
+              };
+            } catch (error) {
+              console.error(
+                `Failed to fetch participants for activity ${activity.id}:`,
+                error,
+              );
+              return { activity, participantCount: 0 };
+            }
+          })),
+        ]);
 
         setParticipations(enrichedData);
+        setHostedActivities(
+          hostedWithParticipants.sort((a, b) =>
+            b.activity.createdAt.localeCompare(a.activity.createdAt),
+          ),
+        );
       } catch (error: any) {
         console.error("Failed to fetch data:", error);
       } finally {
@@ -118,20 +168,30 @@ export default function HomePage() {
   }, [isAuthenticated]);
 
   // Calculate summary stats
-  const currentQuarterActivities = participations.filter(
+  const hostedActivityIds = new Set(
+    hostedActivities.map(({ activity }) => activity.id),
+  );
+  const participatingActivities = participations.filter(
+    ({ participant }) => !hostedActivityIds.has(participant.activity.id),
+  );
+
+  const currentQuarterActivities = participatingActivities.filter(
     (p) => p.participant.activity?.quarter?.id === currentQuarter?.id,
+  );
+  const currentQuarterHostedActivities = hostedActivities.filter(
+    ({ activity }) => activity.quarter?.id === currentQuarter?.id,
   );
 
   const currentQuarterCompleted = currentQuarterActivities.filter(
     (p) => p.participant.completed,
   ).length;
 
-  const totalActivities = participations.length;
+  const totalActivities = participatingActivities.length;
 
   const averageAttendance =
-    participations.length > 0
-      ? participations.reduce((acc, p) => acc + p.attendanceRate, 0) /
-        participations.length
+    participatingActivities.length > 0
+      ? participatingActivities.reduce((acc, p) => acc + p.attendanceRate, 0) /
+        participatingActivities.length
       : 0;
 
   if (authLoading || (loading && isAuthenticated)) {
@@ -162,81 +222,90 @@ export default function HomePage() {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">내 활동</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          활동 참여 현황과 출석 정보를 확인하세요
+          참여 중인 활동과 직접 개설한 활동을 확인하세요
         </p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              이번 분기 활동
-            </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {currentQuarterActivities.length}
+      <div className="space-y-10">
+        <div className="space-y-8">
+          {/* Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  이번 분기 활동
+                </CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                  {currentQuarterActivities.length + currentQuarterHostedActivities.length}
+                  </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {currentQuarter?.name || ""}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  수료 활동
+                </CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {currentQuarterCompleted}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  이번 분기 기준
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  전체 참여 활동
+                </CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalActivities}</div>
+                <p className="mt-1 text-xs text-muted-foreground">누적 활동 수</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  평균 출석률
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {averageAttendance.toFixed(0)}%
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">전체 평균</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Current Quarter Activities */}
+          <section className="space-y-8">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">이번 분기 활동</h2>
+              <p className="mt-1 text-muted-foreground">
+                {currentQuarter?.name} 활동 현황
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {currentQuarter?.name || ""}
-            </p>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              수료 활동
-            </CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{currentQuarterCompleted}</div>
-            <p className="text-xs text-muted-foreground mt-1">이번 분기 기준</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              전체 참여 활동
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalActivities}</div>
-            <p className="text-xs text-muted-foreground mt-1">누적 활동 수</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              평균 출석률
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {averageAttendance.toFixed(0)}%
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">전체 평균</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Separator />
-
-      {/* Current Quarter Activities */}
-      <section className="space-y-6">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight">이번 분기 활동</h2>
-          <p className="text-muted-foreground mt-1">
-            {currentQuarter?.name} 진행 중인 활동
-          </p>
-        </div>
+            <div className="space-y-4">
+              <h3 className="text-base font-semibold tracking-tight">
+                내가 참여 중인 활동
+              </h3>
 
         {currentQuarterActivities.length === 0 ? (
           <Card>
@@ -316,18 +385,81 @@ export default function HomePage() {
             )}
           </div>
         )}
-      </section>
+            </div>
 
-      <Separator />
+            <div className="space-y-4">
+              <h3 className="text-base font-semibold tracking-tight">
+                내가 개설한 활동
+              </h3>
+              {currentQuarterHostedActivities.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                    <Users className="mb-3 h-10 w-10 text-muted-foreground" />
+                    <p className="text-muted-foreground">
+                      이번 분기에 개설한 활동이 없습니다
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {currentQuarterHostedActivities.map(
+                    ({ activity, participantCount }) => (
+                      <button
+                        key={activity.id}
+                        type="button"
+                        className="text-left"
+                        onClick={() =>
+                          router.push(`/manage/activities/${activity.id}`)
+                        }
+                      >
+                        <Card className="h-full transition-shadow hover:shadow-md">
+                          <CardHeader className="space-y-3">
+                            <div className="flex items-start justify-between gap-4">
+                              <CardTitle className="min-w-0 text-lg leading-snug">
+                                {activity.title}
+                              </CardTitle>
+                              <ActivityStatusBadge status={activity.status} />
+                            </div>
+                            <ActivityTypeBadge
+                              activityType={activity.activityType}
+                            />
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="flex items-center gap-2 text-muted-foreground">
+                                <Users className="h-4 w-4" />
+                                참여자
+                              </span>
+                              <strong>{participantCount}명</strong>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(activity.startDate)} -{" "}
+                              {formatDate(activity.endDate)}
+                            </p>
+                            <div className="flex items-center justify-end gap-1 text-sm font-medium">
+                              관리 화면 열기
+                              <ArrowRight className="h-4 w-4" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </button>
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
 
-      {/* All Activities History */}
-      <section className="space-y-6">
+          <Separator />
+
+          {/* All Activities History */}
+          <section className="space-y-6">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">전체 활동</h2>
+          <h3 className="text-lg font-semibold tracking-tight">전체 참여 이력</h3>
           <p className="text-muted-foreground mt-1">모든 활동 참여 이력</p>
         </div>
 
-        {participations.length === 0 ? (
+        {participatingActivities.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
@@ -340,7 +472,7 @@ export default function HomePage() {
           <Card className="py-0">
             <CardContent className="p-0">
               <div className="divide-y">
-                {participations.map(
+                {participatingActivities.map(
                   ({
                     participant,
                     attendanceStats,
@@ -400,7 +532,9 @@ export default function HomePage() {
             </CardContent>
           </Card>
         )}
-      </section>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

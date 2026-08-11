@@ -68,7 +68,15 @@ export default function ActivityNewPage() {
     quarterId: "",
     startDate: "",
     endDate: "",
+    depositAmount: "30000",
   });
+
+  const selectedActivityType = activityTypes.find(
+    (type) => type.id === formData.activityTypeId,
+  );
+  const requiresDeposit =
+    selectedActivityType?.code === "STUDY" ||
+    selectedActivityType?.code === "SPECIAL_LECTURE";
 
   useEffect(() => {
     async function loadData() {
@@ -98,6 +106,16 @@ export default function ActivityNewPage() {
     if (!formData.activityTypeId) return "활동 유형을 선택해주세요.";
     if (!formData.quarterId) return "분기를 선택해주세요.";
     if (!formData.assigneeId) return "담당자를 선택해주세요.";
+    const depositAmount = Number(formData.depositAmount);
+    if (
+      requiresDeposit &&
+      (!formData.depositAmount ||
+        !Number.isInteger(depositAmount) ||
+        depositAmount < 0 ||
+        depositAmount > 1_000_000)
+    ) {
+      return "참여 보증금은 0원 이상 1,000,000원 이하로 입력해주세요.";
+    }
     return null;
   }
 
@@ -121,6 +139,9 @@ export default function ActivityNewPage() {
         quarterId: formData.quarterId,
         startDate: formData.startDate,
         endDate: formData.endDate,
+        depositAmount: requiresDeposit
+          ? Number(formData.depositAmount)
+          : undefined,
       };
 
       const created = await createActivity(data);
@@ -203,9 +224,17 @@ export default function ActivityNewPage() {
                 </Label>
                 <Select
                   value={formData.activityTypeId}
-                  onValueChange={(value) =>
-                    handleInputChange("activityTypeId", value)
-                  }
+                  onValueChange={(value) => {
+                    handleInputChange("activityTypeId", value);
+                    const type = activityTypes.find((item) => item.id === value);
+                    if (
+                      (type?.code === "STUDY" ||
+                        type?.code === "SPECIAL_LECTURE") &&
+                      !formData.depositAmount
+                    ) {
+                      handleInputChange("depositAmount", "30000");
+                    }
+                  }}
                 >
                   <SelectTrigger id="activityType" className="w-48">
                     <SelectValue placeholder="유형 선택" />
@@ -219,6 +248,33 @@ export default function ActivityNewPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {requiresDeposit && (
+                <div className="space-y-2">
+                  <Label htmlFor="depositAmount">참여 보증금</Label>
+                  <div className="relative w-48">
+                    <Input
+                      id="depositAmount"
+                      value={formData.depositAmount}
+                      onChange={(event) =>
+                        handleInputChange(
+                          "depositAmount",
+                          event.target.value.replace(/\D/g, ""),
+                        )
+                      }
+                      inputMode="numeric"
+                      className="pr-9"
+                      maxLength={7}
+                    />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      원
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    0원으로 설정하면 보증금 절차를 사용하지 않습니다.
+                  </p>
+                </div>
+              )}
 
               {/* Quarter */}
               <div className="space-y-2">

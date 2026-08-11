@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -19,6 +19,9 @@ import {
   UserPlus,
   X,
   Search,
+  CalendarRange,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,23 +72,30 @@ import {
   updateActivityParticipantStatus,
   updateActivityParticipantCompleted,
   createActivityParticipant,
+  getActivityParticipantRefundAccounts,
 } from "@/lib/api/activity-participant";
 import { getAllUsers } from "@/lib/api/user";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import {
   getActivitySessionsByActivityId,
   createActivitySession,
+  createActivitySessionsBulk,
   deleteActivitySession,
 } from "@/lib/api/activity-session";
 import {
   getAttendancesBySessionId,
-  bulkCreateAttendances,
   getAttendanceStatsByParticipantId,
   bulkUpdateAttendances,
 } from "@/lib/api/attendance";
 import { ActivityResponse } from "@/lib/interfaces/activity";
-import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
-import { ActivitySessionResponseDto } from "@/lib/interfaces/activity-session";
+import {
+  ActivityParticipantRefundAccount,
+  ActivityParticipantResponse,
+} from "@/lib/interfaces/activity-participant";
+import {
+  ActivitySessionResponseDto,
+  ActivitySessionWeekday,
+} from "@/lib/interfaces/activity-session";
 import { AttendanceResponseDto } from "@/lib/interfaces/attendance";
 import { AttendanceInputContent } from "@/components/custom/attendance/attendance-input-content";
 import { formatDate, formatDateTime } from "@/lib/utils/date-utils";
@@ -108,6 +118,40 @@ import {
 import { ParticipantStatusSelector } from "@/components/custom/participant/participant-status-selector";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useAuth } from "@/lib/contexts/AuthContext";
+
+const WEEKDAY_OPTIONS: { value: ActivitySessionWeekday; label: string }[] = [
+  { value: "MONDAY", label: "월" },
+  { value: "TUESDAY", label: "화" },
+  { value: "WEDNESDAY", label: "수" },
+  { value: "THURSDAY", label: "목" },
+  { value: "FRIDAY", label: "금" },
+  { value: "SATURDAY", label: "토" },
+  { value: "SUNDAY", label: "일" },
+];
+
+const SESSIONS_PER_PAGE = 10;
+
+const WEEKDAY_BY_INDEX: ActivitySessionWeekday[] = [
+  "SUNDAY",
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+];
+
+function parseLocalDate(value: string) {
+  return new Date(`${value}T00:00:00`);
+}
+
+function localDateValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function getActivityStatusLabel(status: string): string {
   const statusMap: Record<string, string> = {
@@ -246,13 +290,22 @@ export default function ActivityDetailManagePage() {
   const params = useParams();
   const router = useRouter();
   const activityId = params.id as string;
+  const { userId, roles, isLoading: authLoading } = useAuth();
+  const canAdministerActivity = roles.some(
+    (role) => role === "ADMIN" || role === "MANAGER",
+  );
 
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
+  const isActivityAssignee = activity?.assignee?.id === userId;
+  const canReviewApplications = canAdministerActivity || isActivityAssignee;
   const [participants, setParticipants] = useState<
     ActivityParticipantResponse[]
   >([]);
   const [filteredParticipants, setFilteredParticipants] = useState<
     ActivityParticipantResponse[]
+  >([]);
+  const [refundAccounts, setRefundAccounts] = useState<
+    ActivityParticipantRefundAccount[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -266,6 +319,8 @@ export default function ActivityDetailManagePage() {
 
   // Session & Attendance states
   const [sessions, setSessions] = useState<ActivitySessionResponseDto[]>([]);
+  const [sessionPage, setSessionPage] = useState(1);
+  const [activeTab, setActiveTab] = useState("info");
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [attendanceStats, setAttendanceStats] = useState<
     Map<
@@ -281,10 +336,25 @@ export default function ActivityDetailManagePage() {
   >(new Map());
   const [statsLoading, setStatsLoading] = useState(false);
   const [showSessionDialog, setShowSessionDialog] = useState(false);
+  const [showBulkSessionDialog, setShowBulkSessionDialog] = useState(false);
+  const [bulkSessionCreating, setBulkSessionCreating] = useState(false);
   const [sessionDialogStep, setSessionDialogStep] = useState<1 | 2>(1);
   const [sessionForm, setSessionForm] = useState({
     sessionNumber: 1,
     date: "",
+    description: "",
+  });
+  const [bulkSessionForm, setBulkSessionForm] = useState<{
+    startDate: string;
+    endDate: string;
+    weekdays: ActivitySessionWeekday[];
+    intervalWeeks: number;
+    description: string;
+  }>({
+    startDate: "",
+    endDate: "",
+    weekdays: [],
+    intervalWeeks: 1,
     description: "",
   });
   const [showAttendanceDialog, setShowAttendanceDialog] = useState(false);
@@ -337,19 +407,94 @@ export default function ActivityDetailManagePage() {
     useState(false);
   const [bulkSessionDeleting, setBulkSessionDeleting] = useState(false);
 
+  const bulkSessionPreview = useMemo(() => {
+    if (
+      !bulkSessionForm.startDate ||
+      !bulkSessionForm.endDate ||
+      bulkSessionForm.weekdays.length === 0
+    ) {
+      return [];
+    }
+
+    const start = parseLocalDate(bulkSessionForm.startDate);
+    const end = parseLocalDate(bulkSessionForm.endDate);
+    if (start > end) return [];
+
+    const firstWeekStart = new Date(start);
+    firstWeekStart.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    const existingDates = new Set(sessions.map((session) => session.date));
+    const dates: string[] = [];
+
+    for (
+      const cursor = new Date(start);
+      cursor <= end;
+      cursor.setDate(cursor.getDate() + 1)
+    ) {
+      const cursorWeekStart = new Date(cursor);
+      cursorWeekStart.setDate(cursor.getDate() - ((cursor.getDay() + 6) % 7));
+      const weekOffset = Math.round(
+        (cursorWeekStart.getTime() - firstWeekStart.getTime()) /
+          (7 * 24 * 60 * 60 * 1000),
+      );
+      const dateValue = localDateValue(cursor);
+      if (
+        weekOffset % bulkSessionForm.intervalWeeks === 0 &&
+        bulkSessionForm.weekdays.includes(WEEKDAY_BY_INDEX[cursor.getDay()]) &&
+        !existingDates.has(dateValue)
+      ) {
+        dates.push(dateValue);
+      }
+    }
+    return dates;
+  }, [bulkSessionForm, sessions]);
+
+  const sessionTotalPages = Math.max(
+    1,
+    Math.ceil(sessions.length / SESSIONS_PER_PAGE),
+  );
+  const paginatedSessions = sessions.slice(
+    (sessionPage - 1) * SESSIONS_PER_PAGE,
+    sessionPage * SESSIONS_PER_PAGE,
+  );
+  const completedSessionCount = sessions.filter(
+    (session) => session.date <= localDateValue(),
+  ).length;
+  const upcomingSessionCount = sessions.length - completedSessionCount;
+
   useEffect(() => {
+    setSessionPage((page) => Math.min(page, sessionTotalPages));
+  }, [sessionTotalPages]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
     async function fetchData() {
       setLoading(true);
       try {
-        const [activityData, participantsData, usersData] = await Promise.all([
-          getActivityById(activityId),
-          getActivityParticipantsByActivityId({ activityId }),
-          getAllUsers(),
-        ]);
+        const activityData = await getActivityById(activityId);
+        const isAssignee = activityData.assignee?.id === userId;
+        if (!canAdministerActivity && !isAssignee) {
+          toast.error("해당 활동을 관리할 권한이 없습니다.");
+          router.replace(`/activities/${activityId}`);
+          return;
+        }
+
+        const requiresDeposit =
+          activityData.activityType.code === "STUDY" ||
+          activityData.activityType.code === "SPECIAL_LECTURE";
+        const [participantsData, usersData, refundAccountsData] =
+          await Promise.all([
+            getActivityParticipantsByActivityId({ activityId }),
+            canAdministerActivity ? getAllUsers() : Promise.resolve([]),
+            canAdministerActivity && requiresDeposit
+              ? getActivityParticipantRefundAccounts(activityId)
+              : Promise.resolve([]),
+          ]);
         setActivity(activityData);
         setParticipants(participantsData);
         setFilteredParticipants(participantsData);
         setAllUsers(usersData);
+        setRefundAccounts(refundAccountsData);
       } catch (error: any) {
         console.error("Failed to fetch activity data:", error);
       } finally {
@@ -358,7 +503,7 @@ export default function ActivityDetailManagePage() {
     }
 
     fetchData();
-  }, [activityId]);
+  }, [activityId, authLoading, canAdministerActivity, router, userId]);
 
   async function handleAddMember(userId: string) {
     setAddingUserId(userId);
@@ -378,26 +523,29 @@ export default function ActivityDetailManagePage() {
     }
   }
 
-  // Load sessions when attendance tab is accessed
-  async function loadSessions() {
-    if (sessions.length > 0) return; // Already loaded
-
-    setSessionsLoading(true);
+  async function refreshScheduleAndAttendance(showLoading = true) {
+    if (showLoading) setSessionsLoading(true);
     try {
       const sessionsData = await getActivitySessionsByActivityId(activityId);
-      setSessions(
-        sessionsData.sort((a, b) => a.sessionNumber - b.sessionNumber),
+      const sortedSessions = [...sessionsData].sort(
+        (a, b) => a.sessionNumber - b.sessionNumber,
       );
-
-      // Load attendance stats for approved participants
-      await loadAttendanceStats();
-
-      // Load attendance status for each session
-      await loadSessionAttendanceStatus(sessionsData);
+      setSessions(sortedSessions);
+      setSelectedSessionIds((selected) => {
+        const validIds = new Set(sortedSessions.map((session) => session.id));
+        return new Set([...selected].filter((id) => validIds.has(id)));
+      });
+      await Promise.all([
+        loadAttendanceStats(),
+        loadSessionAttendanceStatus(sortedSessions),
+      ]);
+      return sortedSessions;
     } catch (error: any) {
       console.error("Failed to load sessions:", error);
+      toast.error("일정과 출석 현황을 불러오지 못했습니다.");
+      return null;
     } finally {
-      setSessionsLoading(false);
+      if (showLoading) setSessionsLoading(false);
     }
   }
 
@@ -422,7 +570,9 @@ export default function ActivityDetailManagePage() {
         const present = attendances.filter(
           (a) => a.status === "PRESENT",
         ).length;
-        const absent = attendances.filter((a) => a.status === "ABSENT").length;
+        const absent = attendances.filter(
+          (a) => a.status === "ABSENT" || a.status === "LATE",
+        ).length;
         const excused = attendances.filter(
           (a) => a.status === "EXCUSED",
         ).length;
@@ -447,7 +597,10 @@ export default function ActivityDetailManagePage() {
       (p) => p.status === "APPROVED",
     );
 
-    if (approvedParticipants.length === 0) return;
+    if (approvedParticipants.length === 0) {
+      setAttendanceStats(new Map());
+      return;
+    }
 
     setStatsLoading(true);
     try {
@@ -505,9 +658,16 @@ export default function ActivityDetailManagePage() {
   // Auto-load sessions once main data is ready
   useEffect(() => {
     if (!loading) {
-      loadSessions();
+      refreshScheduleAndAttendance();
     }
   }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleTabChange(value: string) {
+    setActiveTab(value);
+    if (value === "schedule" || value === "attendance") {
+      void refreshScheduleAndAttendance(false);
+    }
+  }
 
   function handleEdit() {
     router.push(`/manage/activities/${activityId}/edit`);
@@ -529,7 +689,7 @@ export default function ActivityDetailManagePage() {
   }
 
   function handleBackToList() {
-    router.push("/manage/activities");
+    router.push(canAdministerActivity ? "/manage/activities" : `/activities/${activityId}`);
   }
 
   function handleMemberClick(userId: string, e: React.MouseEvent) {
@@ -560,10 +720,17 @@ export default function ActivityDetailManagePage() {
   // Session selection handlers
   function handleSelectAllSessions(checked: boolean) {
     if (checked) {
-      const allIds = new Set(sessions.map((s) => s.id));
-      setSelectedSessionIds(allIds);
+      setSelectedSessionIds((selected) => {
+        const next = new Set(selected);
+        paginatedSessions.forEach((session) => next.add(session.id));
+        return next;
+      });
     } else {
-      setSelectedSessionIds(new Set());
+      setSelectedSessionIds((selected) => {
+        const next = new Set(selected);
+        paginatedSessions.forEach((session) => next.delete(session.id));
+        return next;
+      });
     }
   }
 
@@ -712,6 +879,61 @@ export default function ActivityDetailManagePage() {
     setShowSessionDialog(true);
   }
 
+  function handleOpenBulkSessionDialog() {
+    if (!activity) return;
+    const start = parseLocalDate(activity.startDate);
+    setBulkSessionForm({
+      startDate: activity.startDate,
+      endDate: activity.endDate,
+      weekdays: [WEEKDAY_BY_INDEX[start.getDay()]],
+      intervalWeeks: 1,
+      description: "",
+    });
+    setShowBulkSessionDialog(true);
+  }
+
+  function toggleBulkWeekday(weekday: ActivitySessionWeekday) {
+    setBulkSessionForm((previous) => ({
+      ...previous,
+      weekdays: previous.weekdays.includes(weekday)
+        ? previous.weekdays.filter((value) => value !== weekday)
+        : [...previous.weekdays, weekday],
+    }));
+  }
+
+  async function handleCreateBulkSessions() {
+    if (bulkSessionForm.weekdays.length === 0) {
+      toast.error("진행 요일을 하나 이상 선택해주세요.");
+      return;
+    }
+    if (bulkSessionPreview.length === 0) {
+      toast.error("새로 생성할 일정이 없습니다.");
+      return;
+    }
+
+    setBulkSessionCreating(true);
+    try {
+      const createdSessions = await createActivitySessionsBulk({
+        activityId,
+        ...bulkSessionForm,
+        excludedDates: [],
+      });
+      const refreshedSessions = await refreshScheduleAndAttendance(false);
+      if (refreshedSessions) {
+        setSessionPage(
+          Math.max(1, Math.ceil(refreshedSessions.length / SESSIONS_PER_PAGE)),
+        );
+      }
+      setShowBulkSessionDialog(false);
+      toast.success(`${createdSessions.length}개 일정이 생성되었습니다.`);
+    } catch (error: any) {
+      console.error("Failed to create recurring sessions:", error);
+      toast.error(error.response?.data || "반복 일정 생성에 실패했습니다.");
+    } finally {
+      setBulkSessionCreating(false);
+    }
+  }
+
   async function handleCreateSessionOnly() {
     if (!sessionForm.date) {
       toast.error("날짜를 입력해주세요.");
@@ -719,28 +941,19 @@ export default function ActivityDetailManagePage() {
     }
 
     try {
-      const newSession = await createActivitySession({
+      await createActivitySession({
         activityId,
         sessionNumber: sessionForm.sessionNumber,
         date: sessionForm.date,
         description: sessionForm.description,
       });
 
-      setSessions((prev) =>
-        [...prev, newSession].sort((a, b) => a.sessionNumber - b.sessionNumber),
-      );
-
-      // Update session attendance status
-      setSessionAttendanceStatus((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(newSession.id, {
-          present: 0,
-          absent: 0,
-          excused: 0,
-          total: 0,
-        });
-        return newMap;
-      });
+      const refreshedSessions = await refreshScheduleAndAttendance(false);
+      if (refreshedSessions) {
+        setSessionPage(
+          Math.max(1, Math.ceil(refreshedSessions.length / SESSIONS_PER_PAGE)),
+        );
+      }
 
       setShowSessionDialog(false);
       toast.success("진행 일정이 등록되었습니다.");
@@ -788,7 +1001,7 @@ export default function ActivityDetailManagePage() {
     if (!deleteSessionId) return;
     try {
       await deleteActivitySession(deleteSessionId);
-      setSessions((prev) => prev.filter((s) => s.id !== deleteSessionId));
+      await refreshScheduleAndAttendance(false);
       toast.success("회차가 삭제되었습니다.");
     } catch (error: any) {
       console.error("Failed to delete session:", error);
@@ -808,9 +1021,8 @@ export default function ActivityDetailManagePage() {
     const successCount = results.filter((r) => r.status === "fulfilled").length;
     const failureCount = results.filter((r) => r.status === "rejected").length;
 
-    setSessions((prev) => prev.filter((s) => !selectedSessionIds.has(s.id)));
-
     setSelectedSessionIds(new Set());
+    await refreshScheduleAndAttendance(false);
     setShowBulkSessionDeleteDialog(false);
     setBulkSessionDeleting(false);
 
@@ -856,7 +1068,7 @@ export default function ActivityDetailManagePage() {
         existingAttendances.forEach((att) => {
           if (att.status === "PRESENT") {
             newData.present.add(att.participant.id);
-          } else if (att.status === "ABSENT") {
+          } else if (att.status === "ABSENT" || att.status === "LATE") {
             newData.absent.add(att.participant.id);
           } else if (att.status === "EXCUSED") {
             newData.excused.add(att.participant.id);
@@ -970,23 +1182,21 @@ export default function ActivityDetailManagePage() {
       attendanceData.absent.size +
       attendanceData.excused.size;
 
+    const approvedCount = participants.filter(
+      (participant) => participant.status === "APPROVED",
+    ).length;
+    if (totalAssigned !== approvedCount) {
+      toast.error("모든 참여자의 출석 상태를 지정해주세요.");
+      return;
+    }
+
     try {
-      if (isEditingAttendance) {
-        // Update existing attendance records
-        await bulkUpdateAttendances({
-          sessionId: selectedSession.id,
-          presentParticipantIds: Array.from(attendanceData.present),
-          absentParticipantIds: Array.from(attendanceData.absent),
-          excusedParticipantIds: Array.from(attendanceData.excused),
-        });
-      } else {
-        await bulkCreateAttendances({
-          sessionId: selectedSession.id,
-          presentParticipantIds: Array.from(attendanceData.present),
-          absentParticipantIds: Array.from(attendanceData.absent),
-          excusedParticipantIds: Array.from(attendanceData.excused),
-        });
-      }
+      await bulkUpdateAttendances({
+        sessionId: selectedSession.id,
+        presentParticipantIds: Array.from(attendanceData.present),
+        absentParticipantIds: Array.from(attendanceData.absent),
+        excusedParticipantIds: Array.from(attendanceData.excused),
+      });
 
       // Update session attendance status
       setSessionAttendanceStatus((prev) => {
@@ -1006,7 +1216,7 @@ export default function ActivityDetailManagePage() {
       toast.success("출석이 저장되었습니다.");
 
       // Reload attendance stats after saving
-      await loadAttendanceStats();
+      await refreshScheduleAndAttendance(false);
     } catch (error: any) {
       console.error("Failed to save attendance:", error);
       toast.error(error.response?.data || "출석 저장에 실패했습니다.");
@@ -1016,6 +1226,7 @@ export default function ActivityDetailManagePage() {
   function handleSkipAttendanceInput() {
     setShowSessionDialog(false);
     setSessionDialogStep(1);
+    void refreshScheduleAndAttendance(false);
     toast.success("진행 일정이 등록되었습니다.");
   }
 
@@ -1129,7 +1340,7 @@ export default function ActivityDetailManagePage() {
         excusedCount: 0,
       };
 
-      const totalSessions = sessions.length;
+      const totalSessions = completedSessionCount;
       const attendedCount = stats.presentCount + stats.excusedCount;
       const attendanceRate =
         totalSessions > 0 ? (attendedCount / totalSessions) * 100 : 0;
@@ -1170,7 +1381,7 @@ export default function ActivityDetailManagePage() {
       {/* Header */}
       <div className="space-y-3">
         <Button
-          onClick={() => router.push("/manage/activities")}
+          onClick={handleBackToList}
           variant="ghost"
           size="sm"
           className="mb-2"
@@ -1194,14 +1405,16 @@ export default function ActivityDetailManagePage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="info" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
           <TabsTrigger value="info" className="px-4 py-2">
             기본 정보
           </TabsTrigger>
-          <TabsTrigger value="applications" className="px-4 py-2">
-            신청 관리
-          </TabsTrigger>
+          {canReviewApplications && (
+            <TabsTrigger value="applications" className="px-4 py-2">
+              참여자 현황
+            </TabsTrigger>
+          )}
           <TabsTrigger value="schedule" className="px-4 py-2">
             일정 관리
           </TabsTrigger>
@@ -1242,6 +1455,18 @@ export default function ActivityDetailManagePage() {
                   label="유형"
                   value={activity.activityType.name}
                 />
+                {(activity.activityType.code === "STUDY" ||
+                  activity.activityType.code === "SPECIAL_LECTURE") && (
+                  <InfoRow
+                    icon={<Info className="h-4 w-4" />}
+                    label="참여 보증금"
+                    value={
+                      activity.depositAmount > 0
+                        ? `${activity.depositAmount.toLocaleString("ko-KR")}원`
+                        : "없음"
+                    }
+                  />
+                )}
                 <InfoRow
                   icon={<CalendarDays className="h-4 w-4" />}
                   label="분기"
@@ -1299,30 +1524,38 @@ export default function ActivityDetailManagePage() {
             </CardContent>
           </Card>
         </TabsContent>
+        {canReviewApplications && (
         <TabsContent value="applications" className="space-y-4">
-          {/* 신청 내역 Card */}
+          {/* 참여자 현황 Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-3">
-                  신청 내역
+                  참여자 현황
                   <span className="text-sm font-normal text-muted-foreground">
                     총 {filteredParticipants.length}건
                   </span>
                 </CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowAddMemberDialog(true)}
-                >
-                  <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-                  멤버 추가
-                </Button>
+                {canAdministerActivity && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowAddMemberDialog(true)}
+                  >
+                    <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                    멤버 추가
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {!canAdministerActivity && (
+                <p className="text-sm text-muted-foreground">
+                  개설한 활동의 참여자 현황을 확인할 수 있습니다.
+                </p>
+              )}
               {/* Filters / Bulk Toolbar Toggle */}
-              {selectedIds.size > 0 ? (
+              {canAdministerActivity && selectedIds.size > 0 ? (
                 <div className="flex items-center gap-3 h-9">
                   <span className="text-xs text-muted-foreground font-medium">
                     {selectedIds.size}개 선택됨
@@ -1385,21 +1618,23 @@ export default function ActivityDetailManagePage() {
               {filteredParticipants.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <UserIcon className="h-12 w-12 text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">신청 내역이 없습니다</p>
+                  <p className="text-muted-foreground">참여자가 없습니다</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={
-                            filteredParticipants.length > 0 &&
-                            selectedIds.size === filteredParticipants.length
-                          }
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </TableHead>
+                      {canAdministerActivity && (
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={
+                              filteredParticipants.length > 0 &&
+                              selectedIds.size === filteredParticipants.length
+                            }
+                            onCheckedChange={handleSelectAll}
+                          />
+                        </TableHead>
+                      )}
                       <TableHead className="w-30">이름</TableHead>
                       <TableHead className="w-30">학번</TableHead>
                       <TableHead className="w-60">이메일</TableHead>
@@ -1413,22 +1648,27 @@ export default function ActivityDetailManagePage() {
                       return (
                         <TableRow
                           key={participant.id}
-                          onClick={(e) =>
-                            handleMemberClick(participant.user!.id, e)
+                          onClick={
+                            canAdministerActivity
+                              ? (e) => handleMemberClick(participant.user!.id, e)
+                              : undefined
                           }
+                          className={canAdministerActivity ? "cursor-pointer" : undefined}
                         >
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedIds.has(participant.id)}
-                              onCheckedChange={(checked) =>
-                                handleSelectOne(
-                                  participant.id,
-                                  checked as boolean,
-                                )
-                              }
-                              disabled={isUpdating}
-                            />
-                          </TableCell>
+                          {canAdministerActivity && (
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedIds.has(participant.id)}
+                                onCheckedChange={(checked) =>
+                                  handleSelectOne(
+                                    participant.id,
+                                    checked as boolean,
+                                  )
+                                }
+                                disabled={isUpdating}
+                              />
+                            </TableCell>
+                          )}
                           <TableCell className="font-medium">
                             {participant.user?.name || "-"}
                           </TableCell>
@@ -1455,8 +1695,66 @@ export default function ActivityDetailManagePage() {
             </CardContent>
           </Card>
 
+          {canAdministerActivity &&
+            (activity.activityType.code === "STUDY" ||
+              activity.activityType.code === "SPECIAL_LECTURE") && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    보증금 환급 정보
+                    <span className="text-sm font-normal text-muted-foreground">
+                      총 {refundAccounts.length}건
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {refundAccounts.length === 0 ? (
+                    <div className="py-10 text-center text-sm text-muted-foreground">
+                      등록된 환급 계좌가 없습니다.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>이름</TableHead>
+                            <TableHead>학번</TableHead>
+                            <TableHead>은행</TableHead>
+                            <TableHead>계좌번호</TableHead>
+                            <TableHead>예금주</TableHead>
+                            <TableHead>입금 확인 시각</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {refundAccounts.map((account) => (
+                            <TableRow key={account.participantId}>
+                              <TableCell className="font-medium">
+                                {account.userName}
+                              </TableCell>
+                              <TableCell>{account.studentId}</TableCell>
+                              <TableCell>{account.bankName}</TableCell>
+                              <TableCell className="font-mono text-sm">
+                                {account.accountNumber}
+                              </TableCell>
+                              <TableCell>{account.accountHolder}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {formatDateTime(account.paymentConfirmedAt)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    환급 계좌 정보는 보증금 반환 업무에만 사용해주세요.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
           {/* 멤버 직접 추가 Dialog */}
-          <Dialog
+          {canAdministerActivity && <Dialog
             open={showAddMemberDialog}
             onOpenChange={(open) => {
               setShowAddMemberDialog(open);
@@ -1528,22 +1826,33 @@ export default function ActivityDetailManagePage() {
                 })()}
               </div>
             </DialogContent>
-          </Dialog>
+          </Dialog>}
         </TabsContent>
+        )}
         <TabsContent value="schedule" className="space-y-4">
           {/* 진행 일정 Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>진행 일정</CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleOpenSessionDialog}
-                >
-                  <Plus className="h-3 w-3" />
-                  <span className="text-xs">일정 생성</span>
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleOpenBulkSessionDialog}
+                  >
+                    <CalendarRange className="h-3.5 w-3.5" />
+                    <span className="text-xs">반복 일정</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleOpenSessionDialog}
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span className="text-xs">한 회차</span>
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1587,14 +1896,17 @@ export default function ActivityDetailManagePage() {
                   </p>
                 </div>
               ) : (
+                <>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12">
                         <Checkbox
                           checked={
-                            sessions.length > 0 &&
-                            selectedSessionIds.size === sessions.length
+                            paginatedSessions.length > 0 &&
+                            paginatedSessions.every((session) =>
+                              selectedSessionIds.has(session.id),
+                            )
                           }
                           onCheckedChange={handleSelectAllSessions}
                         />
@@ -1607,7 +1919,7 @@ export default function ActivityDetailManagePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sessions.map((session) => {
+                    {paginatedSessions.map((session) => {
                       const status = sessionAttendanceStatus.get(session.id);
                       const hasAttendance = status && status.total > 0;
 
@@ -1678,6 +1990,40 @@ export default function ActivityDetailManagePage() {
                     })}
                   </TableBody>
                 </Table>
+                {sessionTotalPages > 1 && (
+                  <div className="flex items-center justify-center gap-3 border-t pt-5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label="이전 페이지"
+                      onClick={() =>
+                        setSessionPage((page) => Math.max(1, page - 1))
+                      }
+                      disabled={sessionPage === 1}
+                    >
+                      <ChevronLeft />
+                    </Button>
+                    <span className="min-w-16 text-center text-sm font-medium text-muted-foreground">
+                      {sessionPage} / {sessionTotalPages}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label="다음 페이지"
+                      onClick={() =>
+                        setSessionPage((page) =>
+                          Math.min(sessionTotalPages, page + 1),
+                        )
+                      }
+                      disabled={sessionPage === sessionTotalPages}
+                    >
+                      <ChevronRight />
+                    </Button>
+                  </div>
+                )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -1690,7 +2036,27 @@ export default function ActivityDetailManagePage() {
               <CardTitle>출석 현황</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {selectedCompletionIds.size > 0 ? (
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b pb-4 text-sm">
+                <span className="text-muted-foreground">
+                  전체 일정{" "}
+                  <strong className="font-semibold text-foreground">
+                    {sessions.length}회
+                  </strong>
+                </span>
+                <span className="text-muted-foreground">
+                  진행 회차{" "}
+                  <strong className="font-semibold text-foreground">
+                    {completedSessionCount}회
+                  </strong>
+                </span>
+                <span className="text-muted-foreground">
+                  예정 회차{" "}
+                  <strong className="font-semibold text-foreground">
+                    {upcomingSessionCount}회
+                  </strong>
+                </span>
+              </div>
+              {canAdministerActivity && selectedCompletionIds.size > 0 ? (
                 <div className="flex items-center gap-3 h-9">
                   <span className="text-xs text-muted-foreground font-medium">
                     {selectedCompletionIds.size}명 선택됨
@@ -1751,7 +2117,7 @@ export default function ActivityDetailManagePage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12">
+                        {canAdministerActivity && <TableHead className="w-12">
                           <Checkbox
                             checked={
                               participants.filter(
@@ -1765,14 +2131,14 @@ export default function ActivityDetailManagePage() {
                             }
                             onCheckedChange={handleSelectAllCompletion}
                           />
-                        </TableHead>
+                        </TableHead>}
                         <TableHead className="w-32">이름</TableHead>
                         <TableHead className="w-32">학번</TableHead>
                         <TableHead className="text-center w-24">
                           출석률
                         </TableHead>
                         <TableHead className="text-center w-32">
-                          출석/전체
+                          출석/진행 회차
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1785,7 +2151,7 @@ export default function ActivityDetailManagePage() {
                           );
                           return (
                             <TableRow key={participant.id}>
-                              <TableCell>
+                              {canAdministerActivity && <TableCell>
                                 {!participant.completed && (
                                   <Checkbox
                                     checked={selectedCompletionIds.has(
@@ -1799,7 +2165,7 @@ export default function ActivityDetailManagePage() {
                                     }
                                   />
                                 )}
-                              </TableCell>
+                              </TableCell>}
                               <TableCell className="font-medium">
                                 {participant.user?.name || "-"}
                               </TableCell>
@@ -1813,8 +2179,8 @@ export default function ActivityDetailManagePage() {
                               </TableCell>
                               <TableCell className="text-center text-muted-foreground">
                                 {stats
-                                  ? `${stats.presentCount}/${stats.totalSessions}`
-                                  : `0/${sessions.length}`}
+                                  ? `${stats.presentCount + stats.excusedCount}/${stats.totalSessions}`
+                                  : `0/${completedSessionCount}`}
                               </TableCell>
                             </TableRow>
                           );
@@ -1823,7 +2189,7 @@ export default function ActivityDetailManagePage() {
                   </Table>
 
                   <p className="text-xs text-muted-foreground mt-2">
-                    출석률은 (출석+공결) / 전체 회차 기준입니다.
+                    출석률은 오늘까지 진행된 회차 중 출석과 공결을 기준으로 계산합니다.
                   </p>
                 </>
               )}
@@ -1831,7 +2197,7 @@ export default function ActivityDetailManagePage() {
           </Card>
         </TabsContent>
       </Tabs>
-      <div className="flex gap-2 justify-end">
+      {canAdministerActivity && <div className="flex gap-2 justify-end">
         <Button variant="outline" onClick={handleEdit}>
           <Pencil className="h-3 w-3" />
           <span className="text-xs">수정</span>
@@ -1840,7 +2206,144 @@ export default function ActivityDetailManagePage() {
           <Trash2 className="h-3 w-3" />
           <span className="text-xs">삭제</span>
         </Button>
-      </div>
+      </div>}
+
+      <Dialog open={showBulkSessionDialog} onOpenChange={setShowBulkSessionDialog}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>반복 일정 생성</DialogTitle>
+            <DialogDescription>
+              활동 기간과 요일을 기준으로 여러 회차를 한 번에 만듭니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-1">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="bulk-session-start">
+                  시작일
+                </label>
+                <Input
+                  id="bulk-session-start"
+                  type="date"
+                  min={activity.startDate}
+                  max={activity.endDate}
+                  value={bulkSessionForm.startDate}
+                  onChange={(event) =>
+                    setBulkSessionForm((previous) => ({
+                      ...previous,
+                      startDate: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="bulk-session-end">
+                  종료일
+                </label>
+                <Input
+                  id="bulk-session-end"
+                  type="date"
+                  min={activity.startDate}
+                  max={activity.endDate}
+                  value={bulkSessionForm.endDate}
+                  onChange={(event) =>
+                    setBulkSessionForm((previous) => ({
+                      ...previous,
+                      endDate: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-sm font-medium">진행 요일</span>
+              <div className="grid grid-cols-7 gap-1.5">
+                {WEEKDAY_OPTIONS.map((weekday) => {
+                  const selected = bulkSessionForm.weekdays.includes(weekday.value);
+                  return (
+                    <Button
+                      key={weekday.value}
+                      type="button"
+                      size="sm"
+                      variant={selected ? "default" : "outline"}
+                      aria-pressed={selected}
+                      className="px-0"
+                      onClick={() => toggleBulkWeekday(weekday.value)}
+                    >
+                      {weekday.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <span className="text-sm font-medium">반복 주기</span>
+                <Select
+                  value={String(bulkSessionForm.intervalWeeks)}
+                  onValueChange={(value) =>
+                    setBulkSessionForm((previous) => ({
+                      ...previous,
+                      intervalWeeks: Number(value),
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">매주</SelectItem>
+                    <SelectItem value="2">2주마다</SelectItem>
+                    <SelectItem value="3">3주마다</SelectItem>
+                    <SelectItem value="4">4주마다</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="bulk-session-description">
+                  공통 설명
+                </label>
+                <Input
+                  id="bulk-session-description"
+                  value={bulkSessionForm.description}
+                  placeholder="선택 사항"
+                  onChange={(event) =>
+                    setBulkSessionForm((previous) => ({
+                      ...previous,
+                      description: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="rounded-md border bg-muted/30 px-4 py-3 text-sm">
+              <p className="font-medium">{bulkSessionPreview.length}개 일정 생성 예정</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {bulkSessionPreview.length > 0
+                  ? `${bulkSessionPreview.slice(0, 3).map(formatDate).join(", ")}${bulkSessionPreview.length > 3 ? ` 외 ${bulkSessionPreview.length - 3}개` : ""}`
+                  : "기간과 요일을 확인해주세요."}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkSessionDialog(false)}
+              disabled={bulkSessionCreating}
+            >
+              취소
+            </Button>
+            <Button onClick={handleCreateBulkSessions} disabled={bulkSessionCreating}>
+              {bulkSessionCreating ? "생성 중..." : "일정 생성"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Session Create Dialog - 2 Step Flow */}
       <Dialog
@@ -1936,7 +2439,6 @@ export default function ActivityDetailManagePage() {
                   selectedParticipants={selectedParticipants}
                   attendanceSearchQuery={attendanceSearchQuery}
                   attendanceStatusTab={attendanceStatusTab}
-                  isEditingAttendance={isEditingAttendance}
                   onToggleSelection={handleToggleParticipantSelection}
                   onBulkAssignStatus={handleBulkAssignStatus}
                   onMoveParticipant={handleMoveParticipant}
@@ -1994,7 +2496,6 @@ export default function ActivityDetailManagePage() {
               selectedParticipants={selectedParticipants}
               attendanceSearchQuery={attendanceSearchQuery}
               attendanceStatusTab={attendanceStatusTab}
-              isEditingAttendance={isEditingAttendance}
               onToggleSelection={handleToggleParticipantSelection}
               onBulkAssignStatus={handleBulkAssignStatus}
               onMoveParticipant={handleMoveParticipant}
