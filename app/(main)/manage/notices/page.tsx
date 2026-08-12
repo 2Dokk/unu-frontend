@@ -259,7 +259,6 @@ export default function NoticesPage() {
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">태그</label>
               <Input
-                placeholder="예: 행사, 활동, 모집"
                 value={formData.tag}
                 onChange={(e) =>
                   setFormData({ ...formData, tag: e.target.value })

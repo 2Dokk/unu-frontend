@@ -370,7 +370,6 @@ export function WeeklyMaterials({
                     title: event.target.value,
                   }))
                 }
-                placeholder="예: HTML/CSS 기초"
               />
             </div>
             <div className="space-y-2">
@@ -401,7 +400,6 @@ export function WeeklyMaterials({
                     materialName: event.target.value,
                   }))
                 }
-                placeholder="예: 1주차 강의안"
               />
             </div>
             <div className="space-y-2">

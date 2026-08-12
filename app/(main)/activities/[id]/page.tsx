@@ -1222,7 +1222,6 @@ export default function ActivityDetails() {
                   <Input
                     value={refundBankName}
                     onChange={(event) => setRefundBankName(event.target.value)}
-                    placeholder="예: 신한은행"
                     maxLength={50}
                     autoComplete="off"
                   />

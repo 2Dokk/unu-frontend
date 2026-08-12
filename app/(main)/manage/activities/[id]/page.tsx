@@ -387,6 +387,11 @@ export default function ActivityDetailManagePage() {
     open: boolean;
     participant: ActivityParticipantResponse | null;
   }>({ open: false, participant: null });
+  const [revokeCompletionDialog, setRevokeCompletionDialog] = useState<{
+    open: boolean;
+    participant: ActivityParticipantResponse | null;
+  }>({ open: false, participant: null });
+  const [revokingCompletion, setRevokingCompletion] = useState(false);
   const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
 
   // Bulk completion states
@@ -1291,7 +1296,10 @@ export default function ActivityDetailManagePage() {
     if (!completionDialog.participant) return;
 
     try {
-      await updateActivityParticipantCompleted(completionDialog.participant.id);
+      await updateActivityParticipantCompleted(
+        completionDialog.participant.id,
+        true,
+      );
 
       // Update local state
       setParticipants((prev) =>
@@ -1307,6 +1315,34 @@ export default function ActivityDetailManagePage() {
     } catch (error: any) {
       console.error("Failed to mark as completed:", error);
       toast.error(error.response?.data || "수료 처리에 실패했습니다.");
+    }
+  }
+
+  async function handleRevokeCompletion() {
+    if (!revokeCompletionDialog.participant) return;
+
+    setRevokingCompletion(true);
+    try {
+      await updateActivityParticipantCompleted(
+        revokeCompletionDialog.participant.id,
+        false,
+      );
+
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.id === revokeCompletionDialog.participant!.id
+            ? { ...p, completed: false }
+            : p,
+        ),
+      );
+
+      setRevokeCompletionDialog({ open: false, participant: null });
+      toast.success("수료가 취소되었습니다.");
+    } catch (error: any) {
+      console.error("Failed to revoke completion:", error);
+      toast.error(error.response?.data || "수료 취소에 실패했습니다.");
+    } finally {
+      setRevokingCompletion(false);
     }
   }
 
@@ -1338,7 +1374,7 @@ export default function ActivityDetailManagePage() {
     setBulkCompletionUpdating(true);
     const ids = Array.from(selectedCompletionIds);
     const results = await runWithConcurrency(ids, 5, (id) =>
-      updateActivityParticipantCompleted(id),
+      updateActivityParticipantCompleted(id, true),
     );
 
     const successCount = results.filter((r) => r.status === "fulfilled").length;
@@ -2233,6 +2269,7 @@ export default function ActivityDetailManagePage() {
                         <TableHead className="text-center w-32">
                           출석/진행 회차
                         </TableHead>
+                        <TableHead className="text-center w-32">수료</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -2274,6 +2311,37 @@ export default function ActivityDetailManagePage() {
                                 {stats
                                   ? `${stats.presentCount + stats.excusedCount}/${stats.totalSessions}`
                                   : `0/${completedSessionCount}`}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {participant.completed ? (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Badge
+                                      variant="outline"
+                                      className="border-green-200 bg-green-50 text-green-700"
+                                    >
+                                      수료
+                                    </Badge>
+                                    {canAdministerActivity && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 text-xs text-destructive hover:text-destructive"
+                                        onClick={() =>
+                                          setRevokeCompletionDialog({
+                                            open: true,
+                                            participant,
+                                          })
+                                        }
+                                      >
+                                        취소
+                                      </Button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">
+                                    미수료
+                                  </span>
+                                )}
                               </TableCell>
                             </TableRow>
                           );
@@ -2644,6 +2712,42 @@ export default function ActivityDetailManagePage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog
+        open={revokeCompletionDialog.open}
+        onOpenChange={(open) =>
+          !revokingCompletion &&
+          setRevokeCompletionDialog({
+            open,
+            participant: revokeCompletionDialog.participant,
+          })
+        }
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>수료를 취소할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {revokeCompletionDialog.participant?.user?.name} 학회원의 수료가
+              취소되고 미수료 상태로 돌아갑니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revokingCompletion}>
+              돌아가기
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={revokingCompletion}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => {
+                event.preventDefault();
+                void handleRevokeCompletion();
+              }}
+            >
+              {revokingCompletion ? "취소 중..." : "수료 취소"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <DeleteConfirmDialog
         open={!!deleteSessionId}
         onOpenChange={(open) => !open && setDeleteSessionId(null)}
@@ -2709,8 +2813,7 @@ export default function ActivityDetailManagePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>일괄 수료 처리할까요?</AlertDialogTitle>
             <AlertDialogDescription>
-              선택한 {selectedCompletionIds.size}명을 수료 처리합니다. 이 작업은
-              되돌릴 수 없습니다
+              선택한 {selectedCompletionIds.size}명을 수료 처리합니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

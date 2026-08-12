@@ -49,9 +49,11 @@ export async function updateActivityParticipantStatus(
 
 export async function updateActivityParticipantCompleted(
   id: string,
+  completed: boolean,
 ): Promise<ActivityParticipantResponse> {
   const response = await axiosInstance.patch<ActivityParticipantResponse>(
     `/activity-participants/${id}/completed`,
+    { completed },
   );
   return response.data;
 }
