@@ -888,31 +888,24 @@ export default function ActivityDetailManagePage() {
     limit: number,
     fn: (item: T) => Promise<R>,
   ): Promise<PromiseSettledResult<R>[]> {
-    const results: PromiseSettledResult<R>[] = [];
-    const executing: Promise<void>[] = [];
+    const results: PromiseSettledResult<R>[] = new Array(items.length);
+    let nextIndex = 0;
 
-    for (const item of items) {
-      const promise = fn(item).then(
-        (value) => {
-          results.push({ status: "fulfilled", value });
-        },
-        (reason) => {
-          results.push({ status: "rejected", reason });
-        },
-      );
-
-      executing.push(promise);
-
-      if (executing.length >= limit) {
-        await Promise.race(executing);
-        executing.splice(
-          executing.findIndex((p) => p === promise),
-          1,
-        );
+    async function worker() {
+      while (nextIndex < items.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        try {
+          results[index] = { status: "fulfilled", value: await fn(items[index]) };
+        } catch (reason) {
+          results[index] = { status: "rejected", reason };
+        }
       }
     }
 
-    await Promise.allSettled(executing);
+    await Promise.all(
+      Array.from({ length: Math.min(limit, items.length) }, () => worker()),
+    );
     return results;
   }
 
@@ -1379,11 +1372,12 @@ export default function ActivityDetailManagePage() {
 
     const successCount = results.filter((r) => r.status === "fulfilled").length;
     const failureCount = results.filter((r) => r.status === "rejected").length;
+    const succeededIds = new Set(
+      ids.filter((_, index) => results[index]?.status === "fulfilled"),
+    );
 
     setParticipants((prev) =>
-      prev.map((p) =>
-        selectedCompletionIds.has(p.id) ? { ...p, completed: true } : p,
-      ),
+      prev.map((p) => (succeededIds.has(p.id) ? { ...p, completed: true } : p)),
     );
 
     setSelectedCompletionIds(new Set());

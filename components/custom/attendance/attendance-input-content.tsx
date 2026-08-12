@@ -107,9 +107,9 @@ export function AttendanceInputContent({
   };
 
   return (
-    <div className="grid grid-cols-[2fr_3fr] gap-4 h-full">
+    <div className="grid grid-cols-[2fr_3fr] gap-4 h-full min-h-0">
       {/* Left Panel: Participant List */}
-      <div className="border rounded-lg p-4 flex flex-col">
+      <div className="border rounded-lg p-4 flex flex-col min-h-0">
         <div className="space-y-3 shrink-0">
           <h3 className="font-medium text-sm">참여자 목록</h3>
 
@@ -153,7 +153,7 @@ export function AttendanceInputContent({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto mt-3 space-y-1">
+        <div className="flex-1 min-h-0 overflow-y-auto mt-3 space-y-1">
           {filteredUnassigned.length === 0 ? (
             <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
               {attendanceSearchQuery
@@ -181,11 +181,11 @@ export function AttendanceInputContent({
       </div>
 
       {/* Right Panel: Status Tabs */}
-      <div className="border rounded-lg flex flex-col">
+      <div className="border rounded-lg flex flex-col min-h-0">
         <Tabs
           value={attendanceStatusTab}
           onValueChange={(v) => onTabChange(v as any)}
-          className="flex flex-col flex-1"
+          className="flex flex-col flex-1 min-h-0"
         >
           <div className="px-4 pt-3">
             <TabsList className="w-full grid grid-cols-3">
@@ -205,7 +205,7 @@ export function AttendanceInputContent({
             <TabsContent
               key={status}
               value={status}
-              className="flex-1 overflow-y-auto p-4 m-0"
+              className="flex-1 min-h-0 overflow-y-auto p-4 m-0"
             >
               <div className="space-y-2">
                 {getParticipantsForStatus(status).length === 0 ? (
