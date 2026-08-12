@@ -67,6 +67,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getActivityById, deleteActivity } from "@/lib/api/activity";
+import { getLectureMaterialsByActivity } from "@/lib/api/lecture-material";
+import { LectureMaterial } from "@/lib/interfaces/lecture-material";
+import { WeeklyMaterials } from "@/components/custom/activity/weekly-materials";
+import { getActivityNotices } from "@/lib/api/activity-notice";
+import { ActivityNotice } from "@/lib/interfaces/activity-notice";
+import { ActivityNotices } from "@/components/custom/activity/activity-notices";
 import {
   getActivityParticipantsByActivityId,
   updateActivityParticipantStatus,
@@ -309,6 +315,8 @@ export default function ActivityDetailManagePage() {
   const [refundAccounts, setRefundAccounts] = useState<
     ActivityParticipantRefundAccount[]
   >([]);
+  const [lectureMaterials, setLectureMaterials] = useState<LectureMaterial[]>([]);
+  const [activityNotices, setActivityNotices] = useState<ActivityNotice[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -484,19 +492,34 @@ export default function ActivityDetailManagePage() {
         const requiresDeposit =
           activityData.activityType.code === "STUDY" ||
           activityData.activityType.code === "SPECIAL_LECTURE";
-        const [participantsData, usersData, refundAccountsData] =
-          await Promise.all([
-            getActivityParticipantsByActivityId({ activityId }),
-            canAdministerActivity ? getAllUsers() : Promise.resolve([]),
-            canAdministerActivity && requiresDeposit
-              ? getActivityParticipantRefundAccounts(activityId)
-              : Promise.resolve([]),
-          ]);
+        const [
+          participantsData,
+          usersData,
+          refundAccountsData,
+          materialsData,
+          noticesData,
+        ] = await Promise.all([
+          getActivityParticipantsByActivityId({ activityId }),
+          canAdministerActivity ? getAllUsers() : Promise.resolve([]),
+          canAdministerActivity && requiresDeposit
+            ? getActivityParticipantRefundAccounts(activityId)
+            : Promise.resolve([]),
+          getLectureMaterialsByActivity(activityId).catch((error) => {
+            console.error("Failed to fetch lecture materials:", error);
+            return [];
+          }),
+          getActivityNotices(activityId).catch((error) => {
+            console.error("Failed to fetch activity notices:", error);
+            return [];
+          }),
+        ]);
         setActivity(activityData);
         setParticipants(participantsData);
         setFilteredParticipants(participantsData);
         setAllUsers(usersData);
         setRefundAccounts(refundAccountsData);
+        setLectureMaterials(materialsData);
+        setActivityNotices(noticesData);
       } catch (error: any) {
         console.error("Failed to fetch activity data:", error);
       } finally {
@@ -668,6 +691,22 @@ export default function ActivityDetailManagePage() {
     setActiveTab(value);
     if (value === "schedule" || value === "attendance") {
       void refreshScheduleAndAttendance(false);
+    }
+  }
+
+  async function refreshMaterials() {
+    try {
+      setLectureMaterials(await getLectureMaterialsByActivity(activityId));
+    } catch (error) {
+      console.error("Failed to refresh lecture materials:", error);
+    }
+  }
+
+  async function refreshNotices() {
+    try {
+      setActivityNotices(await getActivityNotices(activityId));
+    } catch (error) {
+      console.error("Failed to refresh activity notices:", error);
     }
   }
 
@@ -1423,6 +1462,12 @@ export default function ActivityDetailManagePage() {
               참여자 현황
             </TabsTrigger>
           )}
+          <TabsTrigger value="content" className="px-4 py-2">
+            활동 내용
+          </TabsTrigger>
+          <TabsTrigger value="notices" className="px-4 py-2">
+            공지
+          </TabsTrigger>
           <TabsTrigger value="schedule" className="px-4 py-2">
             일정 관리
           </TabsTrigger>
@@ -1855,6 +1900,28 @@ export default function ActivityDetailManagePage() {
           </Dialog>}
         </TabsContent>
         )}
+        {/* Tab: 활동 내용 */}
+        <TabsContent value="content" className="space-y-4">
+          <WeeklyMaterials
+            activityId={activityId}
+            materials={lectureMaterials}
+            canManage
+            canModify
+            onChanged={refreshMaterials}
+          />
+        </TabsContent>
+
+        {/* Tab: 공지 */}
+        <TabsContent value="notices" className="space-y-4">
+          <ActivityNotices
+            activityId={activityId}
+            notices={activityNotices}
+            canManage
+            canModify
+            onChanged={refreshNotices}
+          />
+        </TabsContent>
+
         <TabsContent value="schedule" className="space-y-4">
           {/* 진행 일정 Card */}
           <Card>

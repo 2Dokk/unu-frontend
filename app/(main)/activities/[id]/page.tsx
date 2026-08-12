@@ -44,6 +44,7 @@ import {
   deleteActivity,
   updateActivityStatus,
 } from "@/lib/api/activity";
+import { getLectureMaterialsByActivity } from "@/lib/api/lecture-material";
 import {
   getMyParticipantByActivityId,
   createMyParticipantByActivityId,
@@ -52,6 +53,7 @@ import {
   getActivityCapacity,
 } from "@/lib/api/activity-participant";
 import { ActivityResponse } from "@/lib/interfaces/activity";
+import { LectureMaterial } from "@/lib/interfaces/lecture-material";
 import {
   ActivityJoinRequest,
   ActivityParticipantResponse,
@@ -74,13 +76,19 @@ import {
   AlertCircle,
   Landmark,
   RotateCcw,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { CourseTimeReservationCard } from "@/components/custom/activity/course-time-reservation";
 import { CourseSessionReportCard } from "@/components/custom/activity/course-session-report";
+import { WeeklyMaterials } from "@/components/custom/activity/weekly-materials";
+import { ActivityNotices } from "@/components/custom/activity/activity-notices";
+import { getActivityNotices } from "@/lib/api/activity-notice";
+import { ActivityNotice } from "@/lib/interfaces/activity-notice";
 import { formatDate } from "@/lib/utils/date-utils";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 // ========================
@@ -278,6 +286,7 @@ function localDateValue(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+
 // ========================
 // MAIN COMPONENT
 // ========================
@@ -299,8 +308,15 @@ export default function ActivityDetails() {
   const [capacity, setCapacity] = useState<ActivityCapacityResponse | null>(
     null,
   );
+  const [lectureMaterials, setLectureMaterials] = useState<LectureMaterial[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [activityTab, setActivityTab] = useState<"info" | "content" | "notices">(
+    "info",
+  );
+  const [activityNotices, setActivityNotices] = useState<ActivityNotice[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
@@ -318,11 +334,16 @@ export default function ActivityDetails() {
     const fetchActivityDetails = async () => {
       setLoading(true);
       try {
-        const [activityData, participantData, capacityData] = await Promise.all([
-          getActivityById(activityId),
-          getMyParticipantByActivityId(activityId),
-          getActivityCapacity(activityId),
-        ]);
+        const [activityData, participantData, capacityData, materialsData] =
+          await Promise.all([
+            getActivityById(activityId),
+            getMyParticipantByActivityId(activityId),
+            getActivityCapacity(activityId),
+            getLectureMaterialsByActivity(activityId).catch((error) => {
+              console.error("Failed to fetch lecture materials:", error);
+              return [];
+            }),
+          ]);
         const recruitmentClosed =
           activityData.status === "ONGOING" ||
           activityData.status === "COMPLETED";
@@ -337,6 +358,7 @@ export default function ActivityDetails() {
         setActivity(activityData);
         setMyParticipant(participantData);
         setCapacity(capacityData);
+        setLectureMaterials(materialsData);
         setVisibleMembers(membersData);
       } catch (error: any) {
         console.error("Failed to fetch activity details:", error);
@@ -350,6 +372,35 @@ export default function ActivityDetails() {
 
     fetchActivityDetails();
   }, [activityId]);
+
+  // 공지는 참여 확정자·운영진·담당자만 볼 수 있어서, 권한이 확인된 뒤에 따로 불러온다.
+  const canViewNotices =
+    !!activity &&
+    (hasRole("MANAGER") ||
+      activity.assignee?.id === userId ||
+      myParticipant?.status === "APPROVED");
+
+  useEffect(() => {
+    if (!canViewNotices) {
+      setActivityNotices([]);
+      // 참여를 취소해 열람 권한을 잃으면 빈 탭에 남지 않도록 되돌린다.
+      setActivityTab((tab) => (tab === "notices" ? "info" : tab));
+      return;
+    }
+    getActivityNotices(activityId)
+      .then(setActivityNotices)
+      .catch((error) =>
+        console.error("Failed to fetch activity notices:", error),
+      );
+  }, [canViewNotices, activityId]);
+
+  async function refreshNotices() {
+    try {
+      setActivityNotices(await getActivityNotices(activityId));
+    } catch (error) {
+      console.error("Failed to refresh activity notices:", error);
+    }
+  }
 
   const refreshCapacity = async () => {
     try {
@@ -513,6 +564,14 @@ export default function ActivityDetails() {
     }
   };
 
+  async function refreshMaterials() {
+    try {
+      setLectureMaterials(await getLectureMaterialsByActivity(activityId));
+    } catch (error) {
+      console.error("Failed to refresh lecture materials:", error);
+    }
+  }
+
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
@@ -578,6 +637,8 @@ export default function ActivityDetails() {
   const activityHasStarted = activity.startDate <= localDateValue();
   const canManage =
     hasRole("MANAGER") || hasRole("ADMIN") || activity.assignee.id === userId;
+  const canManageMaterials = hasRole("MANAGER");
+  const unassignedMaterials = lectureMaterials.filter((m) => m.weekNumber == null);
   const ctaConfig = deriveCtaConfig(
     activity,
     myParticipant,
@@ -727,6 +788,48 @@ export default function ActivityDetails() {
               myParticipant={myParticipant}
             />
           )}
+          <div className="flex gap-1 border-b">
+            <button
+              type="button"
+              onClick={() => setActivityTab("info")}
+              className={cn(
+                "px-3 pb-2.5 text-sm font-semibold transition-colors",
+                activityTab === "info"
+                  ? "border-b-2 border-[#174b3a] text-[#174b3a]"
+                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              활동 정보
+            </button>
+            <button
+              type="button"
+              onClick={() => setActivityTab("content")}
+              className={cn(
+                "px-3 pb-2.5 text-sm font-semibold transition-colors",
+                activityTab === "content"
+                  ? "border-b-2 border-[#174b3a] text-[#174b3a]"
+                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              활동 내용
+            </button>
+            {canViewNotices && (
+              <button
+                type="button"
+                onClick={() => setActivityTab("notices")}
+                className={cn(
+                  "px-3 pb-2.5 text-sm font-semibold transition-colors",
+                  activityTab === "notices"
+                    ? "border-b-2 border-[#174b3a] text-[#174b3a]"
+                    : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                공지
+              </button>
+            )}
+          </div>
+
+          {activityTab === "info" && (
           <Card>
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
               <CardTitle className="text-md font-semibold">활동 정보</CardTitle>
@@ -811,6 +914,48 @@ export default function ActivityDetails() {
                 }
               />
 
+              <div className="flex items-start gap-3 py-3">
+                <div className="mt-0.5 text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">강의자료</p>
+                    {canManageMaterials && (
+                      <button
+                        type="button"
+                        className="shrink-0 text-xs font-medium text-[#174b3a] hover:underline"
+                        onClick={() =>
+                          router.push(
+                            `/lecture-materials?activityId=${activityId}&create=true`,
+                          )
+                        }
+                      >
+                        자료 추가
+                      </button>
+                    )}
+                  </div>
+                  {unassignedMaterials.length === 0 ? (
+                    <p className="text-sm font-medium">—</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {unassignedMaterials.map((material) => (
+                        <a
+                          key={material.id}
+                          href={material.driveUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[#174b3a] hover:underline"
+                        >
+                          <span className="truncate">{material.title}</span>
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* My Participant Status (Desktop) */}
               <div className="hidden lg:flex items-start gap-3 py-3">
                 <div className="mt-0.5 text-muted-foreground">
@@ -886,6 +1031,25 @@ export default function ActivityDetails() {
               </div>
             </CardContent>
           </Card>
+          )}
+
+          {activityTab === "content" && (
+            <WeeklyMaterials
+              activityId={activityId}
+              materials={lectureMaterials}
+              canManage={canManage}
+              onChanged={refreshMaterials}
+            />
+          )}
+
+          {activityTab === "notices" && canViewNotices && (
+            <ActivityNotices
+              activityId={activityId}
+              notices={activityNotices}
+              canManage={canManage}
+              onChanged={refreshNotices}
+            />
+          )}
         </div>
       </div>
 
@@ -1157,6 +1321,7 @@ export default function ActivityDetails() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

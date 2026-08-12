@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ExternalLink,
   FileText,
@@ -23,6 +23,9 @@ import {
   LectureMaterialRequest,
 } from "@/lib/interfaces/lecture-material";
 import { formatDate } from "@/lib/utils/date-utils";
+import { isGoogleDriveUrl } from "@/lib/utils/drive-url";
+import { searchActivities } from "@/lib/api/activity";
+import { ActivityResponse } from "@/lib/interfaces/activity";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,6 +38,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +68,7 @@ const EMPTY_FORM: LectureMaterialRequest = {
   title: "",
   description: "",
   driveUrl: "",
+  weekNumber: null,
 };
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -65,23 +76,13 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return typeof data === "string" && data.trim() ? data : fallback;
 }
 
-function isGoogleDriveUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      ["drive.google.com", "docs.google.com"].includes(url.hostname)
-    );
-  } catch {
-    return false;
-  }
-}
-
-export default function LectureMaterialsPage() {
+function LectureMaterialsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { hasRole, isAuthenticated, isLoading: authLoading } = useAuth();
   const canManage = hasRole("MANAGER");
   const [materials, setMaterials] = useState<LectureMaterial[]>([]);
+  const [activities, setActivities] = useState<ActivityResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] =
@@ -90,11 +91,14 @@ export default function LectureMaterialsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<LectureMaterial | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const handledCreateQuery = useRef(false);
 
   const loadMaterials = useCallback(async () => {
     setLoading(true);
     try {
-      setMaterials(await getLectureMaterials());
+      // 주차가 지정된 자료는 해당 활동 상세 페이지의 "활동 내용" 탭에서만 보여준다.
+      const all = await getLectureMaterials();
+      setMaterials(all.filter((material) => material.weekNumber == null));
     } catch (error) {
       toast.error(getErrorMessage(error, "강의자료를 불러오지 못했습니다."));
     } finally {
@@ -109,7 +113,25 @@ export default function LectureMaterialsPage() {
       return;
     }
     void loadMaterials();
-  }, [authLoading, isAuthenticated, loadMaterials, router]);
+    if (canManage) {
+      void searchActivities({ includeUnlisted: true })
+        .then(setActivities)
+        .catch(() => toast.error("활동 목록을 불러오지 못했습니다."));
+    }
+  }, [authLoading, canManage, isAuthenticated, loadMaterials, router]);
+
+  useEffect(() => {
+    if (!canManage || handledCreateQuery.current) return;
+    if (searchParams.get("create") !== "true") return;
+
+    handledCreateQuery.current = true;
+    setEditingMaterial(null);
+    setForm({
+      ...EMPTY_FORM,
+      activityId: searchParams.get("activityId") ?? undefined,
+    });
+    setDialogOpen(true);
+  }, [canManage, searchParams]);
 
   function openCreateDialog() {
     setEditingMaterial(null);
@@ -123,6 +145,8 @@ export default function LectureMaterialsPage() {
       title: material.title,
       description: material.description ?? "",
       driveUrl: material.driveUrl,
+      weekNumber: material.weekNumber,
+      activityId: material.activityId ?? undefined,
     });
     setDialogOpen(true);
   }
@@ -143,6 +167,8 @@ export default function LectureMaterialsPage() {
         title: form.title.trim(),
         description: form.description.trim(),
         driveUrl: form.driveUrl.trim(),
+        weekNumber: form.weekNumber || null,
+        activityId: form.activityId,
       };
       if (editingMaterial) {
         await updateLectureMaterial(editingMaterial.id, request);
@@ -230,6 +256,9 @@ export default function LectureMaterialsPage() {
                       <CardDescription>
                         {formatDate(material.createdAt)} 등록
                       </CardDescription>
+                      <p className="text-xs font-medium text-[#174b3a]">
+                        {material.activityTitle ?? "공용 자료"}
+                      </p>
                     </div>
                   </div>
                   {canManage && (
@@ -292,6 +321,33 @@ export default function LectureMaterialsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="material-activity">연결 활동</Label>
+              <Select
+                value={form.activityId ?? "none"}
+                onValueChange={(value) =>
+                  setForm((current) => ({
+                    ...current,
+                    activityId: value === "none" ? undefined : value,
+                  }))
+                }
+              >
+                <SelectTrigger id="material-activity">
+                  <SelectValue placeholder="활동을 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">공용 자료</SelectItem>
+                  {activities.map((activity) => (
+                    <SelectItem key={activity.id} value={activity.id}>
+                      {activity.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                활동을 선택하면 해당 활동 상세 페이지에도 자료가 표시됩니다.
+              </p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="material-title">자료 제목</Label>
               <Input
@@ -384,5 +440,13 @@ export default function LectureMaterialsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function LectureMaterialsPage() {
+  return (
+    <Suspense fallback={null}>
+      <LectureMaterialsContent />
+    </Suspense>
   );
 }

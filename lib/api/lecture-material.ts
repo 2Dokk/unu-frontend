@@ -11,6 +11,15 @@ export async function getLectureMaterials(): Promise<LectureMaterial[]> {
   return response.data;
 }
 
+export async function getLectureMaterialsByActivity(
+  activityId: string,
+): Promise<LectureMaterial[]> {
+  const response = await axiosInstance.get<LectureMaterial[]>(
+    `/lecture-materials/activity/${activityId}`,
+  );
+  return response.data;
+}
+
 export async function createLectureMaterial(
   data: LectureMaterialRequest,
 ): Promise<LectureMaterial> {
