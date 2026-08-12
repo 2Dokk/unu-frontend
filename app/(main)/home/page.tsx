@@ -1,22 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
-import { getMyActivityParticipants } from "@/lib/api/activity-participant";
-import { getActivityParticipantsByActivityId } from "@/lib/api/activity-participant";
-import { getMyHostedActivities } from "@/lib/api/activity";
-import { getAttendanceStatsByParticipantId } from "@/lib/api/attendance";
-import { getActivitySessionsByActivityId } from "@/lib/api/activity-session";
-import { getCurrentQuarter } from "@/lib/api/quarter";
-import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
-import { AttendanceStatsResponseDto } from "@/lib/interfaces/attendance";
-import { QuarterResponse } from "@/lib/interfaces/quarter";
-import { ActivityResponse } from "@/lib/interfaces/activity";
+import { useMyActivities } from "@/lib/hooks/useMyActivities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Activity,
@@ -33,31 +22,11 @@ import { ActivityStatusBadge } from "@/components/custom/activity/activity-statu
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { formatDate } from "@/lib/utils/date-utils";
 
-interface ParticipationWithStats {
-  participant: ActivityParticipantResponse;
-  attendanceStats: AttendanceStatsResponseDto;
-  totalSessions: number;
-  attendanceRate: number;
-}
-
-interface HostedActivityWithParticipants {
-  activity: ActivityResponse;
-  participantCount: number;
-}
-
 export default function HomePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [currentQuarter, setCurrentQuarter] = useState<QuarterResponse | null>(
-    null,
-  );
-  const [participations, setParticipations] = useState<
-    ParticipationWithStats[]
-  >([]);
-  const [hostedActivities, setHostedActivities] = useState<
-    HostedActivityWithParticipants[]
-  >([]);
-  const [loading, setLoading] = useState(true);
+  const { loading, currentQuarter, participations, hostedActivities } =
+    useMyActivities();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -65,117 +34,7 @@ export default function HomePage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-
-        // Fetch current quarter and participations in parallel
-        const [quarterData, participantData, hostedData] = await Promise.all([
-          getCurrentQuarter(),
-          getMyActivityParticipants(),
-          getMyHostedActivities(),
-        ]);
-
-        setCurrentQuarter(quarterData);
-
-        // Fetch stats for each participation
-        const [enrichedData, hostedWithParticipants] = await Promise.all([
-          Promise.all(participantData.map(async (participant) => {
-            try {
-              const [attendanceStats, sessions] = await Promise.all([
-                getAttendanceStatsByParticipantId(participant.id),
-                getActivitySessionsByActivityId(participant.activity.id),
-              ]);
-
-              const today = new Date();
-              const todayValue = [
-                today.getFullYear(),
-                String(today.getMonth() + 1).padStart(2, "0"),
-                String(today.getDate()).padStart(2, "0"),
-              ].join("-");
-              const totalSessions = sessions.filter(
-                (session) => session.date <= todayValue,
-              ).length;
-              const attendedSessions =
-                attendanceStats.presentCount + attendanceStats.excusedCount;
-              const attendanceRate =
-                totalSessions > 0
-                  ? (attendedSessions / totalSessions) * 100
-                  : 0;
-
-              return {
-                participant,
-                attendanceStats,
-                totalSessions,
-                attendanceRate,
-              };
-            } catch (error: any) {
-              console.error(
-                `Failed to fetch stats for participant ${participant.id}:`,
-                error,
-              );
-              return {
-                participant,
-                attendanceStats: {
-                  presentCount: 0,
-                  absentCount: 0,
-                  excusedCount: 0,
-                },
-                totalSessions: 0,
-                attendanceRate: 0,
-              };
-            }
-          })),
-          Promise.all(hostedData.map(async (activity) => {
-            try {
-              const activityParticipants =
-                await getActivityParticipantsByActivityId({
-                  activityId: activity.id,
-                });
-              return {
-                activity,
-                participantCount: activityParticipants.filter(
-                  (participant) => participant.status === "APPROVED",
-                ).length,
-              };
-            } catch (error) {
-              console.error(
-                `Failed to fetch participants for activity ${activity.id}:`,
-                error,
-              );
-              return { activity, participantCount: 0 };
-            }
-          })),
-        ]);
-
-        setParticipations(enrichedData);
-        setHostedActivities(
-          hostedWithParticipants.sort((a, b) =>
-            b.activity.createdAt.localeCompare(a.activity.createdAt),
-          ),
-        );
-      } catch (error: any) {
-        console.error("Failed to fetch data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [isAuthenticated]);
-
-  // Calculate summary stats
-  const hostedActivityIds = new Set(
-    hostedActivities.map(({ activity }) => activity.id),
-  );
-  const participatingActivities = participations.filter(
-    ({ participant }) => !hostedActivityIds.has(participant.activity.id),
-  );
-
-  const currentQuarterActivities = participatingActivities.filter(
+  const currentQuarterActivities = participations.filter(
     (p) =>
       p.participant.activity?.quarter?.id === currentQuarter?.id &&
       p.participant.status !== "REJECTED",
@@ -184,14 +43,14 @@ export default function HomePage() {
     ({ activity }) => activity.quarter?.id === currentQuarter?.id,
   );
 
-  const currentQuarterCompleted = currentQuarterActivities.filter(
+  const completedCount = participations.filter(
     (p) => p.participant.completed,
   ).length;
 
-  const confirmedActivities = participatingActivities.filter(
+  const confirmedActivities = participations.filter(
     (p) => p.participant.status === "APPROVED",
   );
-  const totalActivities = confirmedActivities.length;
+  const totalActivities = confirmedActivities.length + hostedActivities.length;
 
   const averageAttendance =
     confirmedActivities.length > 0
@@ -252,35 +111,49 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  수료 활동
-                </CardTitle>
-                <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {currentQuarterCompleted}
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  이번 분기 기준
-                </p>
-              </CardContent>
-            </Card>
+            <button
+              type="button"
+              className="text-left"
+              onClick={() => router.push("/home/completed")}
+            >
+              <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+                    수료 활동
+                    <ArrowRight className="h-3 w-3" />
+                  </CardTitle>
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{completedCount}</div>
+                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    누적 수료 수
+                  </p>
+                </CardContent>
+              </Card>
+            </button>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  전체 참여 활동
-                </CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalActivities}</div>
-                <p className="mt-1 text-xs text-muted-foreground">누적 활동 수</p>
-              </CardContent>
-            </Card>
+            <button
+              type="button"
+              className="text-left"
+              onClick={() => router.push("/home/activities")}
+            >
+              <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+                    전체 참여 활동
+                    <ArrowRight className="h-3 w-3" />
+                  </CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{totalActivities}</div>
+                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                    누적 활동 수
+                  </p>
+                </CardContent>
+              </Card>
+            </button>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -468,108 +341,6 @@ export default function HomePage() {
             </div>
           </section>
 
-          <Separator />
-
-          {/* All Activities History */}
-          <section className="space-y-6">
-        <div>
-          <h3 className="text-lg font-semibold tracking-tight">
-            전체 신청·참여 이력
-          </h3>
-          <p className="text-muted-foreground mt-1">
-            신청하거나 참여한 모든 활동
-          </p>
-        </div>
-
-        {participatingActivities.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                아직 신청하거나 참여한 활동이 없습니다
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="py-0">
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {participatingActivities.map(
-                  ({
-                    participant,
-                    attendanceStats,
-                    totalSessions,
-                    attendanceRate,
-                  }) => {
-                    const attendedCount =
-                      attendanceStats.presentCount +
-                      attendanceStats.excusedCount;
-
-                    return (
-                      <div
-                        key={participant.id}
-                        role="button"
-                        tabIndex={0}
-                        className="flex cursor-pointer items-center justify-between p-4 transition-colors hover:bg-muted/50"
-                        onClick={() =>
-                          router.push(
-                            `/activities/${participant.activity.id}?from=home`,
-                          )
-                        }
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            router.push(
-                              `/activities/${participant.activity.id}?from=home`,
-                            );
-                          }
-                        }}
-                      >
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">
-                                {participant.activity?.title || "활동명 없음"}
-                              </p>
-                              {participant.completed && (
-                                <Badge
-                                  variant="outline"
-                                  className="bg-green-50 text-green-700 border-green-200"
-                                >
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  수료
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {participant.activity?.quarter?.name ||
-                                "분기 정보 없음"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <p className="text-sm font-medium">
-                              {attendedCount} / {totalSessions}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              출석률 {attendanceRate.toFixed(0)}%
-                            </p>
-                          </div>
-                          <div className="w-24">
-                            <Progress value={attendanceRate} className="h-2" />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  },
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-          </section>
         </div>
       </div>
     </div>

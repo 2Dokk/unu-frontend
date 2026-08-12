@@ -55,6 +55,7 @@ export const config = {
     "/manage/:path*",
     "/admin/:path*",
     "/home",
+    "/home/:path*",
     "/profile",
     "/activities/:path*",
     "/activity-opening/:path*",
