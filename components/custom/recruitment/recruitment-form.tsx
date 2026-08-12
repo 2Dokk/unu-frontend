@@ -47,6 +47,9 @@ export default function RecruitmentForm({
   const [description, setDescription] = useState(
     initialData?.description || "",
   );
+  const [completionMessage, setCompletionMessage] = useState(
+    initialData?.completionMessage || "",
+  );
   const [startAt, setStartAt] = useState(
     initialData?.startAt ? initialData.startAt : "",
   );
@@ -152,6 +155,7 @@ export default function RecruitmentForm({
       const payload = {
         title,
         description,
+        completionMessage,
         startAt: startAt,
         endAt: endAt,
         quarterId: quarterId,
@@ -216,6 +220,22 @@ export default function RecruitmentForm({
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="completionMessage">지원 완료 안내 메세지</Label>
+                <Textarea
+                  id="completionMessage"
+                  placeholder="신청자가 지원 완료 시 볼 수 있는 메세지입니다."
+                  value={completionMessage}
+                  onChange={(e) => setCompletionMessage(e.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                />
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  지원 완료 화면에 표시됩니다. 비워두면 기본 안내만
+                  표시됩니다.
+                </p>
               </div>
 
               {/* Quarter */}

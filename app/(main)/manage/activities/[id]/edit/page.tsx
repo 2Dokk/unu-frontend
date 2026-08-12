@@ -136,6 +136,7 @@ export default function ActivityEditPage() {
     startDate: "",
     endDate: "",
     depositAmount: "30000",
+    participantLimit: "",
   });
 
   const selectedActivityType = activityTypes.find(
@@ -188,6 +189,7 @@ export default function ActivityEditPage() {
         startDate: toDateInputValue(activityData.startDate),
         endDate: toDateInputValue(activityData.endDate),
         depositAmount: String(activityData.depositAmount ?? 30000),
+        participantLimit: String(activityData.participantLimit ?? ""),
       });
     } catch (err) {
       console.error("Failed to load activity:", err);
@@ -235,6 +237,30 @@ export default function ActivityEditPage() {
       return "참여 보증금은 0원 이상 1,000,000원 이하로 입력해주세요.";
     }
 
+    const participantLimit = Number(formData.participantLimit);
+    if (
+      formData.participantLimit &&
+      (!Number.isInteger(participantLimit) ||
+        participantLimit < 1 ||
+        participantLimit > 1000)
+    ) {
+      return "참여 정원은 1명 이상 1,000명 이하로 입력해주세요.";
+    }
+    const currentParticipantCount = existingParticipants.filter(
+      (participant) =>
+        participant.status !== "REJECTED" &&
+        participant.user.id !== formData.assigneeId,
+    ).length;
+    const newParticipantCount = newParticipantIds.filter(
+      (userId) => userId !== formData.assigneeId,
+    ).length;
+    if (
+      formData.participantLimit &&
+      participantLimit < currentParticipantCount + newParticipantCount
+    ) {
+      return "참여 정원은 현재 신청·참여 인원보다 적을 수 없습니다.";
+    }
+
     return null;
   }
 
@@ -261,6 +287,9 @@ export default function ActivityEditPage() {
           canEditDeposit && requiresDeposit
             ? Number(formData.depositAmount)
             : undefined,
+        participantLimit: formData.participantLimit
+          ? Number(formData.participantLimit)
+          : undefined,
       };
 
       await updateActivity(activityId, updateData);
@@ -377,6 +406,12 @@ export default function ActivityEditPage() {
                       ) {
                         handleInputChange("depositAmount", "30000");
                       }
+                      if (
+                        type?.code === "LECTURE" &&
+                        !formData.participantLimit
+                      ) {
+                        handleInputChange("participantLimit", "5");
+                      }
                     }}
                   >
                     <SelectTrigger id="activityType" className="w-48">
@@ -418,6 +453,36 @@ export default function ActivityEditPage() {
                     </p>
                   </div>
                 )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="participantLimit">참여 정원</Label>
+                  <div className="relative w-48">
+                    <Input
+                      id="participantLimit"
+                      value={formData.participantLimit}
+                      onChange={(event) =>
+                        handleInputChange(
+                          "participantLimit",
+                          event.target.value.replace(/\D/g, ""),
+                        )
+                      }
+                      placeholder="제한 없음"
+                      inputMode="numeric"
+                      className="pr-9"
+                      maxLength={4}
+                    />
+                    {formData.participantLimit && (
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        명
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedActivityType?.code === "LECTURE"
+                      ? "인강 활동은 기본 정원이 5명이며 담당자는 제외됩니다."
+                      : "비워두면 제한이 없으며 담당자는 정원에서 제외됩니다."}
+                  </p>
+                </div>
 
                 {/* Quarter */}
                 <div className="space-y-2">

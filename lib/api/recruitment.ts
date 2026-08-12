@@ -1,4 +1,5 @@
 import {
+  RecruitmentCompletionMessageResponse,
   RecruitmentRequest,
   RecruitmentResponse,
 } from "../interfaces/recruitment";
@@ -51,4 +52,12 @@ export async function getActiveRecruitment(): Promise<RecruitmentResponse> {
 
 export async function getClosestRecruitment(): Promise<RecruitmentResponse> {
   return publicClient.get<RecruitmentResponse>(`/public/recruitments/closest`);
+}
+
+export async function getRecruitmentCompletionMessage(
+  id: string,
+): Promise<RecruitmentCompletionMessageResponse> {
+  return publicClient.get<RecruitmentCompletionMessageResponse>(
+    `/public/recruitments/${encodeURIComponent(id)}/completion-message`,
+  );
 }

@@ -176,7 +176,9 @@ export default function HomePage() {
   );
 
   const currentQuarterActivities = participatingActivities.filter(
-    (p) => p.participant.activity?.quarter?.id === currentQuarter?.id,
+    (p) =>
+      p.participant.activity?.quarter?.id === currentQuarter?.id &&
+      p.participant.status !== "REJECTED",
   );
   const currentQuarterHostedActivities = hostedActivities.filter(
     ({ activity }) => activity.quarter?.id === currentQuarter?.id,
@@ -186,12 +188,15 @@ export default function HomePage() {
     (p) => p.participant.completed,
   ).length;
 
-  const totalActivities = participatingActivities.length;
+  const confirmedActivities = participatingActivities.filter(
+    (p) => p.participant.status === "APPROVED",
+  );
+  const totalActivities = confirmedActivities.length;
 
   const averageAttendance =
-    participatingActivities.length > 0
-      ? participatingActivities.reduce((acc, p) => acc + p.attendanceRate, 0) /
-        participatingActivities.length
+    confirmedActivities.length > 0
+      ? confirmedActivities.reduce((acc, p) => acc + p.attendanceRate, 0) /
+        confirmedActivities.length
       : 0;
 
   if (authLoading || (loading && isAuthenticated)) {
@@ -222,7 +227,7 @@ export default function HomePage() {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">내 활동</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          참여 중인 활동과 직접 개설한 활동을 확인하세요
+          신청·참여 중인 활동과 직접 개설한 활동을 확인하세요
         </p>
       </div>
 
@@ -304,7 +309,7 @@ export default function HomePage() {
 
             <div className="space-y-4">
               <h3 className="text-base font-semibold tracking-tight">
-                내가 참여 중인 활동
+                내가 신청·참여한 활동
               </h3>
 
         {currentQuarterActivities.length === 0 ? (
@@ -312,7 +317,7 @@ export default function HomePage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Activity className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                이번 분기에 참여한 활동이 없습니다
+                이번 분기에 신청하거나 참여한 활동이 없습니다
               </p>
             </CardContent>
           </Card>
@@ -333,7 +338,9 @@ export default function HomePage() {
                     key={participant.id}
                     className="hover:shadow-md transition-shadow"
                     onClick={() =>
-                      router.push(`/activities/${participant.activity.id}`)
+                      router.push(
+                        `/activities/${participant.activity.id}?from=home`,
+                      )
                     }
                     onMouseOver={() => (document.body.style.cursor = "pointer")}
                     onMouseOut={() => (document.body.style.cursor = "default")}
@@ -348,7 +355,9 @@ export default function HomePage() {
                             <ParticipantStatusBadge
                               status={participant.status}
                             />
-                            {participant.completed ? (
+                            {participant.status === "APPLIED" ? (
+                              <Badge variant="outline">시작 전</Badge>
+                            ) : participant.completed ? (
                               <Badge
                                 variant="outline"
                                 className="bg-green-50 text-green-700 border-green-200"
@@ -363,7 +372,13 @@ export default function HomePage() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="space-y-2">
+                      {participant.status === "APPLIED" ? (
+                        <p className="text-sm text-muted-foreground">
+                          {formatDate(participant.activity.startDate)}에 참여가
+                          확정됩니다.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground flex items-center gap-1">
                             <Clock className="h-3 w-3" />
@@ -377,7 +392,8 @@ export default function HomePage() {
                         <p className="text-xs text-right text-muted-foreground">
                           {attendanceRate.toFixed(0)}%
                         </p>
-                      </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
@@ -409,7 +425,9 @@ export default function HomePage() {
                         type="button"
                         className="text-left"
                         onClick={() =>
-                          router.push(`/manage/activities/${activity.id}`)
+                          router.push(
+                            `/manage/activities/${activity.id}?from=home`,
+                          )
                         }
                       >
                         <Card className="h-full transition-shadow hover:shadow-md">
@@ -455,8 +473,12 @@ export default function HomePage() {
           {/* All Activities History */}
           <section className="space-y-6">
         <div>
-          <h3 className="text-lg font-semibold tracking-tight">전체 참여 이력</h3>
-          <p className="text-muted-foreground mt-1">모든 활동 참여 이력</p>
+          <h3 className="text-lg font-semibold tracking-tight">
+            전체 신청·참여 이력
+          </h3>
+          <p className="text-muted-foreground mt-1">
+            신청하거나 참여한 모든 활동
+          </p>
         </div>
 
         {participatingActivities.length === 0 ? (
@@ -464,7 +486,7 @@ export default function HomePage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                아직 참여한 활동이 없습니다
+                아직 신청하거나 참여한 활동이 없습니다
               </p>
             </CardContent>
           </Card>
@@ -486,7 +508,22 @@ export default function HomePage() {
                     return (
                       <div
                         key={participant.id}
-                        className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                        role="button"
+                        tabIndex={0}
+                        className="flex cursor-pointer items-center justify-between p-4 transition-colors hover:bg-muted/50"
+                        onClick={() =>
+                          router.push(
+                            `/activities/${participant.activity.id}?from=home`,
+                          )
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            router.push(
+                              `/activities/${participant.activity.id}?from=home`,
+                            );
+                          }
+                        }}
                       >
                         <div className="flex items-center gap-4 flex-1">
                           <div className="flex-1">

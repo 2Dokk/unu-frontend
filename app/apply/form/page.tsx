@@ -164,8 +164,9 @@ export default function ApplicationFormPage() {
         password: password,
       });
 
-      // Navigate to success page
-      router.push("/apply/complete");
+      router.push(
+        `/apply/complete?recruitmentId=${encodeURIComponent(recruitment!.id)}`,
+      );
     } catch (error: unknown) {
       console.error("Failed to submit application:", error);
       toast.error(

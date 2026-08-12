@@ -20,6 +20,7 @@ export interface ActivityOpeningRequestPayload {
   endDate: string;
   expectedMemberCount: number;
   acceptsNewMembers: boolean;
+  participantLimit?: number;
   personalProject: boolean;
   parentActivityId?: string;
   initialMemberIds: string[];
@@ -37,6 +38,7 @@ export interface ActivityOpeningRequestResponse {
   endDate: string;
   expectedMemberCount: number;
   acceptsNewMembers: boolean;
+  participantLimit?: number | null;
   personalProject: boolean;
   parentActivityId?: string | null;
   parentActivityTitle?: string | null;

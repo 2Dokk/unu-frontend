@@ -1,12 +1,32 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ChevronRight, FileText } from "lucide-react";
+import { CheckCircle2, ChevronRight, FileText, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getRecruitmentCompletionMessage } from "@/lib/api/recruitment";
 
 export default function ApplicationCompletePage() {
   const router = useRouter();
+  const [completionMessage, setCompletionMessage] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const recruitmentId = new URLSearchParams(window.location.search).get(
+      "recruitmentId",
+    );
+    if (!recruitmentId) return;
+
+    getRecruitmentCompletionMessage(recruitmentId)
+      .then(({ completionMessage: message }) => {
+        setCompletionMessage(message?.trim() || null);
+      })
+      .catch(() => {
+        // The submission is already complete, so an optional notice failure is non-blocking.
+      });
+  }, []);
 
   return (
     <div className="container mx-auto max-w-2xl py-20 px-4">
@@ -28,6 +48,20 @@ export default function ApplicationCompletePage() {
               결과는 이메일로 안내드릴 예정입니다.
             </p>
           </div>
+
+          {completionMessage && (
+            <div className="border-y py-4">
+              <div className="flex items-start gap-3">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">안내</p>
+                  <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                    {completionMessage}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="rounded-lg border bg-muted/40 p-4 sm:p-5">
             <p className="mb-3 text-sm font-semibold">지원서 확인 경로</p>

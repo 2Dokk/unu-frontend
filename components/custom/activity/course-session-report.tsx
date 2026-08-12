@@ -115,9 +115,9 @@ export function CourseSessionReportCard({
         (a, b) => a.sessionNumber - b.sessionNumber,
       );
 
-      // Fetch my attendances if participant exists
+      // Fetch attendance only after participation is confirmed.
       let myAttendances: AttendanceResponseDto[] = [];
-      if (myParticipant) {
+      if (myParticipant?.status === "APPROVED") {
         try {
           myAttendances = await getAttendancesByParticipantId(myParticipant.id);
         } catch {
@@ -170,7 +170,12 @@ export function CourseSessionReportCard({
   };
 
   const handleSubmit = async () => {
-    if (!dialogSession || !myParticipant || !title.trim() || !content.trim())
+    if (
+      !dialogSession ||
+      myParticipant?.status !== "APPROVED" ||
+      !title.trim() ||
+      !content.trim()
+    )
       return;
 
     setSubmitting(true);
@@ -280,7 +285,7 @@ export function CourseSessionReportCard({
                             )}
                           </Button>
                         )}
-                        {canSubmit && myParticipant && (
+                        {canSubmit && myParticipant?.status === "APPROVED" && (
                           <Button
                             size="sm"
                             variant="default"
@@ -290,9 +295,11 @@ export function CourseSessionReportCard({
                             보고서 작성
                           </Button>
                         )}
-                        {!myParticipant && canSubmit && (
+                        {canSubmit && myParticipant?.status !== "APPROVED" && (
                           <span className="text-xs text-muted-foreground">
-                            참여 신청 필요
+                            {myParticipant?.status === "APPLIED"
+                              ? "활동 시작 후 이용 가능"
+                              : "참여 신청 필요"}
                           </span>
                         )}
                       </div>

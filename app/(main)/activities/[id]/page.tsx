@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,12 +49,14 @@ import {
   createMyParticipantByActivityId,
   deleteActivityParticipant,
   getActivityMemberSummaries,
+  getActivityCapacity,
 } from "@/lib/api/activity-participant";
 import { ActivityResponse } from "@/lib/interfaces/activity";
 import {
   ActivityJoinRequest,
   ActivityParticipantResponse,
   ActivityParticipantSummary,
+  ActivityCapacityResponse,
 } from "@/lib/interfaces/activity-participant";
 import {
   Calendar,
@@ -174,6 +176,7 @@ interface CtaConfig {
 function deriveCtaConfig(
   activity: ActivityResponse,
   participant: ActivityParticipantResponse | null,
+  capacityFull: boolean,
   handlers: {
     onApply: () => void;
     onCancel: () => void;
@@ -187,10 +190,14 @@ function deriveCtaConfig(
 
   if (!participant) {
     return {
-      label: "참여하기",
+      label: capacityFull ? "신청 마감" : "참여 신청",
       variant: "default",
-      disabled: !isRecruiting,
-      disabledReason: isRecruiting ? undefined : "모집 중이 아닙니다",
+      disabled: !isRecruiting || capacityFull,
+      disabledReason: capacityFull
+        ? "참여 정원이 모두 찼습니다."
+        : isRecruiting
+          ? undefined
+          : "모집 중이 아닙니다",
       onClick: handlers.onApply,
     };
   }
@@ -215,16 +222,20 @@ function deriveCtaConfig(
 
   if (participant.status === "REJECTED") {
     return {
-      label: "재신청",
+      label: capacityFull ? "신청 마감" : "다시 신청",
       variant: "outline",
-      disabled: !isRecruiting,
-      disabledReason: isRecruiting ? undefined : "모집 중이 아닙니다",
+      disabled: !isRecruiting || capacityFull,
+      disabledReason: capacityFull
+        ? "참여 정원이 모두 찼습니다."
+        : isRecruiting
+          ? undefined
+          : "모집 중이 아닙니다",
       onClick: handlers.onReapply,
     };
   }
 
   return {
-    label: "참여하기",
+    label: "참여 신청",
     variant: "default",
     disabled: true,
     onClick: handlers.onApply,
@@ -260,6 +271,13 @@ function InfoRow({ icon, label, value }: InfoRowProps) {
   );
 }
 
+function localDateValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 // ========================
 // MAIN COMPONENT
 // ========================
@@ -267,17 +285,25 @@ function InfoRow({ icon, label, value }: InfoRowProps) {
 export default function ActivityDetails() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const activityId = params.id as string;
+  const returnToMyActivities = searchParams.get("from") === "home";
+  const returnPath = returnToMyActivities ? "/home" : "/activities";
+  const returnLabel = returnToMyActivities ? "내 활동으로" : "모든 활동으로";
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [myParticipant, setMyParticipant] =
     useState<ActivityParticipantResponse | null>(null);
   const [visibleMembers, setVisibleMembers] = useState<
     ActivityParticipantSummary[]
   >([]);
+  const [capacity, setCapacity] = useState<ActivityCapacityResponse | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [studyDepositOpen, setStudyDepositOpen] = useState(false);
   const [agreedToPolicy, setAgreedToPolicy] = useState(false);
   const [confirmedPayment, setConfirmedPayment] = useState(false);
@@ -292,9 +318,10 @@ export default function ActivityDetails() {
     const fetchActivityDetails = async () => {
       setLoading(true);
       try {
-        const [activityData, participantData] = await Promise.all([
+        const [activityData, participantData, capacityData] = await Promise.all([
           getActivityById(activityId),
           getMyParticipantByActivityId(activityId),
+          getActivityCapacity(activityId),
         ]);
         const recruitmentClosed =
           activityData.status === "ONGOING" ||
@@ -309,6 +336,7 @@ export default function ActivityDetails() {
         }
         setActivity(activityData);
         setMyParticipant(participantData);
+        setCapacity(capacityData);
         setVisibleMembers(membersData);
       } catch (error: any) {
         console.error("Failed to fetch activity details:", error);
@@ -323,6 +351,14 @@ export default function ActivityDetails() {
     fetchActivityDetails();
   }, [activityId]);
 
+  const refreshCapacity = async () => {
+    try {
+      setCapacity(await getActivityCapacity(activityId));
+    } catch (error) {
+      console.error("Failed to refresh activity capacity:", error);
+    }
+  };
+
   const handleApply = async (application?: ActivityJoinRequest) => {
     if (!activity) return false;
     setActionLoading(true);
@@ -332,13 +368,19 @@ export default function ActivityDetails() {
         application,
       });
       setMyParticipant(newParticipant);
+      void refreshCapacity();
+      toast.success(
+        newParticipant.status === "APPROVED"
+          ? "참여가 확정되었습니다."
+          : "참여 신청이 완료되었습니다. 활동 시작일에 참여가 확정됩니다.",
+      );
       return true;
     } catch (error: any) {
       console.error("Failed to apply for activity:", error);
       toast.error(
         typeof error.response?.data === "string"
           ? error.response.data
-          : "활동 참여에 실패했습니다. 잠시 후 다시 시도해주세요.",
+          : "참여 신청에 실패했습니다. 잠시 후 다시 시도해주세요.",
       );
       return false;
     } finally {
@@ -352,10 +394,12 @@ export default function ActivityDetails() {
     try {
       await deleteActivityParticipant(myParticipant.id);
       setMyParticipant(null);
+      void refreshCapacity();
+      toast.success("참여 신청이 취소되었습니다.");
     } catch (error: any) {
       console.error("Failed to cancel activity:", error);
       toast.error(
-        "참여를 취소하는 데 실패했습니다. 잠시 후 다시 시도해주세요.",
+        "참여 신청을 취소하지 못했습니다. 잠시 후 다시 시도해주세요.",
       );
     } finally {
       setActionLoading(false);
@@ -373,6 +417,7 @@ export default function ActivityDetails() {
     try {
       await deleteActivityParticipant(myParticipant.id);
       setMyParticipant(null);
+      void refreshCapacity();
       setLeaveDialogOpen(false);
     } catch (error: any) {
       console.error("Failed to leave activity:", error);
@@ -403,8 +448,13 @@ export default function ActivityDetails() {
       setRefundAccountHolder("");
       setStudyDepositOpen(true);
     } else {
-      handleApply();
+      setApplyDialogOpen(true);
     }
+  };
+
+  const handleApplyConfirm = async () => {
+    const applied = await handleApply();
+    if (applied) setApplyDialogOpen(false);
   };
 
   const handleStudyDepositConfirm = async () => {
@@ -513,9 +563,9 @@ export default function ActivityDetails() {
             <Button
               variant="outline"
               className="mt-4"
-              onClick={() => router.push("/activities")}
+              onClick={() => router.push(returnPath)}
             >
-              활동 목록으로 돌아가기
+              {returnLabel} 돌아가기
             </Button>
           </CardContent>
         </Card>
@@ -525,27 +575,33 @@ export default function ActivityDetails() {
 
   const activityStatusMeta = getActivityStatusMeta(activity.status);
   const participantMeta = getMyParticipantMeta(myParticipant);
+  const activityHasStarted = activity.startDate <= localDateValue();
   const canManage =
     hasRole("MANAGER") || hasRole("ADMIN") || activity.assignee.id === userId;
-  const ctaConfig = deriveCtaConfig(activity, myParticipant, {
-    onApply: handleApplyClick,
-    onCancel: handleCancel,
-    onComplete: handleComplete,
-    onLeave: () => setLeaveDialogOpen(true),
-    onReapply: handleReapply,
-  });
+  const ctaConfig = deriveCtaConfig(
+    activity,
+    myParticipant,
+    capacity?.full ?? false,
+    {
+      onApply: handleApplyClick,
+      onCancel: handleCancel,
+      onComplete: handleComplete,
+      onLeave: () => setLeaveDialogOpen(true),
+      onReapply: handleReapply,
+    },
+  );
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       <div className="space-y-2 border-b pb-6">
         <Button
           variant="ghost"
-          onClick={() => router.push("/activities")}
+          onClick={() => router.push(returnPath)}
           className="mb-2"
           size="sm"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          돌아가기
+          {returnLabel}
         </Button>
 
         <div className="space-y-3">
@@ -640,7 +696,12 @@ export default function ActivityDetails() {
               <div>
                 <p className="text-sm text-muted-foreground">내 참여 상태</p>
                 <p className="font-semibold">{participantMeta.label}</p>
-                {myParticipant && (
+                {myParticipant?.status === "APPLIED" && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatDate(activity.startDate)}에 참여가 확정됩니다.
+                  </p>
+                )}
+                {myParticipant?.status === "APPROVED" && (
                   <Badge
                     variant={myParticipant.completed ? "default" : "outline"}
                     className="mt-1"
@@ -731,6 +792,16 @@ export default function ActivityDetails() {
               />
 
               <InfoRow
+                icon={<Users className="h-4 w-4" />}
+                label="참여 인원"
+                value={
+                  capacity?.participantLimit == null
+                    ? "제한 없음"
+                    : `${capacity.participantCount} / ${capacity.participantLimit}명`
+                }
+              />
+
+              <InfoRow
                 icon={<User className="h-4 w-4" />}
                 label="담당자"
                 value={
@@ -753,7 +824,7 @@ export default function ActivityDetails() {
                     <Badge variant={participantMeta.variant}>
                       {participantMeta.label}
                     </Badge>
-                    {myParticipant && (
+                    {myParticipant?.status === "APPROVED" && (
                       <Badge
                         variant={
                           myParticipant.completed ? "default" : "outline"
@@ -764,6 +835,11 @@ export default function ActivityDetails() {
                       </Badge>
                     )}
                   </div>
+                  {myParticipant?.status === "APPLIED" && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatDate(activity.startDate)}에 참여가 확정됩니다.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -849,6 +925,45 @@ export default function ActivityDetails() {
         onConfirm={handleDelete}
       />
 
+      <AlertDialog
+        open={applyDialogOpen}
+        onOpenChange={(open) => {
+          if (!actionLoading) setApplyDialogOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {activity.title} 참여를 신청하시겠습니까?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {activityHasStarted ? (
+                <>신청 즉시 참여가 확정됩니다.</>
+              ) : (
+                <>
+                  신청 후 {formatDate(activity.startDate)}에 참여가 자동으로
+                  확정됩니다. 시작 전까지 신청을 취소할 수 있습니다.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>
+              돌아가기
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={actionLoading}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleApplyConfirm();
+              }}
+            >
+              {actionLoading ? "신청 중..." : "참여 신청"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Leave Dialog */}
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
         <AlertDialogContent>
@@ -882,7 +997,7 @@ export default function ActivityDetails() {
           <DialogHeader>
             <DialogTitle>보증금 납부 및 환급 안내</DialogTitle>
             <DialogDescription>
-              참여 전에 납부 기준을 확인하고 환급받을 계좌를 입력해주세요.
+              신청 전에 납부 기준을 확인하고 환급받을 계좌를 입력해주세요.
             </DialogDescription>
           </DialogHeader>
 
@@ -1037,7 +1152,7 @@ export default function ActivityDetails() {
               }
               onClick={handleStudyDepositConfirm}
             >
-              {actionLoading ? "처리 중..." : "참여하기"}
+              {actionLoading ? "신청 중..." : "참여 신청"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -7,9 +7,9 @@ import {
 } from "@/components/ui/select";
 
 const STATUS_OPTIONS = [
-  { value: "APPLIED", label: "신청" },
+  { value: "APPLIED", label: "신청 완료" },
   { value: "APPROVED", label: "참여 확정" },
-  { value: "REJECTED", label: "거절" },
+  { value: "REJECTED", label: "신청 반려" },
 ];
 
 interface ParticipantStatusSelectorProps {

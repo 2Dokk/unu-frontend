@@ -114,7 +114,7 @@ function ActivityCard({ activity, onClick }: ActivityCardProps) {
             }}
           >
             <span className="text-xs">
-              {recruiting ? "참여하기" : isClosed ? "종료" : "보기"}
+              {recruiting ? "참여 신청" : isClosed ? "종료" : "보기"}
             </span>
             {!isClosed && <ChevronRight className="h-3 w-3 ml-1" />}
           </Button>

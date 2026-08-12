@@ -4,6 +4,7 @@ import {
   ActivityParticipantRequest,
   ActivityParticipantResponse,
   ActivityParticipantSummary,
+  ActivityCapacityResponse,
 } from "../interfaces/activity-participant";
 import axiosInstance from "./axiosInstance";
 
@@ -126,6 +127,15 @@ export async function getActivityMemberSummaries(
 ): Promise<ActivityParticipantSummary[]> {
   const response = await axiosInstance.get<ActivityParticipantSummary[]>(
     `/activity-participants/activities/${activityId}/members`,
+  );
+  return response.data;
+}
+
+export async function getActivityCapacity(
+  activityId: string,
+): Promise<ActivityCapacityResponse> {
+  const response = await axiosInstance.get<ActivityCapacityResponse>(
+    `/activity-participants/activities/${activityId}/capacity`,
   );
   return response.data;
 }

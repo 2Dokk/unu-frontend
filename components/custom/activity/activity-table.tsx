@@ -147,7 +147,7 @@ export function ActivityTable({
           disabled={isApplying}
           size="sm"
         >
-          {isApplying ? "참여 중..." : "참여하기"}
+          {isApplying ? "신청 중..." : "참여 신청"}
         </Button>
       );
     }
@@ -159,7 +159,11 @@ export function ActivityTable({
         disabled={isCanceling}
         size="sm"
       >
-      {isCanceling ? "취소 중..." : "참여 취소"}
+      {isCanceling
+        ? "취소 중..."
+        : participant.status === "APPLIED"
+          ? "신청 취소"
+          : "참여 취소"}
       </Button>
     );
   };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Pencil,
@@ -104,9 +104,9 @@ import { ActivityStatusBadge } from "@/components/custom/activity/activity-statu
 import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
 
 const PARTICIPANT_STATUS_OPTIONS = [
-  { value: "APPLIED", label: "신청" },
+  { value: "APPLIED", label: "신청 완료" },
   { value: "APPROVED", label: "참여 확정" },
-  { value: "REJECTED", label: "거절" },
+  { value: "REJECTED", label: "신청 반려" },
 ];
 import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
 import {
@@ -182,9 +182,9 @@ function getActivityStatusVariant(
 
 function getParticipantStatusLabel(status: string): string {
   const statusMap: Record<string, string> = {
-    APPLIED: "신청",
+    APPLIED: "신청 완료",
     APPROVED: "참여 확정",
-    REJECTED: "거절",
+    REJECTED: "신청 반려",
   };
   return statusMap[status] || status;
 }
@@ -289,7 +289,9 @@ function LoadingSkeleton() {
 export default function ActivityDetailManagePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const activityId = params.id as string;
+  const returnToMyActivities = searchParams.get("from") === "home";
   const { userId, roles, isLoading: authLoading } = useAuth();
   const canAdministerActivity = roles.some(
     (role) => role === "ADMIN" || role === "MANAGER",
@@ -689,7 +691,13 @@ export default function ActivityDetailManagePage() {
   }
 
   function handleBackToList() {
-    router.push(canAdministerActivity ? "/manage/activities" : `/activities/${activityId}`);
+    if (returnToMyActivities) {
+      router.push("/home");
+      return;
+    }
+    router.push(
+      canAdministerActivity ? "/manage/activities" : `/activities/${activityId}`,
+    );
   }
 
   function handleMemberClick(userId: string, e: React.MouseEvent) {
@@ -1370,7 +1378,7 @@ export default function ActivityDetailManagePage() {
         <p className="text-muted-foreground">활동을 찾을 수 없습니다</p>
         <Button onClick={handleBackToList} variant="outline">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          목록으로
+          {returnToMyActivities ? "내 활동으로" : "목록으로"}
         </Button>
       </div>
     );
@@ -1387,7 +1395,7 @@ export default function ActivityDetailManagePage() {
           className="mb-2"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          목록으로
+          {returnToMyActivities ? "내 활동으로" : "목록으로"}
         </Button>
 
         <h1 className="text-xl font-bold tracking-tight">{activity.title}</h1>
@@ -1468,6 +1476,22 @@ export default function ActivityDetailManagePage() {
                   />
                 )}
                 <InfoRow
+                  icon={<UserIcon className="h-4 w-4" />}
+                  label="참여 정원"
+                  value={
+                    activity.participantLimit == null
+                      ? "제한 없음"
+                      : `${
+                          participants.filter(
+                            (participant) =>
+                              (participant.status === "APPLIED" ||
+                                participant.status === "APPROVED") &&
+                              participant.user.id !== activity.assignee.id,
+                          ).length
+                        } / ${activity.participantLimit}명`
+                  }
+                />
+                <InfoRow
                   icon={<CalendarDays className="h-4 w-4" />}
                   label="분기"
                   value={activity.quarter.name}
@@ -1531,7 +1555,7 @@ export default function ActivityDetailManagePage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-3">
-                  참여자 현황
+                  신청·참여 현황
                   <span className="text-sm font-normal text-muted-foreground">
                     총 {filteredParticipants.length}건
                   </span>
@@ -1551,7 +1575,7 @@ export default function ActivityDetailManagePage() {
             <CardContent className="space-y-4">
               {!canAdministerActivity && (
                 <p className="text-sm text-muted-foreground">
-                  개설한 활동의 참여자 현황을 확인할 수 있습니다.
+                  개설한 활동의 신청 및 참여 현황을 확인할 수 있습니다.
                 </p>
               )}
               {/* Filters / Bulk Toolbar Toggle */}
@@ -1591,9 +1615,9 @@ export default function ActivityDetailManagePage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="전체">전체</SelectItem>
-                      <SelectItem value="신청">신청</SelectItem>
+                      <SelectItem value="신청 완료">신청 완료</SelectItem>
                       <SelectItem value="참여 확정">참여 확정</SelectItem>
-                      <SelectItem value="거절">거절</SelectItem>
+                      <SelectItem value="신청 반려">신청 반려</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -1618,7 +1642,9 @@ export default function ActivityDetailManagePage() {
               {filteredParticipants.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <UserIcon className="h-12 w-12 text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">참여자가 없습니다</p>
+                  <p className="text-muted-foreground">
+                    신청 또는 참여 내역이 없습니다
+                  </p>
                 </div>
               ) : (
                 <Table>

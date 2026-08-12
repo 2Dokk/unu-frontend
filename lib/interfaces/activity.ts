@@ -27,6 +27,7 @@ export interface ActivityResponse {
   parentActivityId?: string;
   listed?: boolean;
   depositAmount: number;
+  participantLimit: number | null;
   createdAt: string;
   modifiedAt: string;
   createdBy: AuditorDto;
@@ -44,6 +45,7 @@ export interface ActivityRequest {
   endDate: string;
   parentActivityId?: string;
   depositAmount?: number;
+  participantLimit?: number;
 }
 
 export interface ActivityTypeReponse {

@@ -48,6 +48,11 @@ export const menuConfig: MenuConfig = {
       icon: Activity,
     },
     {
+      label: "학회 공지",
+      href: "/notices",
+      icon: Bell,
+    },
+    {
       label: "강의자료",
       href: "/lecture-materials",
       icon: LibraryBig,

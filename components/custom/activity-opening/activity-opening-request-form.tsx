@@ -53,6 +53,7 @@ interface FormState {
   startDate: string;
   endDate: string;
   acceptsNewMembers: boolean;
+  participantLimit: string;
   personalProject: boolean | null;
   parentActivityId: string;
 }
@@ -66,6 +67,7 @@ const EMPTY_FORM: FormState = {
   startDate: "",
   endDate: "",
   acceptsNewMembers: false,
+  participantLimit: "",
   personalProject: null,
   parentActivityId: "none",
 };
@@ -160,6 +162,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
             startDate: existing.startDate,
             endDate: existing.endDate,
             acceptsNewMembers: existing.acceptsNewMembers,
+            participantLimit: String(existing.participantLimit ?? ""),
             personalProject: existing.personalProject,
             parentActivityId: existing.parentActivityId ?? "none",
           });
@@ -254,6 +257,23 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
     if (!form.startDate || !form.endDate) return "활동 기간을 입력해주세요.";
     if (new Date(form.startDate) > new Date(form.endDate))
       return "종료일은 시작일 이후여야 합니다.";
+    const participantLimit = Number(form.participantLimit);
+    if (
+      form.acceptsNewMembers &&
+      form.participantLimit &&
+      (!Number.isInteger(participantLimit) ||
+        participantLimit < 1 ||
+        participantLimit > 1000)
+    ) {
+      return "참여 정원은 1명 이상 1,000명 이하로 입력해주세요.";
+    }
+    if (
+      form.acceptsNewMembers &&
+      form.participantLimit &&
+      participantLimit < initialMembers.length
+    ) {
+      return "참여 정원은 함께 시작할 인원보다 적을 수 없습니다.";
+    }
     return null;
   }
 
@@ -274,6 +294,10 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
       endDate: form.endDate,
       expectedMemberCount: initialMembers.length + 1,
       acceptsNewMembers: form.acceptsNewMembers,
+      participantLimit:
+        form.acceptsNewMembers && form.participantLimit
+          ? Number(form.participantLimit)
+          : undefined,
       personalProject: Boolean(form.personalProject),
       parentActivityId:
         form.parentActivityId === "none" ? undefined : form.parentActivityId,
@@ -477,6 +501,36 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                 />
               </div>
             )}
+          {form.acceptsNewMembers && (
+            <div className="space-y-2">
+              <Label htmlFor="opening-participant-limit">참여 정원</Label>
+              <div className="relative max-w-48">
+                <Input
+                  id="opening-participant-limit"
+                  value={form.participantLimit}
+                  onChange={(event) =>
+                    change(
+                      "participantLimit",
+                      event.target.value.replace(/\D/g, ""),
+                    )
+                  }
+                  placeholder="제한 없음"
+                  inputMode="numeric"
+                  className="pr-9"
+                  maxLength={4}
+                />
+                {form.participantLimit && (
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    명
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                비워두면 제한 없이 신청받습니다. 담당자는 제외하고 함께 시작할
+                학회원을 포함한 전체 참여 정원입니다.
+              </p>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>이어가는 이전 활동</Label>
             <Select value={form.parentActivityId} onValueChange={(value) => change("parentActivityId", value)}>

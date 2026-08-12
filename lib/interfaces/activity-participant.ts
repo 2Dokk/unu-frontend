@@ -43,8 +43,14 @@ export interface ActivityParticipantSummary {
   name: string;
 }
 
+export interface ActivityCapacityResponse {
+  participantLimit: number | null;
+  participantCount: number;
+  full: boolean;
+}
+
 export const ACTIVITY_PARTICIPANT_STATUS_MAP: Record<string, string> = {
-  APPLIED: "신청됨",
-  APPROVED: "승인됨",
-  REJECTED: "거절됨",
+  APPLIED: "신청 완료",
+  APPROVED: "참여 확정",
+  REJECTED: "신청 반려",
 };
