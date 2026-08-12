@@ -20,8 +20,10 @@ export function setAuthCookies(token: string, refreshToken?: string) {
   notifyAuthStateChanged();
 }
 
-export function clearAuthCookies() {
+export function clearAuthCookies(options: { notify?: boolean } = {}) {
   Cookies.remove("token");
   Cookies.remove("refreshToken");
-  notifyAuthStateChanged();
+  if (options.notify !== false) {
+    notifyAuthStateChanged();
+  }
 }

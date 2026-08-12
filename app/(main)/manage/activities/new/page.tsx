@@ -99,12 +99,12 @@ export default function ActivityNewPage() {
   }
 
   function validateForm(): string | null {
+    if (!formData.activityTypeId) return "활동 유형을 선택해주세요.";
     if (!formData.title.trim()) return "활동명을 입력해주세요.";
     if (!formData.startDate || !formData.endDate)
       return "시작일과 종료일을 입력해주세요.";
     if (new Date(formData.startDate) > new Date(formData.endDate))
       return "종료일은 시작일 이후여야 합니다.";
-    if (!formData.activityTypeId) return "활동 유형을 선택해주세요.";
     if (!formData.quarterId) return "분기를 선택해주세요.";
     if (!formData.assigneeId) return "담당자를 선택해주세요.";
     const depositAmount = Number(formData.depositAmount);
@@ -210,6 +210,41 @@ export default function ActivityNewPage() {
             <CardTitle>기본 정보</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Activity Type */}
+            <div className="space-y-2">
+              <Label htmlFor="activityType">
+                활동 유형 <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={formData.activityTypeId}
+                onValueChange={(value) => {
+                  handleInputChange("activityTypeId", value);
+                  const type = activityTypes.find((item) => item.id === value);
+                  if (
+                    (type?.code === "STUDY" ||
+                      type?.code === "SPECIAL_LECTURE") &&
+                    !formData.depositAmount
+                  ) {
+                    handleInputChange("depositAmount", "30000");
+                  }
+                  if (type?.code === "LECTURE" && !formData.participantLimit) {
+                    handleInputChange("participantLimit", "5");
+                  }
+                }}
+              >
+                <SelectTrigger id="activityType" className="w-48">
+                  <SelectValue placeholder="유형 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activityTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="title">
@@ -238,41 +273,6 @@ export default function ActivityNewPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Activity Type */}
-              <div className="space-y-2">
-                <Label htmlFor="activityType">
-                  유형 <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={formData.activityTypeId}
-                  onValueChange={(value) => {
-                    handleInputChange("activityTypeId", value);
-                    const type = activityTypes.find((item) => item.id === value);
-                    if (
-                      (type?.code === "STUDY" ||
-                        type?.code === "SPECIAL_LECTURE") &&
-                      !formData.depositAmount
-                    ) {
-                      handleInputChange("depositAmount", "30000");
-                    }
-                    if (type?.code === "LECTURE" && !formData.participantLimit) {
-                      handleInputChange("participantLimit", "5");
-                    }
-                  }}
-                >
-                  <SelectTrigger id="activityType" className="w-48">
-                    <SelectValue placeholder="유형 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activityTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               {requiresDeposit && (
                 <div className="space-y-2">
                   <Label htmlFor="depositAmount">참여 보증금</Label>

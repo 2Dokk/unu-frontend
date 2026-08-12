@@ -47,10 +47,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/**
- * JWT 토큰에서 역할 목록을 그대로 추출한다.
- * "ROLE_" 접두사는 떼고 대문자로 정규화한다.
- */
 function extractRolesFromToken(token: string): string[] {
   try {
     const decoded = jwtDecode<DecodedToken>(token);
@@ -67,10 +63,7 @@ function extractRolesFromToken(token: string): string[] {
   }
 }
 
-/**
- * JWT 토큰에서 가장 높은 권한을 추출
- * 우선순위: ADMIN > MANAGER > MEMBER
- */
+
 function extractRoleFromToken(token: string): UserRole {
   try {
     const decoded = jwtDecode<DecodedToken>(token);
@@ -210,12 +203,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearAuthState]);
 
   const logout = useCallback(() => {
-    clearSession();
-
     if (typeof window !== "undefined") {
+      clearAuthCookies({ notify: false });
       window.location.replace("/");
     }
-  }, [clearSession]);
+  }, []);
 
   const expireSession = useCallback(() => {
     clearSession();
