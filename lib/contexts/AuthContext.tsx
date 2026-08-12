@@ -204,24 +204,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTokenExpiresAt(decoded.exp ? decoded.exp * 1000 : null);
   };
 
-  const logout = useCallback(() => {
+  const clearSession = useCallback(() => {
     clearAuthCookies();
     clearAuthState();
+  }, [clearAuthState]);
+
+  const logout = useCallback(() => {
+    clearSession();
 
     if (typeof window !== "undefined") {
-      router.replace("/login");
+      window.location.replace("/");
     }
-  }, [clearAuthState, router]);
+  }, [clearSession]);
+
+  const expireSession = useCallback(() => {
+    clearSession();
+    router.replace("/login");
+  }, [clearSession, router]);
 
   useEffect(() => {
     if (!isAuthenticated || tokenExpiresAt === null) return;
 
     const timer = window.setTimeout(
-      logout,
+      expireSession,
       Math.max(0, tokenExpiresAt - Date.now()),
     );
     return () => window.clearTimeout(timer);
-  }, [isAuthenticated, logout, tokenExpiresAt]);
+  }, [expireSession, isAuthenticated, tokenExpiresAt]);
 
   // 비활동 자동 로그아웃
   useEffect(() => {
@@ -230,7 +239,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let timer: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
       clearTimeout(timer);
-      timer = setTimeout(logout, IDLE_TIMEOUT_MS);
+      timer = setTimeout(expireSession, IDLE_TIMEOUT_MS);
     };
 
     IDLE_EVENTS.forEach((event) => window.addEventListener(event, resetTimer));
@@ -240,7 +249,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(timer);
       IDLE_EVENTS.forEach((event) => window.removeEventListener(event, resetTimer));
     };
-  }, [isAuthenticated, logout]);
+  }, [expireSession, isAuthenticated]);
 
   const getAuthToken = (): string | undefined => {
     return Cookies.get("token");
