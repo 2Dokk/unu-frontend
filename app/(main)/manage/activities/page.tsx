@@ -154,16 +154,22 @@ export default function ActivitiesManagementPage() {
     }
   }
 
+  const sortedActivities = [...activities].sort((a, b) =>
+    (b.startDate ?? "").localeCompare(a.startDate ?? ""),
+  );
+
   // Bulk selection helpers
   const totalPages = Math.max(
     1,
-    Math.ceil(activities.length / ACTIVITIES_PER_PAGE),
+    Math.ceil(sortedActivities.length / ACTIVITIES_PER_PAGE),
   );
-  const paginatedActivities = activities.slice(
+  const paginatedActivities = sortedActivities.slice(
     (currentPage - 1) * ACTIVITIES_PER_PAGE,
     currentPage * ACTIVITIES_PER_PAGE,
   );
-  const selectedActivities = activities.filter((a) => selectedIds.has(a.id));
+  const selectedActivities = sortedActivities.filter((a) =>
+    selectedIds.has(a.id),
+  );
   const allSelected =
     paginatedActivities.length > 0 &&
     paginatedActivities.every((a) => selectedIds.has(a.id));
