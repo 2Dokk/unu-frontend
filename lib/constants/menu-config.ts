@@ -43,21 +43,15 @@ export const menuConfig: MenuConfig = {
       icon: UserRound, 
     },
     {
-      label: "내 활동",
-      href: "/home",
-      icon: Activity,
-    },
-    {
       label: "학회 공지",
       href: "/notices",
       icon: Bell,
     },
     {
-      label: "강의자료",
-      href: "/lecture-materials",
-      icon: LibraryBig,
+      label: "내 활동",
+      href: "/home",
+      icon: Activity,
     },
-
   ],
 
   // MEMBER 권한 사용자에게만 표시되는 메뉴
@@ -66,6 +60,11 @@ export const menuConfig: MenuConfig = {
       label: "모든 활동",
       href: "/activities",
       icon: Calendar,
+    },
+    {
+      label: "강의자료",
+      href: "/lecture-materials",
+      icon: LibraryBig,
     },
     {
       label: "인강 예약",
