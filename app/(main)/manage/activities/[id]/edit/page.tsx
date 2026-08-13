@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getActivityById, updateActivity } from "@/lib/api/activity";
+import { getLectureMaterialsByActivity } from "@/lib/api/lecture-material";
 import { getAllActivityTypes } from "@/lib/api/activity-type";
 import { getAllQuarters } from "@/lib/api/quarter";
 import { getAllUsers } from "@/lib/api/user";
@@ -62,6 +63,8 @@ import {
 } from "@/lib/constants/project-mode";
 import { isDiscordUrl, supportsDiscordLink } from "@/lib/constants/discord-link";
 import { operationPlanLabel } from "@/lib/constants/operation-plan";
+import { activityMaterialLabel } from "@/lib/constants/activity-material";
+import { isMaterialUrl } from "@/lib/utils/material-url";
 import { useAuth } from "@/lib/contexts/AuthContext";
 
 // ========================
@@ -152,6 +155,7 @@ export default function ActivityEditPage() {
     recruitmentEndDate: "",
     operationPlan: "",
     instructorCareer: "",
+    materialUrl: "",
   });
   const [projectMode, setProjectMode] = useState<ProjectMode>("FIXED_TEAM");
 
@@ -167,6 +171,7 @@ export default function ActivityEditPage() {
   const allowsDiscordLink = supportsDiscordLink(selectedActivityType?.code);
   const planLabel = operationPlanLabel(selectedActivityType?.code);
   const isSpecialLecture = selectedActivityType?.code === "SPECIAL_LECTURE";
+  const materialLabel = activityMaterialLabel(selectedActivityType?.code);
   const modeFields = projectModeFields(projectMode);
   const allowsInitialMembers = !isProject || modeFields.allowsInitialMembers;
   const showsParticipantLimit = !isProject || modeFields.allowsParticipantLimit;
@@ -211,12 +216,14 @@ export default function ActivityEditPage() {
         quartersData,
         usersData,
         participantsData,
+        materialsData,
       ] = await Promise.all([
         getActivityById(activityId),
         getAllActivityTypes(),
         getAllQuarters(),
         canEditOperations ? getAllUsers() : Promise.resolve([]),
         getActivityParticipantsByActivityId({ activityId }),
+        getLectureMaterialsByActivity(activityId),
       ]);
 
       setActivity(activityData);
@@ -243,6 +250,8 @@ export default function ActivityEditPage() {
         recruitmentEndDate: activityData.recruitmentEndDate ?? "",
         operationPlan: activityData.operationPlan ?? "",
         instructorCareer: activityData.instructorCareer ?? "",
+        materialUrl:
+          materialsData.find((material) => material.primary)?.driveUrl ?? "",
       });
       setProjectMode(deriveProjectMode(activityData));
     } catch (err) {
@@ -351,6 +360,13 @@ export default function ActivityEditPage() {
     ) {
       return "디스코드 초대 링크를 확인해주세요.";
     }
+    if (
+      materialLabel &&
+      formData.materialUrl.trim() &&
+      !isMaterialUrl(formData.materialUrl.trim())
+    ) {
+      return `${materialLabel} Google Drive 또는 Notion 공유 링크를 확인해주세요.`;
+    }
 
     return null;
   }
@@ -396,6 +412,9 @@ export default function ActivityEditPage() {
           : null,
         instructorCareer: isSpecialLecture
           ? formData.instructorCareer.trim() || null
+          : null,
+        materialUrl: materialLabel
+          ? formData.materialUrl.trim() || null
           : null,
       };
 
@@ -656,9 +675,30 @@ export default function ActivityEditPage() {
                       onChange={(event) =>
                         handleInputChange("operationPlan", event.target.value)
                       }
-                      placeholder="https://docs.google.com/..."
+                      placeholder="열람 가능한 구글 드라이브 링크를 첨부해 주세요."
                       autoComplete="off"
                     />
+                  </div>
+                )}
+
+                {materialLabel && (
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="materialUrl">{materialLabel} (선택)</Label>
+                    <Input
+                      id="materialUrl"
+                      type="url"
+                      maxLength={2048}
+                      value={formData.materialUrl}
+                      onChange={(event) =>
+                        handleInputChange("materialUrl", event.target.value)
+                      }
+                      placeholder="Google Drive·Docs 또는 Notion 공유 링크"
+                      autoComplete="off"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      학회원이 열람할 수 있도록 공유 권한을 확인해주세요. 비워
+                      두고 저장하면 기존 자료가 제거됩니다.
+                    </p>
                   </div>
                 )}
 

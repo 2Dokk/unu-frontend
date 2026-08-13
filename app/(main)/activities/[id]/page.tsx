@@ -99,6 +99,7 @@ import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-ba
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { activityMaterialLabel } from "@/lib/constants/activity-material";
 
 // ========================
 // TYPES & HELPERS
@@ -381,18 +382,19 @@ export default function ActivityDetails() {
   const showActivityContent = returnToMyActivities && canViewNotices;
 
   useEffect(() => {
-    if (!showActivityContent) {
-      setLectureMaterials([]);
-      setActivityTab((tab) => (tab === "content" ? "info" : tab));
-      return;
-    }
-
     getLectureMaterialsByActivity(activityId)
       .then(setLectureMaterials)
-      .catch((error) =>
-        console.error("Failed to fetch lecture materials:", error),
-      );
-  }, [showActivityContent, activityId]);
+      .catch((error) => {
+        console.error("Failed to fetch lecture materials:", error);
+        setLectureMaterials([]);
+      });
+  }, [activityId]);
+
+  useEffect(() => {
+    if (!showActivityContent) {
+      setActivityTab((tab) => (tab === "content" ? "info" : tab));
+    }
+  }, [showActivityContent]);
 
   useEffect(() => {
     if (!showNotices) {
@@ -671,8 +673,10 @@ export default function ActivityDetails() {
   const activityHasStarted = activity.startDate <= localDateValue();
   const canManage =
     hasRole("MANAGER") || hasRole("ADMIN") || activity.assignee.id === userId;
-  const canManageMaterials = hasRole("MANAGER");
-  const unassignedMaterials = lectureMaterials.filter((m) => m.weekNumber == null);
+  const canManageMaterials = canManage;
+  const unassignedMaterials = lectureMaterials.filter(
+    (material) => material.weekNumber == null,
+  );
   const ctaConfig = deriveCtaConfig(
     activity,
     myParticipant,
@@ -1039,7 +1043,10 @@ export default function ActivityDetails() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground">강의자료</p>
+                    <p className="text-xs text-muted-foreground">
+                      {activityMaterialLabel(activity.activityType.code) ??
+                        "활동 자료"}
+                    </p>
                     {canManageMaterials && (
                       <button
                         type="button"

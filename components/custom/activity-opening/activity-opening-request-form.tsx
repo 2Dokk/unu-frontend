@@ -39,6 +39,8 @@ import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { ActivityOpeningRequestPayload } from "@/lib/interfaces/activity-opening-request";
 import { ActivityOpeningPeriodResponse } from "@/lib/interfaces/activity-opening-period";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { activityMaterialLabel } from "@/lib/constants/activity-material";
+import { isMaterialUrl } from "@/lib/utils/material-url";
 import {
   ExternalLink,
 } from "lucide-react";
@@ -51,6 +53,7 @@ interface FormState {
   title: string;
   description: string;
   operationPlan: string;
+  materialUrl: string;
   activityTypeId: string;
   quarterId: string;
   startDate: string;
@@ -67,6 +70,7 @@ const EMPTY_FORM: FormState = {
   title: "",
   description: "",
   operationPlan: "",
+  materialUrl: "",
   activityTypeId: "",
   quarterId: "",
   startDate: "",
@@ -164,6 +168,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
             title: existing.title,
             description: existing.description,
             operationPlan: existing.operationPlan,
+            materialUrl: existing.materialUrl ?? "",
             activityTypeId: existing.activityType.id,
             quarterId: existing.quarter.id,
             startDate: existing.startDate,
@@ -222,6 +227,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
         : form.acceptsNewMembers
           ? "RECRUITING"
           : "FIXED_TEAM";
+  const materialLabel = activityMaterialLabel(selectedActivityType?.code);
   const canSelectInitialMembers =
     Boolean(selectedActivityType) &&
     (selectedActivityType?.code !== "PROJECT" ||
@@ -349,6 +355,14 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
     ) {
       return "참여 정원은 함께 시작할 인원보다 적을 수 없습니다.";
     }
+
+    if (
+      materialLabel &&
+      form.materialUrl.trim() &&
+      !isMaterialUrl(form.materialUrl.trim())
+    ) {
+      return `${materialLabel} Google Drive 또는 Notion 공유 링크를 확인해주세요.`;
+    }
   
     return null;
   }
@@ -364,6 +378,9 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
       title: form.title.trim(),
       description: form.description.trim(),
       operationPlan: form.operationPlan.trim(),
+      materialUrl: materialLabel
+        ? form.materialUrl.trim() || undefined
+        : undefined,
       activityTypeId: form.activityTypeId,
       quarterId: form.quarterId,
       startDate: form.startDate,
@@ -609,6 +626,26 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                   선정 검토에 참고됩니다.
                 </p>
               </div>
+            </div>
+          )}
+          {materialLabel && (
+            <div className="space-y-2">
+              <Label htmlFor="opening-material-url">
+                {materialLabel} (선택)
+              </Label>
+              <Input
+                id="opening-material-url"
+                type="url"
+                maxLength={2048}
+                value={form.materialUrl}
+                onChange={(event) => change("materialUrl", event.target.value)}
+                placeholder="Google Drive·Docs 또는 Notion 공유 링크"
+                autoComplete="off"
+              />
+              <p className="text-xs text-muted-foreground">
+                학회원이 열람할 수 있도록 공유 권한을 확인해주세요. 승인 후
+                활동 상세와 강의자료 탭에 표시됩니다.
+              </p>
             </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2">

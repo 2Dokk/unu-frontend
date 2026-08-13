@@ -50,7 +50,7 @@ import {
   LectureMaterial,
   LectureMaterialRequest,
 } from "@/lib/interfaces/lecture-material";
-import { isGoogleDriveUrl } from "@/lib/utils/drive-url";
+import { isMaterialUrl } from "@/lib/utils/material-url";
 import { cn } from "@/lib/utils";
 
 const EMPTY_FORM: LectureMaterialRequest = {
@@ -155,8 +155,8 @@ export function WeeklyMaterials({
       toast.error("내용 이름을 입력해주세요.");
       return;
     }
-    if (!isGoogleDriveUrl(form.driveUrl.trim())) {
-      toast.error("Google Drive 공유 링크를 확인해주세요.");
+    if (!isMaterialUrl(form.driveUrl.trim())) {
+      toast.error("Google Drive 또는 Notion 공유 링크를 확인해주세요.");
       return;
     }
 
@@ -434,8 +434,11 @@ export function WeeklyMaterials({
                     driveUrl: event.target.value,
                   }))
                 }
-                placeholder="https://drive.google.com/..."
+                placeholder="Google Drive·Docs 또는 Notion 공유 링크"
               />
+              <p className="text-xs text-muted-foreground">
+                학회원이 열람할 수 있도록 공유 권한을 확인해주세요.
+              </p>
             </div>
           </div>
           <DialogFooter>

@@ -119,6 +119,7 @@ import {
   isOperationPlanUrl,
   operationPlanLabel,
 } from "@/lib/constants/operation-plan";
+import { activityMaterialLabel } from "@/lib/constants/activity-material";
 
 const PARTICIPANT_STATUS_OPTIONS = [
   { value: "APPLIED", label: "신청 완료" },
@@ -1644,6 +1645,41 @@ export default function ActivityDetailManagePage() {
                       ) : (
                         <div className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-sm">
                           {activity.operationPlan || "—"}
+                        </div>
+                      )
+                    }
+                  />
+                )}
+                {activityMaterialLabel(activity.activityType.code) && (
+                  <InfoRow
+                    icon={<FileText className="h-4 w-4" />}
+                    label={
+                      activityMaterialLabel(activity.activityType.code) ??
+                      "활동 자료"
+                    }
+                    value={
+                      lectureMaterials.filter(
+                        (material) => material.weekNumber == null,
+                      ).length === 0 ? (
+                        "—"
+                      ) : (
+                        <div className="space-y-1.5">
+                          {lectureMaterials
+                            .filter((material) => material.weekNumber == null)
+                            .map((material) => (
+                              <a
+                                key={material.id}
+                                href={material.driveUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex min-w-0 items-center gap-1.5 text-sm text-[#174b3a] hover:underline"
+                              >
+                                <span className="truncate">
+                                  {material.materialName || material.title}
+                                </span>
+                                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                              </a>
+                            ))}
                         </div>
                       )
                     }

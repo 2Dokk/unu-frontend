@@ -23,7 +23,7 @@ import {
   LectureMaterialRequest,
 } from "@/lib/interfaces/lecture-material";
 import { formatDate } from "@/lib/utils/date-utils";
-import { isGoogleDriveUrl } from "@/lib/utils/drive-url";
+import { isMaterialUrl } from "@/lib/utils/material-url";
 import { searchActivities } from "@/lib/api/activity";
 import { ActivityResponse } from "@/lib/interfaces/activity";
 import { Button } from "@/components/ui/button";
@@ -156,8 +156,8 @@ function LectureMaterialsContent() {
       toast.error("자료 제목을 입력해주세요.");
       return;
     }
-    if (!isGoogleDriveUrl(form.driveUrl.trim())) {
-      toast.error("Google Drive 공유 링크를 확인해주세요.");
+    if (!isMaterialUrl(form.driveUrl.trim())) {
+      toast.error("Google Drive 또는 Notion 공유 링크를 확인해주세요.");
       return;
     }
 
@@ -317,7 +317,7 @@ function LectureMaterialsContent() {
               {editingMaterial ? "강의자료 수정" : "강의자료 추가"}
             </DialogTitle>
             <DialogDescription>
-              학회원에게 공유할 Google Drive 자료를 등록합니다.
+              학회원에게 공유할 Google Drive 또는 Notion 자료를 등록합니다.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -380,7 +380,7 @@ function LectureMaterialsContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="material-drive-url">Google Drive 링크</Label>
+              <Label htmlFor="material-drive-url">자료 링크</Label>
               <Input
                 id="material-drive-url"
                 type="url"
@@ -393,8 +393,11 @@ function LectureMaterialsContent() {
                     driveUrl: event.target.value,
                   }))
                 }
-                placeholder="https://drive.google.com/..."
+                placeholder="Google Drive·Docs 또는 Notion 공유 링크"
               />
+              <p className="text-xs text-muted-foreground">
+                학회원이 열람할 수 있도록 공유 권한을 확인해주세요.
+              </p>
             </div>
           </div>
           <DialogFooter>

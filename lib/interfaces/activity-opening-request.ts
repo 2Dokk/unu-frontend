@@ -14,6 +14,7 @@ export interface ActivityOpeningRequestPayload {
   title: string;
   description: string;
   operationPlan: string;
+  materialUrl?: string | null;
   activityTypeId: string;
   quarterId: string;
   startDate: string;
@@ -34,6 +35,7 @@ export interface ActivityOpeningRequestResponse {
   title: string;
   description: string;
   operationPlan: string;
+  materialUrl?: string | null;
   activityType: ActivityTypeResponse;
   quarter: QuarterResponse;
   startDate: string;

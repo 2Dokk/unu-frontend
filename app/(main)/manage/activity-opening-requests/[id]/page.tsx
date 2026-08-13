@@ -452,6 +452,32 @@ export default function ActivityOpeningRequestManagementDetailPage() {
                 </section>
               </>
             )}
+
+            {(isStudy || isSpecialLecture) && request.materialUrl && (
+              <>
+                <Separator />
+                <section className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {isStudy ? "스터디 자료" : "강의자료"}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      신청자가 선택적으로 첨부한 자료
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" asChild className="shrink-0">
+                    <a
+                      href={request.materialUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      자료 확인
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                </section>
+              </>
+            )}
           </CardContent>
         </Card>
 

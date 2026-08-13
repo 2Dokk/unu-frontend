@@ -44,6 +44,8 @@ import {
 } from "@/lib/constants/project-mode";
 import { isDiscordUrl, supportsDiscordLink } from "@/lib/constants/discord-link";
 import { operationPlanLabel } from "@/lib/constants/operation-plan";
+import { activityMaterialLabel } from "@/lib/constants/activity-material";
+import { isMaterialUrl } from "@/lib/utils/material-url";
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "준비 중" },
@@ -83,6 +85,7 @@ export default function ActivityNewPage() {
     recruitmentEndDate: "",
     operationPlan: "",
     instructorCareer: "",
+    materialUrl: "",
   });
   const [projectMode, setProjectMode] = useState<ProjectMode>("FIXED_TEAM");
 
@@ -98,6 +101,7 @@ export default function ActivityNewPage() {
   const allowsDiscordLink = supportsDiscordLink(selectedActivityType?.code);
   const planLabel = operationPlanLabel(selectedActivityType?.code);
   const isSpecialLecture = selectedActivityType?.code === "SPECIAL_LECTURE";
+  const materialLabel = activityMaterialLabel(selectedActivityType?.code);
   const modeFields = projectModeFields(projectMode);
   const allowsInitialMembers = !isProject || modeFields.allowsInitialMembers;
   const showsParticipantLimit = !isProject || modeFields.allowsParticipantLimit;
@@ -202,6 +206,13 @@ export default function ActivityNewPage() {
     ) {
       return "디스코드 초대 링크를 확인해주세요.";
     }
+    if (
+      materialLabel &&
+      formData.materialUrl.trim() &&
+      !isMaterialUrl(formData.materialUrl.trim())
+    ) {
+      return `${materialLabel} Google Drive 또는 Notion 공유 링크를 확인해주세요.`;
+    }
     return null;
   }
 
@@ -246,6 +257,9 @@ export default function ActivityNewPage() {
           : undefined,
         instructorCareer: isSpecialLecture
           ? formData.instructorCareer.trim() || undefined
+          : undefined,
+        materialUrl: materialLabel
+          ? formData.materialUrl.trim() || undefined
           : undefined,
       };
 
@@ -492,6 +506,27 @@ export default function ActivityNewPage() {
                     }
                     placeholder="진행 방식, 일정, 예상 결과물을 중심으로 작성해주세요."
                   />
+                </div>
+              )}
+
+              {materialLabel && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="materialUrl">{materialLabel} (선택)</Label>
+                  <Input
+                    id="materialUrl"
+                    type="url"
+                    maxLength={2048}
+                    value={formData.materialUrl}
+                    onChange={(event) =>
+                      handleInputChange("materialUrl", event.target.value)
+                    }
+                    placeholder="Google Drive·Docs 또는 Notion 공유 링크"
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    학회원이 열람할 수 있도록 공유 권한을 확인해주세요. 등록
+                    후 활동 상세와 강의자료 탭에 표시됩니다.
+                  </p>
                 </div>
               )}
 

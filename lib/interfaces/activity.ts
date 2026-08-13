@@ -59,6 +59,7 @@ export interface ActivityRequest {
   recruitmentEndDate?: string | null;
   operationPlan?: string | null;
   instructorCareer?: string | null;
+  materialUrl?: string | null;
 }
 
 export interface ActivityTypeReponse {
