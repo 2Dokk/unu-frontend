@@ -214,9 +214,19 @@ export default function AllActivitiesPage() {
                                 <p className="font-medium">
                                   {participant.activity?.title || "활동명 없음"}
                                 </p>
-                                <ParticipantStatusBadge
-                                  status={participant.status}
-                                />
+                                {participant.activity.status === "COMPLETED" &&
+                                !participant.completed ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-amber-200 bg-amber-50 text-amber-700"
+                                  >
+                                    미수료
+                                  </Badge>
+                                ) : (
+                                  <ParticipantStatusBadge
+                                    status={participant.status}
+                                  />
+                                )}
                                 {participant.completed && (
                                   <Badge
                                     variant="outline"
