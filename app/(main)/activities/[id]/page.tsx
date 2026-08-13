@@ -86,6 +86,15 @@ import { ActivityNotices } from "@/components/custom/activity/activity-notices";
 import { getActivityNotices } from "@/lib/api/activity-notice";
 import { ActivityNotice } from "@/lib/interfaces/activity-notice";
 import { formatDate } from "@/lib/utils/date-utils";
+import {
+  isOperationPlanUrl,
+  operationPlanLabel,
+} from "@/lib/constants/operation-plan";
+import {
+  activityDisplayStatus,
+  isActivityRecruiting,
+  localDateValue,
+} from "@/lib/utils/activity-recruitment";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
 import { cn } from "@/lib/utils";
@@ -193,8 +202,7 @@ function deriveCtaConfig(
     onReapply: () => void;
   },
 ): CtaConfig {
-  const isRecruiting =
-    activity.status === "RECRUITING" || activity.status === "OPEN";
+  const isRecruiting = isActivityRecruiting(activity);
 
   if (!participant) {
     return {
@@ -277,13 +285,6 @@ function InfoRow({ icon, label, value }: InfoRowProps) {
       </div>
     </div>
   );
-}
-
-function localDateValue(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 
@@ -632,7 +633,9 @@ export default function ActivityDetails() {
     );
   }
 
-  const activityStatusMeta = getActivityStatusMeta(activity.status);
+  const activityStatusMeta = getActivityStatusMeta(
+    activityDisplayStatus(activity),
+  );
   const participantMeta = getMyParticipantMeta(myParticipant);
   const activityHasStarted = activity.startDate <= localDateValue();
   const canManage =
@@ -670,7 +673,7 @@ export default function ActivityDetails() {
 
           <div className="flex flex-wrap items-center gap-2">
             <ActivityTypeBadge activityType={activity.activityType} />
-            <ActivityStatusBadge status={activity.status} />
+            <ActivityStatusBadge status={activityDisplayStatus(activity)} />
           </div>
         </div>
       </div>
@@ -903,6 +906,54 @@ export default function ActivityDetails() {
                     : `${capacity.participantCount} / ${capacity.participantLimit}명`
                 }
               />
+
+              {activity.instructorCareer &&
+                activity.activityType.code === "SPECIAL_LECTURE" && (
+                  <div className="flex items-start gap-3 py-3">
+                    <div className="mt-0.5 text-muted-foreground">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-0.5 text-xs text-muted-foreground">
+                        강의자 경력
+                      </p>
+                      <p className="max-h-48 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
+                        {activity.instructorCareer}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+              {activity.operationPlan &&
+                operationPlanLabel(activity.activityType.code) && (
+                  <div className="flex items-start gap-3 py-3">
+                    <div className="mt-0.5 text-muted-foreground">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-0.5 text-xs text-muted-foreground">
+                        {operationPlanLabel(activity.activityType.code)}
+                      </p>
+                      {isOperationPlanUrl(activity.operationPlan) ? (
+                        <a
+                          href={activity.operationPlan.trim()}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[#174b3a] hover:underline"
+                        >
+                          <span className="truncate">
+                            {operationPlanLabel(activity.activityType.code)} 열기
+                          </span>
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                        </a>
+                      ) : (
+                        <p className="max-h-48 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
+                          {activity.operationPlan}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
               {activity.recruitmentPositions && (
                 <div className="flex items-start gap-3 py-3">

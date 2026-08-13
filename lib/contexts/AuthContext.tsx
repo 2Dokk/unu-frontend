@@ -9,12 +9,15 @@ import React, {
 } from "react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
-import { useRouter } from "next/navigation";
 import {
   AUTH_STATE_CHANGED_EVENT,
   clearAuthCookies,
   setAuthCookies,
 } from "@/lib/utils/auth-cookies";
+import {
+  markSessionExpired,
+  sessionExpiredLoginUrl,
+} from "@/lib/utils/auth-session";
 
 // 30분간 활동이 없으면 자동 로그아웃
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
@@ -63,6 +66,14 @@ function extractRolesFromToken(token: string): string[] {
   }
 }
 
+function isExpiredToken(token: string): boolean {
+  try {
+    const decoded = jwtDecode<DecodedToken>(token);
+    return Boolean(decoded.exp && decoded.exp * 1000 < Date.now());
+  } catch {
+    return false;
+  }
+}
 
 function extractRoleFromToken(token: string): UserRole {
   try {
@@ -123,7 +134,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
   const clearAuthState = useCallback(() => {
     setIsAuthenticated(false);
@@ -146,6 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const role = extractRoleFromToken(token);
 
       if (role === "GUEST") {
+        if (isExpiredToken(token)) markSessionExpired();
         clearAuthCookies();
         clearAuthState();
       } else {
@@ -210,9 +221,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const expireSession = useCallback(() => {
+    markSessionExpired();
     clearSession();
-    router.replace("/login");
-  }, [clearSession, router]);
+    window.location.replace(sessionExpiredLoginUrl());
+  }, [clearSession]);
 
   useEffect(() => {
     if (!isAuthenticated || tokenExpiresAt === null) return;

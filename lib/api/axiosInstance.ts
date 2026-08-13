@@ -1,6 +1,18 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 import { clearAuthCookies, setAuthCookies } from "@/lib/utils/auth-cookies";
+import {
+  markSessionExpired,
+  sessionExpiredLoginUrl,
+} from "@/lib/utils/auth-session";
+
+function redirectToExpiredSessionLogin() {
+  markSessionExpired();
+  clearAuthCookies();
+  if (typeof window !== "undefined") {
+    window.location.replace(sessionExpiredLoginUrl());
+  }
+}
 
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
@@ -60,19 +72,25 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    const requestUrl = String(originalRequest?.url ?? "");
+    if (
+      requestUrl.includes("/auth/login") ||
+      requestUrl.includes("/auth/signup")
+    ) {
+      return Promise.reject(error);
+    }
+
     // prevent infinite loop when refresh endpoint itself returns 401
     if (originalRequest && originalRequest._retry) {
       // already retried -> logout
-      clearAuthCookies();
-      if (typeof window !== "undefined") window.location.href = "/login";
+      redirectToExpiredSessionLogin();
       return Promise.reject(error);
     }
 
     // if no refresh token, logout immediately
     const refreshToken = Cookies.get("refreshToken");
     if (!refreshToken) {
-      clearAuthCookies();
-      if (typeof window !== "undefined") window.location.href = "/login";
+      if (Cookies.get("token")) redirectToExpiredSessionLogin();
       return Promise.reject(error);
     }
 
@@ -122,8 +140,7 @@ axiosInstance.interceptors.response.use(
         })
         .catch((err) => {
           processQueue(err, null);
-          clearAuthCookies();
-          if (typeof window !== "undefined") window.location.href = "/login";
+          redirectToExpiredSessionLogin();
           reject(err);
         });
     });

@@ -58,6 +58,7 @@ interface FormState {
   acceptsNewMembers: boolean;
   participantLimit: string;
   recruitmentPositions: string;
+  instructorCareer: string;
   personalProject: boolean | null;
   parentActivityId: string;
 }
@@ -73,6 +74,7 @@ const EMPTY_FORM: FormState = {
   acceptsNewMembers: false,
   participantLimit: "",
   recruitmentPositions: "",
+  instructorCareer: "",
   personalProject: null,
   parentActivityId: "none",
 };
@@ -169,6 +171,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
             acceptsNewMembers: existing.acceptsNewMembers,
             participantLimit: String(existing.participantLimit ?? ""),
             recruitmentPositions: existing.recruitmentPositions ?? "",
+            instructorCareer: existing.instructorCareer ?? "",
             personalProject: existing.personalProject,
             parentActivityId: existing.parentActivityId ?? "none",
           });
@@ -284,6 +287,13 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
         missingFields.push("운영 계획");
       }
     }
+
+    if (
+      selectedActivityType?.code === "SPECIAL_LECTURE" &&
+      !form.instructorCareer.trim()
+    ) {
+      missingFields.push("강의자 경력");
+    }
   
     if (!form.startDate || !form.endDate) {
       missingFields.push("활동 기간");
@@ -365,6 +375,10 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
       recruitmentPositions: form.acceptsNewMembers
         ? form.recruitmentPositions.trim() || undefined
         : undefined,
+      instructorCareer:
+        selectedActivityType?.code === "SPECIAL_LECTURE"
+          ? form.instructorCareer.trim() || undefined
+          : undefined,
       personalProject: Boolean(form.personalProject),
       parentActivityId:
         form.parentActivityId === "none" ? undefined : form.parentActivityId,
@@ -570,6 +584,27 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                 />
                 <p className="text-xs text-muted-foreground">
                   양식대로 작성한 뒤 열람 가능한 구글 드라이브 링크를 첨부해주세요.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="opening-instructor-career">
+                  강의자 경력
+                  <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="opening-instructor-career"
+                  rows={5}
+                  maxLength={2000}
+                  value={form.instructorCareer}
+                  onChange={(event) =>
+                    change("instructorCareer", event.target.value)
+                  }
+                  placeholder="해당 주제와 관련된 프로젝트, 인턴십, 수상, 학습 경험 등을 적어주세요."
+                />
+                <p className="text-xs text-muted-foreground">
+                  강의 주제를 다룰 수 있는 근거가 되는 경력을 작성해주세요.
+                  선정 검토에 참고됩니다.
                 </p>
               </div>
             </div>

@@ -63,8 +63,10 @@ import {
 } from "@/lib/interfaces/activity";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
+import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { formatDate } from "@/lib/utils/date-utils";
+import { toast } from "sonner";
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "준비 중" },
@@ -99,6 +101,8 @@ export default function ActivitiesManagementPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkTargetStatus, setBulkTargetStatus] = useState<string>("");
   const [bulkUpdating, setBulkUpdating] = useState(false);
 
@@ -224,6 +228,30 @@ export default function ActivitiesManagementPage() {
     }
   }
 
+  async function handleBulkDelete() {
+    setBulkDeleting(true);
+    const ids = selectedActivities.map((activity) => activity.id);
+    const results = await Promise.allSettled(
+      ids.map((id) => deleteActivity(id)),
+    );
+
+    const deletedIds = new Set(
+      ids.filter((_, index) => results[index].status === "fulfilled"),
+    );
+    const failureCount = ids.length - deletedIds.size;
+
+    setActivities((prev) => prev.filter((a) => !deletedIds.has(a.id)));
+    setSelectedIds(new Set());
+    setBulkDeleting(false);
+    setBulkDeleteDialogOpen(false);
+
+    if (failureCount === 0) {
+      toast.success(`${deletedIds.size}개 활동을 삭제했습니다.`);
+    } else {
+      toast.error(`${deletedIds.size}개 삭제, ${failureCount}개 실패`);
+    }
+  }
+
   function confirmDelete(id: string, title: string) {
     setItemToDelete({ id, title });
     setDeleteDialogOpen(true);
@@ -303,6 +331,15 @@ export default function ActivitiesManagementPage() {
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs text-destructive hover:text-destructive"
+                  onClick={() => setBulkDeleteDialogOpen(true)}
+                  disabled={bulkDeleting}
+                >
+                  삭제
+                </Button>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -475,7 +512,7 @@ export default function ActivitiesManagementPage() {
                         {formatDate(activity.endDate)}
                       </TableCell>
                       <TableCell className="text-center">
-                        <ActivityStatusBadge status={activity.status} />
+                        <ActivityStatusBadge status={activityDisplayStatus(activity)} />
                       </TableCell>
                       <TableCell className="hidden text-center text-sm text-muted-foreground xl:table-cell">
                         {activity.assignee.name || activity.assignee.username}
@@ -593,6 +630,34 @@ export default function ActivitiesManagementPage() {
               disabled={bulkUpdating}
             >
               {bulkUpdating ? "변경 중..." : "변경"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={(open) => !bulkDeleting && setBulkDeleteDialogOpen(open)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>선택한 활동을 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{selectedIds.size}개</strong> 활동이 삭제됩니다. 참여자,
+              일정, 출석 기록과 활동 공지도 함께 삭제되며 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => {
+                event.preventDefault();
+                void handleBulkDelete();
+              }}
+            >
+              {bulkDeleting ? "삭제 중..." : "삭제"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

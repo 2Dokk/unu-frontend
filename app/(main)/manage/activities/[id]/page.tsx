@@ -24,6 +24,7 @@ import {
   CalendarRange,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,7 +113,12 @@ import { AttendanceInputContent } from "@/components/custom/attendance/attendanc
 import { formatDate, formatDateTime } from "@/lib/utils/date-utils";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
+import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
 import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
+import {
+  isOperationPlanUrl,
+  operationPlanLabel,
+} from "@/lib/constants/operation-plan";
 
 const PARTICIPANT_STATUS_OPTIONS = [
   { value: "APPLIED", label: "신청 완료" },
@@ -1476,7 +1482,7 @@ export default function ActivityDetailManagePage() {
         <div className="flex items-center gap-2 flex-wrap">
           <ActivityTypeBadge activityType={activity.activityType} />
           <span className="text-sm text-muted-foreground">·</span>
-          <ActivityStatusBadge status={activity.status} />
+          <ActivityStatusBadge status={activityDisplayStatus(activity)} />
           <span className="text-sm text-muted-foreground">·</span>
           {activity.quarter && (
             <span className="text-xs text-muted-foreground">
@@ -1543,6 +1549,43 @@ export default function ActivityDetailManagePage() {
                   label="유형"
                   value={activity.activityType.name}
                 />
+                {activity.activityType.code === "SPECIAL_LECTURE" && (
+                  <InfoRow
+                    icon={<UserIcon className="h-4 w-4" />}
+                    label="강의자 경력"
+                    value={
+                      <div className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-sm">
+                        {activity.instructorCareer || "—"}
+                      </div>
+                    }
+                  />
+                )}
+                {operationPlanLabel(activity.activityType.code) && (
+                  <InfoRow
+                    icon={<FileText className="h-4 w-4" />}
+                    label={operationPlanLabel(activity.activityType.code) ?? "계획서"}
+                    value={
+                      activity.operationPlan &&
+                      isOperationPlanUrl(activity.operationPlan) ? (
+                        <a
+                          href={activity.operationPlan.trim()}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-w-0 items-center gap-1.5 text-sm text-[#174b3a] hover:underline"
+                        >
+                          <span className="truncate">
+                            {operationPlanLabel(activity.activityType.code)} 열기
+                          </span>
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                        </a>
+                      ) : (
+                        <div className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-sm">
+                          {activity.operationPlan || "—"}
+                        </div>
+                      )
+                    }
+                  />
+                )}
                 {supportsDiscordLink(activity.activityType.code) &&
                     activity.discordUrl && (
                       <InfoRow
@@ -1601,7 +1644,11 @@ export default function ActivityDetailManagePage() {
                 />
                 <InfoRow
                   icon={<UserRound className="h-4 w-4" />}
-                  label="담당자"
+                  label={
+                    activity.activityType.code === "SPECIAL_LECTURE"
+                      ? "강의자"
+                      : "담당자"
+                  }
                   value={activity.assignee?.name || "미지정"}
                 />
               </div>

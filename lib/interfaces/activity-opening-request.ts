@@ -22,6 +22,7 @@ export interface ActivityOpeningRequestPayload {
   acceptsNewMembers: boolean;
   participantLimit?: number;
   recruitmentPositions?: string | null;
+  instructorCareer?: string | null;
   personalProject: boolean;
   parentActivityId?: string;
   initialMemberIds: string[];
@@ -41,6 +42,7 @@ export interface ActivityOpeningRequestResponse {
   acceptsNewMembers: boolean;
   participantLimit?: number | null;
   recruitmentPositions?: string | null;
+  instructorCareer?: string | null;
   personalProject: boolean;
   parentActivityId?: string | null;
   parentActivityTitle?: string | null;

@@ -60,6 +60,11 @@ function messageFor(error: unknown, fallback: string) {
     : fallback;
 }
 
+type MutableReviewStatus =
+  | "SUBMITTED"
+  | "REVISION_REQUESTED"
+  | "REJECTED";
+
 export default function ActivityOpeningRequestManagementDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -72,9 +77,14 @@ export default function ActivityOpeningRequestManagementDetailPage() {
   const [comment, setComment] = useState("");
   const [depositAmount, setDepositAmount] =
     useState("30000");
-
+  const [recruitmentStartDate, setRecruitmentStartDate] =
+    useState("");
+  const [recruitmentEndDate, setRecruitmentEndDate] =
+    useState("");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [approvedStatusTarget, setApprovedStatusTarget] =
+    useState<MutableReviewStatus | null>(null);
 
   useEffect(() => {
     getActivityOpeningRequestForManagement(id)
@@ -91,11 +101,9 @@ export default function ActivityOpeningRequestManagementDetailPage() {
   }, [id]);
 
   async function review(
-    status:
-      | "REVISION_REQUESTED"
-      | "REJECTED",
+    status: MutableReviewStatus,
   ) {
-    if (!comment.trim()) {
+    if (status !== "SUBMITTED" && !comment.trim()) {
       toast.error("검토 의견을 입력해주세요.");
       return;
     }
@@ -111,12 +119,15 @@ export default function ActivityOpeningRequestManagementDetailPage() {
         );
 
       setRequest(updated);
+      setComment(updated.reviewComment ?? "");
 
-      toast.success(
-        status === "REJECTED"
-          ? "신청을 반려했습니다."
-          : "보완을 요청했습니다.",
-      );
+      const successMessage = {
+        SUBMITTED: "검토 대기 상태로 변경했습니다.",
+        REVISION_REQUESTED: "보완 요청 상태로 변경했습니다.",
+        REJECTED: "반려 상태로 변경했습니다.",
+      }[status];
+
+      toast.success(successMessage);
     } catch (error) {
       toast.error(
         messageFor(
@@ -127,6 +138,18 @@ export default function ActivityOpeningRequestManagementDetailPage() {
     } finally {
       setUpdating(false);
     }
+  }
+
+  function requestReviewStatusChange(status: MutableReviewStatus) {
+    if (status !== "SUBMITTED" && !comment.trim()) {
+      toast.error("검토 의견을 입력해주세요.");
+      return;
+    }
+    if (request?.status === "APPROVED") {
+      setApprovedStatusTarget(status);
+      return;
+    }
+    void review(status);
   }
 
   async function approve() {
@@ -142,6 +165,38 @@ export default function ActivityOpeningRequestManagementDetailPage() {
     const usesDeposit =
       isStudy || isSpecialLecture;
 
+    const usesRecruitmentSchedule =
+      isSpecialLecture ||
+      request.acceptsNewMembers;
+
+    if (
+      usesRecruitmentSchedule &&
+      (!recruitmentStartDate || !recruitmentEndDate)
+    ) {
+      toast.error("모집 기간을 설정해주세요.");
+      return;
+    }
+    
+    if (
+      usesRecruitmentSchedule &&
+      recruitmentEndDate < recruitmentStartDate
+    ) {
+      toast.error(
+        "모집 종료일은 모집 시작일보다 빠를 수 없습니다.",
+      );
+      return;
+    }
+    
+    if (
+      usesRecruitmentSchedule &&
+      request.startDate &&
+      recruitmentEndDate > request.startDate
+    ) {
+      toast.error(
+        "모집 종료일은 활동 시작일 이후로 설정할 수 없습니다.",
+      );
+      return;
+    }
     if (
       usesDeposit &&
       depositAmount.trim() === ""
@@ -175,11 +230,16 @@ export default function ActivityOpeningRequestManagementDetailPage() {
         await approveActivityOpeningRequest(
           id,
           {
-            comment:
-              comment.trim() || undefined,
+            comment: comment.trim() || undefined,
             depositAmount: usesDeposit
               ? parsedDepositAmount
               : 0,
+            recruitmentStartDate: usesRecruitmentSchedule
+              ? recruitmentStartDate
+              : undefined,
+            recruitmentEndDate: usesRecruitmentSchedule
+              ? recruitmentEndDate
+              : undefined,
           },
         );
 
@@ -227,6 +287,11 @@ export default function ActivityOpeningRequestManagementDetailPage() {
   const reviewable =
     request.status === "SUBMITTED";
 
+  const reviewStatusChangeable =
+    request.status === "REVISION_REQUESTED" ||
+    request.status === "REJECTED" ||
+    request.status === "APPROVED";
+
   const isProject =
     request.activityType.code ===
     "PROJECT";
@@ -241,6 +306,10 @@ export default function ActivityOpeningRequestManagementDetailPage() {
 
   const usesDeposit =
     isStudy || isSpecialLecture;
+
+  const usesRecruitmentSchedule =
+    isSpecialLecture ||
+    Boolean(request.acceptsNewMembers);
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
@@ -298,17 +367,6 @@ export default function ActivityOpeningRequestManagementDetailPage() {
         )}
       </div>
 
-      {/*
-        데스크톱:
-        ┌────────────── 7 ──────────────┬────── 5 ──────┐
-        │ 활동 정보                     │ 신청 정보      │
-        ├───────────────────────────────┼───────────────┤
-        │ 참여 정보                     │ 검토           │
-        └───────────────────────────────┴───────────────┘
-
-        각 행의 두 카드는 CSS Grid에 의해 같은 높이를 갖지만,
-        1행과 2행의 높이는 내용에 따라 서로 달라진다.
-      */}
       <div className="grid gap-5 lg:grid-cols-12">
         {/* 활동 정보 */}
         <Card className="lg:col-span-7">
@@ -373,6 +431,26 @@ export default function ActivityOpeningRequestManagementDetailPage() {
                   </a>
                 </Button>
               </section>
+            )}
+
+            {isSpecialLecture && (
+              <>
+                <Separator />
+
+                <section>
+                  <p className="mb-2 text-sm font-medium">강의자 경력</p>
+
+                  {request.instructorCareer ? (
+                    <p className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
+                      {request.instructorCareer}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      작성된 강의자 경력이 없습니다.
+                    </p>
+                  )}
+                </section>
+              </>
             )}
           </CardContent>
         </Card>
@@ -548,6 +626,7 @@ export default function ActivityOpeningRequestManagementDetailPage() {
                       </section>
                     </>
                   )}
+
               </>
             )}
           </CardContent>
@@ -621,6 +700,46 @@ export default function ActivityOpeningRequestManagementDetailPage() {
                     </p>
                   </div>
                 )}
+              {usesRecruitmentSchedule&& (
+                <div className="space-y-2">
+                  <Label>
+                    모집 기간
+                    <span className="text-red-500">*</span>
+                  </Label>
+
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <Input
+                      type="date"
+                      value={recruitmentStartDate}
+                      onChange={(event) =>
+                        setRecruitmentStartDate(
+                          event.target.value,
+                        )
+                      }
+                      disabled={!reviewable || updating}
+                    />
+
+                    <span className="text-sm text-muted-foreground">
+                      ~
+                    </span>
+
+                    <Input
+                      type="date"
+                      value={recruitmentEndDate}
+                      onChange={(event) =>
+                        setRecruitmentEndDate(
+                          event.target.value,
+                        )
+                      }
+                      disabled={!reviewable || updating}
+                    />
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    설정한 기간에만 학회원이 참여를 신청할 수 있습니다.
+                  </p>
+                </div>
+              )}
 
                 <Separator />
 
@@ -694,6 +813,69 @@ export default function ActivityOpeningRequestManagementDetailPage() {
                   </div>
                 </div>
               </>
+            ) : reviewStatusChangeable ? (
+              <div className="space-y-4">
+                {request.status === "APPROVED" && (
+                  <div className="border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+                    승인 상태를 변경하면 등록된 활동과 해당 활동의 참여·일정
+                    기록이 함께 삭제됩니다.
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="review-comment-update">
+                    검토 의견
+                  </Label>
+
+                  <Textarea
+                    id="review-comment-update"
+                    rows={4}
+                    value={comment}
+                    onChange={(event) =>
+                      setComment(event.target.value)
+                    }
+                    disabled={updating}
+                    placeholder="상태 변경 사유나 검토 의견을 작성하세요."
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="grid gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={updating}
+                    onClick={() => requestReviewStatusChange("SUBMITTED")}
+                  >
+                    검토 대기로 변경
+                  </Button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      disabled={
+                        updating ||
+                        request.status === "REVISION_REQUESTED"
+                      }
+                      onClick={() =>
+                        requestReviewStatusChange("REVISION_REQUESTED")
+                      }
+                    >
+                      보완 요청
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      disabled={
+                        updating || request.status === "REJECTED"
+                      }
+                      onClick={() => requestReviewStatusChange("REJECTED")}
+                    >
+                      반려
+                    </Button>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="space-y-5">
                 <p className="text-sm text-muted-foreground">
@@ -721,6 +903,38 @@ export default function ActivityOpeningRequestManagementDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog
+        open={approvedStatusTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setApprovedStatusTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>승인 상태를 변경할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              상태를 변경하면 승인으로 등록된 활동과 해당 활동에 연결된
+              참여·일정 기록이 함께 삭제됩니다. 개설 신청 검토 기록은 선택한
+              상태로 남습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updating}>돌아가기</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={updating}
+              onClick={() => {
+                const status = approvedStatusTarget;
+                setApprovedStatusTarget(null);
+                if (status) void review(status);
+              }}
+            >
+              활동 삭제 및 상태 변경
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

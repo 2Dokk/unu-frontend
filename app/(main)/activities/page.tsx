@@ -33,6 +33,10 @@ import {
   X,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils/date-utils";
+import {
+  activityDisplayStatus,
+  isActivityRecruiting as isRecruiting,
+} from "@/lib/utils/activity-recruitment";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { toast } from "sonner";
@@ -40,10 +44,6 @@ import { toast } from "sonner";
 // ========================
 // ACTIVITY ROW COMPONENT
 // ========================
-
-function isRecruiting(activity: ActivityResponse) {
-  return activity.status === "OPEN" || activity.status === "RECRUITING";
-}
 
 interface ActivityRowProps {
   activity: ActivityResponse;
@@ -115,7 +115,7 @@ function ActivityRow({
         </div>
       </div>
 
-      <ActivityStatusBadge status={activity.status} />
+      <ActivityStatusBadge status={activityDisplayStatus(activity)} />
 
       <Button
         size="sm"

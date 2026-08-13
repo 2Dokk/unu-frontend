@@ -98,7 +98,7 @@ export async function reviewActivityOpeningRequest(
   id: string,
   status: Extract<
     ActivityOpeningRequestStatus,
-    "REVISION_REQUESTED" | "REJECTED"
+    "SUBMITTED" | "REVISION_REQUESTED" | "REJECTED"
   >,
   comment: string,
 ): Promise<ActivityOpeningRequestResponse> {
@@ -114,6 +114,8 @@ export async function approveActivityOpeningRequest(
   data: {
     comment?: string;
     depositAmount?: number;
+    recruitmentStartDate?: string;
+    recruitmentEndDate?: string;
   },
 ): Promise<ActivityOpeningRequestResponse> {
   const response =

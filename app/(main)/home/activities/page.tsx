@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
+import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
 import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
 import { formatDate } from "@/lib/utils/date-utils";
 
@@ -145,7 +146,7 @@ export default function AllActivitiesPage() {
                             <ActivityTypeBadge
                               activityType={activity.activityType}
                             />
-                            <ActivityStatusBadge status={activity.status} />
+                            <ActivityStatusBadge status={activityDisplayStatus(activity)} />
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
                             {formatDate(activity.startDate)} ~{" "}

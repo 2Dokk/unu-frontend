@@ -43,6 +43,7 @@ import {
   projectModeFields,
 } from "@/lib/constants/project-mode";
 import { isDiscordUrl, supportsDiscordLink } from "@/lib/constants/discord-link";
+import { operationPlanLabel } from "@/lib/constants/operation-plan";
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "준비 중" },
@@ -78,6 +79,10 @@ export default function ActivityNewPage() {
     participantLimit: "",
     recruitmentPositions: "",
     discordUrl: "",
+    recruitmentStartDate: "",
+    recruitmentEndDate: "",
+    operationPlan: "",
+    instructorCareer: "",
   });
   const [projectMode, setProjectMode] = useState<ProjectMode>("FIXED_TEAM");
 
@@ -91,6 +96,8 @@ export default function ActivityNewPage() {
   // 스터디는 담당자도 참여자로 자동 등록되므로 정원에 포함된다.
   const countsAssignee = selectedActivityType?.code === "STUDY";
   const allowsDiscordLink = supportsDiscordLink(selectedActivityType?.code);
+  const planLabel = operationPlanLabel(selectedActivityType?.code);
+  const isSpecialLecture = selectedActivityType?.code === "SPECIAL_LECTURE";
   const modeFields = projectModeFields(projectMode);
   const allowsInitialMembers = !isProject || modeFields.allowsInitialMembers;
   const showsParticipantLimit = !isProject || modeFields.allowsParticipantLimit;
@@ -169,6 +176,26 @@ export default function ActivityNewPage() {
         : "참여 정원은 미리 추가한 참여자 수보다 적을 수 없습니다.";
     }
     if (
+      Boolean(formData.recruitmentStartDate) !==
+      Boolean(formData.recruitmentEndDate)
+    ) {
+      return "모집 시작일과 종료일을 모두 입력해주세요.";
+    }
+    if (
+      formData.recruitmentStartDate &&
+      formData.recruitmentEndDate &&
+      formData.recruitmentEndDate < formData.recruitmentStartDate
+    ) {
+      return "모집 종료일은 모집 시작일보다 빠를 수 없습니다.";
+    }
+    if (
+      formData.recruitmentEndDate &&
+      formData.startDate &&
+      formData.recruitmentEndDate > formData.startDate
+    ) {
+      return "모집 종료일은 활동 시작일 이후로 설정할 수 없습니다.";
+    }
+    if (
       allowsDiscordLink &&
       formData.discordUrl.trim() &&
       !isDiscordUrl(formData.discordUrl.trim())
@@ -211,6 +238,14 @@ export default function ActivityNewPage() {
             : undefined,
         discordUrl: allowsDiscordLink
           ? formData.discordUrl.trim() || undefined
+          : undefined,
+        recruitmentStartDate: formData.recruitmentStartDate || undefined,
+        recruitmentEndDate: formData.recruitmentEndDate || undefined,
+        operationPlan: planLabel
+          ? formData.operationPlan.trim() || undefined
+          : undefined,
+        instructorCareer: isSpecialLecture
+          ? formData.instructorCareer.trim() || undefined
           : undefined,
       };
 
@@ -427,6 +462,71 @@ export default function ActivityNewPage() {
                   </p>
                 </div>
               )}
+
+              {isSpecialLecture && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="instructorCareer">강의자 경력</Label>
+                  <Textarea
+                    id="instructorCareer"
+                    rows={4}
+                    maxLength={2000}
+                    value={formData.instructorCareer}
+                    onChange={(event) =>
+                      handleInputChange("instructorCareer", event.target.value)
+                    }
+                    placeholder="관련 프로젝트, 인턴십, 수상, 학습 경험 등"
+                  />
+                </div>
+              )}
+
+              {planLabel && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="operationPlan">{planLabel}</Label>
+                  <Textarea
+                    id="operationPlan"
+                    rows={6}
+                    maxLength={10000}
+                    value={formData.operationPlan}
+                    onChange={(event) =>
+                      handleInputChange("operationPlan", event.target.value)
+                    }
+                    placeholder="진행 방식, 일정, 예상 결과물을 중심으로 작성해주세요."
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2 md:col-span-2">
+                <Label>모집 기간 (선택)</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    type="date"
+                    className="w-44"
+                    value={formData.recruitmentStartDate}
+                    onChange={(event) =>
+                      handleInputChange(
+                        "recruitmentStartDate",
+                        event.target.value,
+                      )
+                    }
+                  />
+                  <span className="text-sm text-muted-foreground">~</span>
+                  <Input
+                    type="date"
+                    className="w-44"
+                    value={formData.recruitmentEndDate}
+                    onChange={(event) =>
+                      handleInputChange(
+                        "recruitmentEndDate",
+                        event.target.value,
+                      )
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  이 기간에만 참여 신청을 받습니다. 비워두면 모집을 진행하지
+                  않습니다. 종료일은 활동 시작일 이후로 설정할 수 없습니다.
+                </p>
+              </div>
 
               {/* Quarter */}
               <div className="space-y-2">

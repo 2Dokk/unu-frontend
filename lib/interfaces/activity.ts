@@ -24,12 +24,16 @@ export interface ActivityResponse {
   quarter: QuarterResponse;
   startDate: string;
   endDate: string;
+  recruitmentStartDate?: string | null;
+  recruitmentEndDate?: string | null;
   parentActivityId?: string;
   listed?: boolean;
   depositAmount: number;
   participantLimit: number | null;
   recruitmentPositions?: string | null;
   discordUrl?: string | null;
+  operationPlan?: string | null;
+  instructorCareer?: string | null;
   createdAt: string;
   modifiedAt: string;
   createdBy: AuditorDto;
@@ -51,6 +55,10 @@ export interface ActivityRequest {
   listed?: boolean;
   recruitmentPositions?: string | null;
   discordUrl?: string | null;
+  recruitmentStartDate?: string | null;
+  recruitmentEndDate?: string | null;
+  operationPlan?: string | null;
+  instructorCareer?: string | null;
 }
 
 export interface ActivityTypeReponse {

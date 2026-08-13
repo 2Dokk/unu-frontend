@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,13 +20,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { login as loginApi } from "@/lib/api/auth";
 import { LoginRequest } from "@/lib/interfaces/auth";
-import { useState } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { consumeSessionExpired } from "@/lib/utils/auth-session";
 
 const LoginForm = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect");
+  const expiredFromUrl = searchParams.get("reason") === "session-expired";
   const safeRedirect =
     redirectTo?.startsWith("/") && !redirectTo.startsWith("//")
       ? redirectTo
@@ -34,6 +35,13 @@ const LoginForm = () => {
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(expiredFromUrl);
+
+  useEffect(() => {
+    if (expiredFromUrl || consumeSessionExpired()) {
+      setSessionExpired(true);
+    }
+  }, [expiredFromUrl]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -93,11 +101,15 @@ const LoginForm = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {safeRedirect && (
+          {sessionExpired ? (
+            <div className="mb-4 rounded-md bg-amber-50 p-3 text-center text-sm text-amber-800">
+              세션이 만료되어 로그아웃 되었습니다.
+            </div>
+          ) : safeRedirect ? (
             <div className="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
               로그인이 필요한 페이지입니다. 로그인 후 이어서 진행해주세요.
             </div>
-          )}
+          ) : null}
           <form onSubmit={handleSubmit}>
             <FieldGroup>
               <Field>
