@@ -6,6 +6,9 @@ export interface ActivityParticipantResponse {
   userId: string; // UUID
   status: "APPLIED" | "APPROVED" | "REJECTED";
   completed: boolean;
+  appliedPosition?: string | null;
+  applicationMessage?: string | null;
+  reviewMessage?: string | null;
   createdAt: string;
   modifiedAt: string;
   activity: ActivityResponse;
@@ -16,15 +19,18 @@ export interface ActivityParticipantRequest {
   activityId: string;
   userId?: string;
   status?: "APPLIED" | "APPROVED" | "REJECTED";
+  reviewMessage?: string;
 }
 
 export interface ActivityJoinRequest {
-  refundBankName: string;
-  refundAccountNumber: string;
-  refundAccountHolder: string;
-  agreedToDepositPolicy: boolean;
-  confirmedDepositPayment: boolean;
-  agreedToPromotion: boolean;
+  refundBankName?: string;
+  refundAccountNumber?: string;
+  refundAccountHolder?: string;
+  agreedToDepositPolicy?: boolean;
+  confirmedDepositPayment?: boolean;
+  agreedToPromotion?: boolean;
+  appliedPosition?: string;
+  applicationMessage?: string;
 }
 
 export interface ActivityParticipantRefundAccount {

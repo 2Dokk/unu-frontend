@@ -35,10 +35,12 @@ export default function HomePage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
-  const currentQuarterActivities = participations.filter(
+  const currentQuarterParticipations = participations.filter(
     (p) =>
-      p.participant.activity?.quarter?.id === currentQuarter?.id &&
-      p.participant.status !== "REJECTED",
+      p.participant.activity?.quarter?.id === currentQuarter?.id,
+  );
+  const currentQuarterActivities = currentQuarterParticipations.filter(
+    (p) => p.participant.status !== "REJECTED",
   );
   const currentQuarterHostedActivities = hostedActivities.filter(
     ({ activity }) => activity.quarter?.id === currentQuarter?.id,
@@ -183,7 +185,7 @@ export default function HomePage() {
                 내가 신청·참여한 활동
               </h2>
 
-        {currentQuarterActivities.length === 0 ? (
+        {currentQuarterParticipations.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Activity className="h-12 w-12 text-muted-foreground mb-4" />
@@ -194,7 +196,7 @@ export default function HomePage() {
           </Card>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {currentQuarterActivities.map(
+            {currentQuarterParticipations.map(
               ({
                 participant,
                 attendanceStats,
@@ -232,7 +234,7 @@ export default function HomePage() {
                         <ParticipantStatusBadge status={participant.status} />
                         {participant.status === "APPLIED" ? (
                           <Badge variant="outline">시작 전</Badge>
-                        ) : participant.completed ? (
+                        ) : participant.status === "REJECTED" ? null : participant.completed ? (
                           <Badge
                             variant="outline"
                             className="border-green-200 bg-green-50 text-green-700"
@@ -245,10 +247,21 @@ export default function HomePage() {
                       </div>
                     </CardHeader>
                     <CardContent className="px-4">
-                      {participant.status === "APPLIED" ? (
+                      {participant.status === "REJECTED" ? (
+                        <div className="flex items-start gap-2 text-xs leading-relaxed">
+                        <span className="shrink-0 font-medium text-foreground">
+                          개설자 안내
+                        </span>
+                        <span className="min-w-0 text-muted-foreground">
+                          {participant.reviewMessage ||
+                            "신청이 반려되었습니다."}
+                        </span>
+                      </div>
+                      ) : participant.status === "APPLIED" ? (
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(participant.activity.startDate)}에 참여가
-                          확정됩니다.
+                          {participant.activity.activityType.code === "PROJECT"
+                            ? "개설자가 신청 내용을 검토하고 있습니다."
+                            : `${formatDate(participant.activity.startDate)}에 참여가 확정됩니다.`}
                         </p>
                       ) : (
                         <div className="space-y-1.5">

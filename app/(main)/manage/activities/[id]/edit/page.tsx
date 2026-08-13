@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { CalendarIcon, ChevronsUpDown, Check } from "lucide-react";
+import { CalendarIcon, ChevronsUpDown, Check, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -110,9 +110,10 @@ export default function ActivityEditPage() {
   const router = useRouter();
   const activityId = params.id as string;
   const { roles } = useAuth();
-  const canEditDeposit = roles.some(
+  const canEditOperations = roles.some(
     (role) => role === "ADMIN" || role === "MANAGER",
   );
+  const canEditDeposit = canEditOperations;
 
   // Data state
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
@@ -167,6 +168,7 @@ export default function ActivityEditPage() {
   const planLabel = operationPlanLabel(selectedActivityType?.code);
   const isSpecialLecture = selectedActivityType?.code === "SPECIAL_LECTURE";
   const modeFields = projectModeFields(projectMode);
+  const allowsInitialMembers = !isProject || modeFields.allowsInitialMembers;
   const showsParticipantLimit = !isProject || modeFields.allowsParticipantLimit;
 
   function handleProjectModeChange(mode: ProjectMode) {
@@ -184,6 +186,10 @@ export default function ActivityEditPage() {
         : "",
       recruitmentPositions:
         mode === "RECRUITING" ? prev.recruitmentPositions : "",
+      recruitmentStartDate:
+        mode === "RECRUITING" ? prev.recruitmentStartDate : "",
+      recruitmentEndDate:
+        mode === "RECRUITING" ? prev.recruitmentEndDate : "",
     }));
   }
 
@@ -193,7 +199,7 @@ export default function ActivityEditPage() {
 
   useEffect(() => {
     loadData();
-  }, [activityId]);
+  }, [activityId, canEditOperations]);
 
   async function loadData() {
     try {
@@ -209,7 +215,7 @@ export default function ActivityEditPage() {
         getActivityById(activityId),
         getAllActivityTypes(),
         getAllQuarters(),
-        getAllUsers(),
+        canEditOperations ? getAllUsers() : Promise.resolve([]),
         getActivityParticipantsByActivityId({ activityId }),
       ]);
 
@@ -287,6 +293,7 @@ export default function ActivityEditPage() {
 
     const participantLimit = Number(formData.participantLimit);
     if (
+      canEditOperations &&
       formData.participantLimit &&
       (!Number.isInteger(participantLimit) ||
         participantLimit < 1 ||
@@ -303,6 +310,7 @@ export default function ActivityEditPage() {
       (userId) => userId !== formData.assigneeId,
     ).length;
     if (
+      canEditOperations &&
       formData.participantLimit &&
       participantLimit <
         currentParticipantCount +
@@ -314,12 +322,14 @@ export default function ActivityEditPage() {
         : "참여 정원은 현재 신청·참여 인원보다 적을 수 없습니다.";
     }
     if (
+      canEditOperations &&
       Boolean(formData.recruitmentStartDate) !==
       Boolean(formData.recruitmentEndDate)
     ) {
       return "모집 시작일과 종료일을 모두 입력해주세요.";
     }
     if (
+      canEditOperations &&
       formData.recruitmentStartDate &&
       formData.recruitmentEndDate &&
       formData.recruitmentEndDate < formData.recruitmentStartDate
@@ -327,6 +337,7 @@ export default function ActivityEditPage() {
       return "모집 종료일은 모집 시작일보다 빠를 수 없습니다.";
     }
     if (
+      canEditOperations &&
       formData.recruitmentEndDate &&
       formData.startDate &&
       formData.recruitmentEndDate > formData.startDate
@@ -390,9 +401,21 @@ export default function ActivityEditPage() {
 
       await updateActivity(activityId, updateData);
 
+      const participantIdsToRemove = allowsInitialMembers
+        ? removedParticipantIds
+        : Array.from(
+            new Set([
+              ...removedParticipantIds,
+              ...existingParticipants.map((participant) => participant.id),
+            ]),
+          );
+      const participantUserIdsToAdd = allowsInitialMembers
+        ? newParticipantIds
+        : [];
+
       await Promise.all([
-        ...removedParticipantIds.map((pid) => deleteActivityParticipant(pid)),
-        ...newParticipantIds.map((userId) =>
+        ...participantIdsToRemove.map((pid) => deleteActivityParticipant(pid)),
+        ...participantUserIdsToAdd.map((userId) =>
           createActivityParticipant({ activityId, userId, status: "APPROVED" }),
         ),
       ]);
@@ -455,6 +478,12 @@ export default function ActivityEditPage() {
               <CardTitle>기본 정보</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {!canEditOperations && (
+                <p className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                  활동명과 설명은 수정할 수 있습니다. 활동 유형, 프로젝트 진행 방식,
+                  담당자, 일정, 모집 조건과 상태 변경은 운영진에게 요청해주세요.
+                </p>
+              )}
               {/* Activity Type */}
               <div className="space-y-2">
                 <Label htmlFor="activityType">
@@ -462,6 +491,7 @@ export default function ActivityEditPage() {
                 </Label>
                 <Select
                   value={formData.activityTypeId}
+                  disabled={!canEditOperations}
                   onValueChange={(value) => {
                     handleInputChange("activityTypeId", value);
                     const type = activityTypes.find(
@@ -526,30 +556,57 @@ export default function ActivityEditPage() {
                 {isProject && (
                   <div className="space-y-2 md:col-span-2">
                     <p className="text-sm font-medium">프로젝트 진행 방식</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {PROJECT_MODE_OPTIONS.map((option) => (
-                        <button
-                          key={option.mode}
-                          type="button"
-                          aria-pressed={projectMode === option.mode}
-                          className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                            projectMode === option.mode
-                              ? "border-[#264638] bg-[#264638]/5 text-[#264638]"
-                              : "text-muted-foreground hover:bg-muted"
-                          }`}
-                          onClick={() => handleProjectModeChange(option.mode)}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      {
-                        PROJECT_MODE_OPTIONS.find(
-                          (option) => option.mode === projectMode,
-                        )?.description
-                      }
-                    </p>
+                    {canEditOperations ? (
+                      <>
+                        <div className="grid grid-cols-3 gap-2">
+                          {PROJECT_MODE_OPTIONS.map((option) => (
+                            <button
+                              key={option.mode}
+                              type="button"
+                              aria-pressed={projectMode === option.mode}
+                              className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                                projectMode === option.mode
+                                  ? "border-[#264638] bg-[#264638]/5 text-[#264638]"
+                                  : "text-muted-foreground hover:bg-muted"
+                              }`}
+                              onClick={() => handleProjectModeChange(option.mode)}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          {
+                            PROJECT_MODE_OPTIONS.find(
+                              (option) => option.mode === projectMode,
+                            )?.description
+                          }
+                        </p>
+                      </>
+                    ) : (
+                      <div className="rounded-md border bg-muted/40 px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-foreground">
+                            {
+                              PROJECT_MODE_OPTIONS.find(
+                                (option) => option.mode === projectMode,
+                              )?.label
+                            }
+                          </p>
+                          <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground">
+                            <LockKeyhole className="h-3.5 w-3.5" />
+                            변경 희망시 운영진에게 문의해주세요.
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {
+                            PROJECT_MODE_OPTIONS.find(
+                              (option) => option.mode === projectMode,
+                            )?.description
+                          }
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -568,6 +625,7 @@ export default function ActivityEditPage() {
                       placeholder="예: 프론트엔드 1명 (React), 백엔드 1명 (Spring)"
                       rows={2}
                       maxLength={500}
+                      disabled={!canEditOperations}
                     />
                   </div>
                 )}
@@ -609,6 +667,7 @@ export default function ActivityEditPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
                       type="date"
+                      disabled={!canEditOperations}
                       className="w-44"
                       value={formData.recruitmentStartDate}
                       onChange={(event) =>
@@ -621,6 +680,7 @@ export default function ActivityEditPage() {
                     <span className="text-sm text-muted-foreground">~</span>
                     <Input
                       type="date"
+                      disabled={!canEditOperations}
                       className="w-44"
                       value={formData.recruitmentEndDate}
                       onChange={(event) =>
@@ -697,6 +757,7 @@ export default function ActivityEditPage() {
                   <div className="relative w-48">
                     <Input
                       id="participantLimit"
+                      disabled={!canEditOperations}
                       value={formData.participantLimit}
                       onChange={(event) =>
                         handleInputChange(
@@ -731,6 +792,7 @@ export default function ActivityEditPage() {
                   </Label>
                   <Select
                     value={formData.quarterId}
+                    disabled={!canEditOperations}
                     onValueChange={(value) =>
                       handleInputChange("quarterId", value)
                     }
@@ -753,6 +815,7 @@ export default function ActivityEditPage() {
                   <Label htmlFor="status">상태</Label>
                   <Select
                     value={formData.status}
+                    disabled={!canEditOperations}
                     onValueChange={(value) =>
                       handleInputChange("status", value)
                     }
@@ -780,6 +843,7 @@ export default function ActivityEditPage() {
                       <Button
                         variant="outline"
                         role="combobox"
+                        disabled={!canEditOperations}
                         className="w-48 justify-between font-normal text-xs"
                       >
                         <span
@@ -792,6 +856,7 @@ export default function ActivityEditPage() {
                                 ?.name ||
                               users.find((u) => u.id === formData.assigneeId)
                                 ?.username ||
+                              activity?.assignee?.name ||
                               "담당자 선택"
                             : "담당자 선택"}
                         </span>
@@ -887,6 +952,7 @@ export default function ActivityEditPage() {
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
+                        disabled={!canEditOperations}
                         className={cn(
                           "w-full justify-start text-left font-normal text-xs",
                           !formData.startDate && "text-muted-foreground",
@@ -929,6 +995,7 @@ export default function ActivityEditPage() {
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
+                        disabled={!canEditOperations}
                         className={cn(
                           "w-full justify-start text-left font-normal text-xs",
                           !formData.endDate && "text-muted-foreground",
@@ -969,26 +1036,28 @@ export default function ActivityEditPage() {
           </Card>
 
           {/* 참여자 Card */}
-          <ParticipantsCard
-            allUsers={users}
-            existingParticipants={existingParticipants}
-            onRemoveExisting={(pid) => {
-              setExistingParticipants((prev) =>
-                prev.filter((p) => p.id !== pid),
-              );
-              setRemovedParticipantIds((prev) => [...prev, pid]);
-              setIsDirty(true);
-            }}
-            newUserIds={newParticipantIds}
-            onToggleNew={(uid) => {
-              setNewParticipantIds((prev) =>
-                prev.includes(uid)
-                  ? prev.filter((id) => id !== uid)
-                  : [...prev, uid],
-              );
-              setIsDirty(true);
-            }}
-          />
+          {canEditOperations && allowsInitialMembers && (
+            <ParticipantsCard
+              allUsers={users}
+              existingParticipants={existingParticipants}
+              onRemoveExisting={(pid) => {
+                setExistingParticipants((prev) =>
+                  prev.filter((p) => p.id !== pid),
+                );
+                setRemovedParticipantIds((prev) => [...prev, pid]);
+                setIsDirty(true);
+              }}
+              newUserIds={newParticipantIds}
+              onToggleNew={(uid) => {
+                setNewParticipantIds((prev) =>
+                  prev.includes(uid)
+                    ? prev.filter((id) => id !== uid)
+                    : [...prev, uid],
+                );
+                setIsDirty(true);
+              }}
+            />
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-4">

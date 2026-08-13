@@ -343,7 +343,9 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
     if (
       form.acceptsNewMembers &&
       form.participantLimit &&
-      participantLimit < initialMembers.length
+      participantLimit <
+        initialMembers.length +
+          (selectedActivityType?.code === "STUDY" ? 1 : 0)
     ) {
       return "참여 정원은 함께 시작할 인원보다 적을 수 없습니다.";
     }
@@ -425,7 +427,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
               <p className="mt-2 text-sm text-muted-foreground">{periodBlockedMessage}</p>
             </div>
             <div className="flex flex-wrap justify-center gap-2">
-              <Button variant="outline" onClick={() => router.push("/activities")}>모든 활동 보기</Button>
+              <Button variant="outline" onClick={() => router.push("/activities")}>학회 활동 보기</Button>
               <Button onClick={() => router.push("/activity-opening/my")}>내 신청 내역</Button>
             </div>
           </CardContent>
@@ -639,7 +641,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                 >
                   <span className="block text-sm font-medium">개인 프로젝트</span>
                   <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                    신청자만 참여하며 모든 활동 목록에 공개하지 않습니다.
+                    신청자만 참여하며 학회 활동 목록에 공개하지 않습니다.
                   </span>
                 </button>
                 <button

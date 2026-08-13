@@ -424,6 +424,11 @@ export default function ActivityDetailManagePage() {
   const [bulkStatus, setBulkStatus] = useState<string>("");
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [rejectionTarget, setRejectionTarget] =
+    useState<ActivityParticipantResponse | null>(null);
+  const [rejectionMessage, setRejectionMessage] = useState("");
+  const [applicationTarget, setApplicationTarget] =
+    useState<ActivityParticipantResponse | null>(null);
 
   // Session selection states
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(
@@ -808,34 +813,80 @@ export default function ActivityDetailManagePage() {
   }
 
   // Per-row status update
-  async function handleStatusChange(participantId: string, newStatus: string) {
-    if (updatingIds.has(participantId)) return;
+  async function handleStatusChange(
+    participantId: string,
+    newStatus: string,
+    reviewMessage?: string,
+  ) {
+    if (updatingIds.has(participantId)) return false;
 
     setUpdatingIds((prev) => new Set(prev).add(participantId));
 
     try {
+      const status = newStatus as "APPLIED" | "APPROVED" | "REJECTED";
       await updateActivityParticipantStatus(participantId, {
         activityId,
-        status: newStatus as "APPLIED" | "APPROVED" | "REJECTED",
+        status,
+        reviewMessage: reviewMessage?.trim() || undefined,
       });
 
       // Update local state
       setParticipants((prev) =>
         prev.map((p) =>
-          p.id === participantId ? { ...p, status: newStatus as any } : p,
+          p.id === participantId
+            ? {
+                ...p,
+                status,
+                reviewMessage:
+                  status === "REJECTED"
+                    ? reviewMessage?.trim() || null
+                    : null,
+              }
+            : p,
         ),
       );
 
       toast.success("상태가 변경되었습니다.");
+      return true;
     } catch (error: any) {
       console.error("Failed to update status:", error);
       toast.error(error.response?.data || "상태 변경에 실패했습니다.");
+      return false;
     } finally {
       setUpdatingIds((prev) => {
         const next = new Set(prev);
         next.delete(participantId);
         return next;
       });
+    }
+  }
+
+  function requestStatusChange(
+    participant: ActivityParticipantResponse,
+    newStatus: string,
+  ) {
+    if (
+      activity?.activityType.code === "PROJECT" &&
+      participant.appliedPosition &&
+      newStatus === "REJECTED"
+    ) {
+      setRejectionTarget(participant);
+      setRejectionMessage(participant.reviewMessage || "");
+      return;
+    }
+    void handleStatusChange(participant.id, newStatus);
+  }
+
+  async function handleRejectionConfirm() {
+    if (!rejectionTarget || !rejectionMessage.trim()) return;
+    const updated = await handleStatusChange(
+      rejectionTarget.id,
+      "REJECTED",
+      rejectionMessage,
+    );
+    if (updated) {
+      setRejectionTarget(null);
+      setRejectionMessage("");
     }
   }
 
@@ -1024,6 +1075,10 @@ export default function ActivityDetailManagePage() {
       toast.error("날짜를 입력해주세요.");
       return;
     }
+    if (sessionForm.date > localDateValue()) {
+      toast.error("미래 일정의 출석은 해당 날짜부터 입력할 수 있습니다.");
+      return;
+    }
 
     try {
       const newSession = await createActivitySession({
@@ -1096,6 +1151,10 @@ export default function ActivityDetailManagePage() {
   async function handleOpenAttendanceDialog(
     session: ActivitySessionResponseDto,
   ) {
+    if (session.date > localDateValue()) {
+      toast.info("미래 일정의 출석은 해당 날짜부터 입력할 수 있습니다.");
+      return;
+    }
     setSelectedSession(session);
     setAttendanceData({
       present: new Set(),
@@ -1232,6 +1291,10 @@ export default function ActivityDetailManagePage() {
 
   async function handleSubmitAttendance() {
     if (!selectedSession) return;
+    if (selectedSession.date > localDateValue()) {
+      toast.error("미래 일정의 출석은 해당 날짜부터 입력할 수 있습니다.");
+      return;
+    }
 
     const totalAssigned =
       attendanceData.present.size +
@@ -1539,7 +1602,7 @@ export default function ActivityDetailManagePage() {
                   icon={<Info className="h-4 w-4" />}
                   label="설명"
                   value={
-                    <div className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                    <div className="text-sm whitespace-pre-wrap break-words">
                       {activity.description || "—"}
                     </div>
                   }
@@ -1809,6 +1872,12 @@ export default function ActivityDetailManagePage() {
                       <TableHead className="w-30">이름</TableHead>
                       <TableHead className="w-30">학번</TableHead>
                       <TableHead className="w-60">이메일</TableHead>
+                      {activity.activityType.code === "PROJECT" && (
+                        <>
+                          <TableHead className="w-36">지원 포지션</TableHead>
+                          <TableHead className="w-28 text-center">지원 내용</TableHead>
+                        </>
+                      )}
                       <TableHead className="w-25 text-center">상태</TableHead>
                       <TableHead className="w-30 text-center">신청일</TableHead>
                     </TableRow>
@@ -1849,10 +1918,48 @@ export default function ActivityDetailManagePage() {
                           <TableCell className="text-muted-foreground text-sm">
                             {participant.user?.email || "-"}
                           </TableCell>
+                          {activity.activityType.code === "PROJECT" && (
+                            <>
+                              <TableCell className="text-sm">
+                                {participant.appliedPosition || "초기 참여자"}
+                              </TableCell>
+                              <TableCell
+                                className="text-center"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {participant.appliedPosition ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs"
+                                    onClick={() => setApplicationTarget(participant)}
+                                  >
+                                    <FileText className="h-3.5 w-3.5" />
+                                    내용 보기
+                                  </Button>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                            </>
+                          )}
                           <TableCell className="text-center">
-                            <ParticipantStatusBadge
-                              status={participant.status}
-                            />
+                            {activity.activityType.code === "PROJECT" &&
+                            (canAdministerActivity || participant.appliedPosition) ? (
+                              <ParticipantStatusSelector
+                                value={participant.status}
+                                onChange={(status) =>
+                                  requestStatusChange(participant, status)
+                                }
+                                disabled={isUpdating}
+                                appliedLabel="검토 대기"
+                              />
+                            ) : (
+                              <ParticipantStatusBadge
+                                status={participant.status}
+                              />
+                            )}
                           </TableCell>
                           <TableCell className="text-center text-muted-foreground text-sm">
                             {formatDate(participant.createdAt)}
@@ -2116,12 +2223,21 @@ export default function ActivityDetailManagePage() {
                     {paginatedSessions.map((session) => {
                       const status = sessionAttendanceStatus.get(session.id);
                       const hasAttendance = status && status.total > 0;
+                      const isFutureSession = session.date > localDateValue();
 
                       return (
                         <TableRow
                           key={session.id}
-                          className="cursor-pointer"
-                          onClick={() => handleOpenAttendanceDialog(session)}
+                          className={
+                            isFutureSession
+                              ? "bg-muted/20"
+                              : "cursor-pointer"
+                          }
+                          onClick={
+                            isFutureSession
+                              ? undefined
+                              : () => handleOpenAttendanceDialog(session)
+                          }
                         >
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <Checkbox
@@ -2142,7 +2258,16 @@ export default function ActivityDetailManagePage() {
                             {session.description || "-"}
                           </TableCell>
                           <TableCell>
-                            {hasAttendance ? (
+                            {isFutureSession ? (
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-xs">
+                                  예정
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  당일부터 입력 가능
+                                </span>
+                              </div>
+                            ) : hasAttendance ? (
                               <div className="flex items-center gap-2">
                                 <Badge variant="default" className="text-xs">
                                   입력됨
@@ -2423,15 +2548,17 @@ export default function ActivityDetailManagePage() {
           </Card>
         </TabsContent>
       </Tabs>
-      {canAdministerActivity && <div className="flex gap-2 justify-end">
+      {canReviewApplications && <div className="flex gap-2 justify-end">
         <Button variant="outline" onClick={handleEdit}>
           <Pencil className="h-3 w-3" />
           <span className="text-xs">수정</span>
         </Button>
-        <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-          <Trash2 className="h-3 w-3" />
-          <span className="text-xs">삭제</span>
-        </Button>
+        {canAdministerActivity && (
+          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+            <Trash2 className="h-3 w-3" />
+            <span className="text-xs">삭제</span>
+          </Button>
+        )}
       </div>}
 
       <Dialog open={showBulkSessionDialog} onOpenChange={setShowBulkSessionDialog}>
@@ -2617,6 +2744,12 @@ export default function ActivityDetailManagePage() {
                         }))
                       }
                     />
+                    {sessionForm.date > localDateValue() && (
+                      <p className="text-xs text-muted-foreground">
+                        미래 일정은 생성할 수 있으며, 출석은 일정 당일부터 입력할
+                        수 있습니다.
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-2">
@@ -2641,11 +2774,21 @@ export default function ActivityDetailManagePage() {
                 >
                   취소
                 </Button>
-                <Button variant="outline" onClick={handleCreateSessionOnly}>
+                <Button
+                  variant={
+                    sessionForm.date > localDateValue() ? "default" : "outline"
+                  }
+                  onClick={handleCreateSessionOnly}
+                >
                   일정만 생성
                 </Button>
-                <Button onClick={handleCreateSessionAndAttendance}>
-                  다음: 출석 입력
+                <Button
+                  onClick={handleCreateSessionAndAttendance}
+                  disabled={sessionForm.date > localDateValue()}
+                >
+                  {sessionForm.date > localDateValue()
+                    ? "출석은 당일부터"
+                    : "다음: 출석 입력"}
                 </Button>
               </DialogFooter>
             </>
@@ -2847,6 +2990,132 @@ export default function ActivityDetailManagePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={applicationTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setApplicationTarget(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>프로젝트 지원 내용</DialogTitle>
+            <DialogDescription>
+              신청자가 작성한 지원 정보를 확인하세요.
+            </DialogDescription>
+          </DialogHeader>
+          {applicationTarget && (
+            <div className="space-y-5 py-1">
+              <div className="grid grid-cols-2 gap-4 rounded-md border bg-muted/20 p-4 text-sm">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">지원자</p>
+                  <p className="font-medium">
+                    {applicationTarget.user?.name || "—"}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">학번</p>
+                  <p className="font-medium">
+                    {applicationTarget.user?.studentId || "—"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">지원 포지션</p>
+                <p className="rounded-md border px-3 py-2.5 text-sm">
+                  {applicationTarget.appliedPosition || "—"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">관련 경험 및 지원 내용</p>
+                <div className="max-h-72 overflow-y-auto rounded-md border px-4 py-3">
+                  <p className="whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
+                    {applicationTarget.applicationMessage ||
+                      "작성된 지원 내용이 없습니다."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setApplicationTarget(null)}
+            >
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={rejectionTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejectionTarget(null);
+            setRejectionMessage("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>프로젝트 신청 반려 안내</DialogTitle>
+            <DialogDescription>
+              {rejectionTarget?.user?.name || "신청자"}님에게 전달할 안내를
+              작성해주세요. 신청 결과와 함께 표시됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label htmlFor="rejection-message" className="mb-3 block text-sm font-medium">
+              반려 안내 <span className="text-destructive">*</span>
+            </label>
+            <Textarea
+              id="rejection-message"
+              value={rejectionMessage}
+              onChange={(event) => setRejectionMessage(event.target.value)}
+              placeholder="예: 이번에는 프론트엔드 모집 인원이 모두 확정되어 함께하지 못하게 되었습니다. 죄송합니다."
+              rows={5}
+              maxLength={500}
+              disabled={
+                rejectionTarget
+                  ? updatingIds.has(rejectionTarget.id)
+                  : false
+              }
+            />
+            <p className="text-right text-xs text-muted-foreground">
+              {rejectionMessage.length}/500
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRejectionTarget(null);
+                setRejectionMessage("");
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void handleRejectionConfirm()}
+              disabled={
+                !rejectionMessage.trim() ||
+                (rejectionTarget
+                  ? updatingIds.has(rejectionTarget.id)
+                  : false)
+              }
+            >
+              신청 반려
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Bulk Update Confirmation Dialog */}
       <AlertDialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>

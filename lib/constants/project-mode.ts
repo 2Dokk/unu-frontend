@@ -8,7 +8,7 @@ export const PROJECT_MODE_OPTIONS: {
   {
     mode: "PERSONAL",
     label: "개인 프로젝트",
-    description: "담당자 혼자 진행하며 모든 활동 목록에는 공개하지 않습니다.",
+    description: "담당자 혼자 진행하며 학회 활동 목록에는 공개하지 않습니다.",
   },
   {
     mode: "FIXED_TEAM",
@@ -23,7 +23,7 @@ export const PROJECT_MODE_OPTIONS: {
 ];
 
 interface ProjectModeFields {
-  /** 모든 활동 목록 공개 여부 */
+  /** 학회 활동 목록 공개 여부 */
   listed: boolean;
   /** 개설 직후 활동 상태 */
   status: "CREATED" | "OPEN";

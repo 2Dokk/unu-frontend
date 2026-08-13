@@ -70,7 +70,7 @@ export default function MyActivityOpeningRequestsPage() {
       <Button variant="ghost" size="sm" className="-ml-3" asChild>
         <Link href="/activities">
           <ArrowLeft className="h-4 w-4" />
-          모든 활동 보기
+          학회 활동 보기
         </Link>
       </Button>
 

@@ -57,7 +57,7 @@ export const menuConfig: MenuConfig = {
   // MEMBER 권한 사용자에게만 표시되는 메뉴
   member: [
     {
-      label: "모든 활동",
+      label: "학회 활동",
       href: "/activities",
       icon: Calendar,
     },

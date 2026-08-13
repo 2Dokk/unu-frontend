@@ -138,8 +138,10 @@ function SignupForm() {
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="비밀번호를 입력하세요"
+                  placeholder="비밀번호를 입력하세요 (최소 8자)"
                   className="h-11"
+                  minLength={8}
+                  maxLength={100}
                   required
                 />
               </Field>

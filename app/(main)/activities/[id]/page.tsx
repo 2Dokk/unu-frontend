@@ -299,7 +299,7 @@ export default function ActivityDetails() {
   const activityId = params.id as string;
   const returnToMyActivities = searchParams.get("from") === "home";
   const returnPath = returnToMyActivities ? "/home" : "/activities";
-  const returnLabel = returnToMyActivities ? "내 활동으로" : "모든 활동으로";
+  const returnLabel = returnToMyActivities ? "내 활동으로" : "학회 활동으로";
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [myParticipant, setMyParticipant] =
     useState<ActivityParticipantResponse | null>(null);
@@ -328,6 +328,8 @@ export default function ActivityDetails() {
   const [refundBankName, setRefundBankName] = useState("");
   const [refundAccountNumber, setRefundAccountNumber] = useState("");
   const [refundAccountHolder, setRefundAccountHolder] = useState("");
+  const [appliedPosition, setAppliedPosition] = useState("");
+  const [applicationMessage, setApplicationMessage] = useState("");
 
   const { userRole, hasRole, userId } = useAuth();
 
@@ -335,21 +337,17 @@ export default function ActivityDetails() {
     const fetchActivityDetails = async () => {
       setLoading(true);
       try {
-        const [activityData, participantData, capacityData, materialsData] =
+        const [activityData, participantData, capacityData] =
           await Promise.all([
             getActivityById(activityId),
             getMyParticipantByActivityId(activityId),
             getActivityCapacity(activityId),
-            getLectureMaterialsByActivity(activityId).catch((error) => {
-              console.error("Failed to fetch lecture materials:", error);
-              return [];
-            }),
           ]);
         const recruitmentClosed =
           activityData.status === "ONGOING" ||
           activityData.status === "COMPLETED";
         let membersData: ActivityParticipantSummary[] = [];
-        if (recruitmentClosed) {
+        if (returnToMyActivities && recruitmentClosed) {
           try {
             membersData = await getActivityMemberSummaries(activityId);
           } catch (memberError) {
@@ -359,7 +357,6 @@ export default function ActivityDetails() {
         setActivity(activityData);
         setMyParticipant(participantData);
         setCapacity(capacityData);
-        setLectureMaterials(materialsData);
         setVisibleMembers(membersData);
       } catch (error: any) {
         console.error("Failed to fetch activity details:", error);
@@ -372,7 +369,7 @@ export default function ActivityDetails() {
     };
 
     fetchActivityDetails();
-  }, [activityId]);
+  }, [activityId, returnToMyActivities]);
 
   // 공지는 참여 확정자·운영진·담당자만 볼 수 있어서, 권한이 확인된 뒤에 따로 불러온다.
   const canViewNotices =
@@ -380,11 +377,27 @@ export default function ActivityDetails() {
     (hasRole("MANAGER") ||
       activity.assignee?.id === userId ||
       myParticipant?.status === "APPROVED");
+  const showNotices = returnToMyActivities && canViewNotices;
+  const showActivityContent = returnToMyActivities && canViewNotices;
 
   useEffect(() => {
-    if (!canViewNotices) {
+    if (!showActivityContent) {
+      setLectureMaterials([]);
+      setActivityTab((tab) => (tab === "content" ? "info" : tab));
+      return;
+    }
+
+    getLectureMaterialsByActivity(activityId)
+      .then(setLectureMaterials)
+      .catch((error) =>
+        console.error("Failed to fetch lecture materials:", error),
+      );
+  }, [showActivityContent, activityId]);
+
+  useEffect(() => {
+    if (!showNotices) {
       setActivityNotices([]);
-      // 참여를 취소해 열람 권한을 잃으면 빈 탭에 남지 않도록 되돌린다.
+      // 학회 활동 상세이거나 열람 권한을 잃으면 빈 탭에 남지 않도록 되돌린다.
       setActivityTab((tab) => (tab === "notices" ? "info" : tab));
       return;
     }
@@ -393,7 +406,7 @@ export default function ActivityDetails() {
       .catch((error) =>
         console.error("Failed to fetch activity notices:", error),
       );
-  }, [canViewNotices, activityId]);
+  }, [showNotices, activityId]);
 
   async function refreshNotices() {
     try {
@@ -422,7 +435,9 @@ export default function ActivityDetails() {
       setMyParticipant(newParticipant);
       void refreshCapacity();
       toast.success(
-        newParticipant.status === "APPROVED"
+        activity.activityType.code === "PROJECT"
+          ? "프로젝트 참여 신청이 접수되었습니다. 개설자가 검토 후 결과를 확정합니다."
+          : newParticipant.status === "APPROVED"
           ? "참여가 확정되었습니다."
           : "참여 신청이 완료되었습니다. 활동 시작일에 참여가 확정됩니다.",
       );
@@ -500,12 +515,28 @@ export default function ActivityDetails() {
       setRefundAccountHolder("");
       setStudyDepositOpen(true);
     } else {
+      setAppliedPosition("");
+      setApplicationMessage("");
       setApplyDialogOpen(true);
     }
   };
 
   const handleApplyConfirm = async () => {
-    const applied = await handleApply();
+    if (
+      activity?.activityType.code === "PROJECT" &&
+      !appliedPosition.trim()
+    ) {
+      toast.error("지원 포지션을 입력해주세요.");
+      return;
+    }
+    const applied = await handleApply(
+      activity?.activityType.code === "PROJECT"
+        ? {
+            appliedPosition: appliedPosition.trim(),
+            applicationMessage: applicationMessage.trim() || undefined,
+          }
+        : undefined,
+    );
     if (applied) setApplyDialogOpen(false);
   };
 
@@ -701,7 +732,7 @@ export default function ActivityDetails() {
                   </h3>
                 ),
                 p: ({ children }) => (
-                  <p className="text-sm text-muted-foreground mb-2 last:mb-0 leading-relaxed">
+                  <p className="text-sm mb-2 last:mb-0 leading-relaxed">
                     {children}
                   </p>
                 ),
@@ -762,8 +793,21 @@ export default function ActivityDetails() {
                 <p className="font-semibold">{participantMeta.label}</p>
                 {myParticipant?.status === "APPLIED" && (
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDate(activity.startDate)}에 참여가 확정됩니다.
+                    {activity.activityType.code === "PROJECT"
+                      ? "개설자가 신청 내용을 검토하고 있습니다."
+                      : `${formatDate(activity.startDate)}에 참여가 확정됩니다.`}
                   </p>
+                )}
+                {myParticipant?.status === "REJECTED" && (
+                  <div className="flex items-start gap-2 text-xs leading-relaxed">
+                    <span className="shrink-0 font-medium text-foreground">
+                      개설자 안내
+                    </span>
+                    <span className="min-w-0 text-muted-foreground">
+                      {myParticipant.reviewMessage ||
+                        "신청이 반려되었습니다."}
+                    </span>
+                </div>
                 )}
                 {myParticipant?.status === "APPROVED" && (
                   <Badge
@@ -791,46 +835,50 @@ export default function ActivityDetails() {
               myParticipant={myParticipant}
             />
           )}
-          <div className="flex gap-1 border-b">
-            <button
-              type="button"
-              onClick={() => setActivityTab("info")}
-              className={cn(
-                "px-3 pb-2.5 text-sm font-semibold transition-colors",
-                activityTab === "info"
-                  ? "border-b-2 border-[#174b3a] text-[#174b3a]"
-                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              활동 정보
-            </button>
-            <button
-              type="button"
-              onClick={() => setActivityTab("content")}
-              className={cn(
-                "px-3 pb-2.5 text-sm font-semibold transition-colors",
-                activityTab === "content"
-                  ? "border-b-2 border-[#174b3a] text-[#174b3a]"
-                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              활동 내용
-            </button>
-            {canViewNotices && (
+          {(showActivityContent || showNotices) && (
+            <div className="flex gap-1 border-b">
               <button
                 type="button"
-                onClick={() => setActivityTab("notices")}
+                onClick={() => setActivityTab("info")}
                 className={cn(
                   "px-3 pb-2.5 text-sm font-semibold transition-colors",
-                  activityTab === "notices"
+                  activityTab === "info"
                     ? "border-b-2 border-[#174b3a] text-[#174b3a]"
                     : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
-                공지
+                활동 정보
               </button>
-            )}
-          </div>
+              {showActivityContent && (
+                <button
+                  type="button"
+                  onClick={() => setActivityTab("content")}
+                  className={cn(
+                    "px-3 pb-2.5 text-sm font-semibold transition-colors",
+                    activityTab === "content"
+                      ? "border-b-2 border-[#174b3a] text-[#174b3a]"
+                      : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  활동 내용
+                </button>
+              )}
+              {showNotices && (
+                <button
+                  type="button"
+                  onClick={() => setActivityTab("notices")}
+                  className={cn(
+                    "px-3 pb-2.5 text-sm font-semibold transition-colors",
+                    activityTab === "notices"
+                      ? "border-b-2 border-[#174b3a] text-[#174b3a]"
+                      : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  공지
+                </button>
+              )}
+            </div>
+          )}
 
           {activityTab === "info" && (
           <Card>
@@ -973,7 +1021,11 @@ export default function ActivityDetails() {
 
               <InfoRow
                 icon={<User className="h-4 w-4" />}
-                label="담당자"
+                label={
+                  activity.activityType.code === "SPECIAL_LECTURE"
+                    ? "강의자"
+                    : "담당자"
+                }
                 value={
                   activity.assignee.name ||
                   activity.assignee.username ||
@@ -1049,8 +1101,21 @@ export default function ActivityDetails() {
                   </div>
                   {myParticipant?.status === "APPLIED" && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDate(activity.startDate)}에 참여가 확정됩니다.
+                      {activity.activityType.code === "PROJECT"
+                        ? "개설자가 신청 내용을 검토하고 있습니다."
+                        : `${formatDate(activity.startDate)}에 참여가 확정됩니다.`}
                     </p>
+                  )}
+                  {myParticipant?.status === "REJECTED" && (
+                    <div className="flex items-start gap-2 text-xs leading-relaxed">
+                      <span className="shrink-0 font-medium text-foreground">
+                        개설자 안내
+                      </span>
+                      <span className="min-w-0 text-muted-foreground">
+                        {myParticipant.reviewMessage ||
+                          "신청이 반려되었습니다."}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1100,7 +1165,7 @@ export default function ActivityDetails() {
           </Card>
           )}
 
-          {activityTab === "content" && (
+          {activityTab === "content" && showActivityContent && (
             <WeeklyMaterials
               activityId={activityId}
               materials={lectureMaterials}
@@ -1110,7 +1175,7 @@ export default function ActivityDetails() {
             />
           )}
 
-          {activityTab === "notices" && canViewNotices && (
+          {activityTab === "notices" && showNotices && (
             <ActivityNotices
               activityId={activityId}
               notices={activityNotices}
@@ -1121,7 +1186,8 @@ export default function ActivityDetails() {
         </div>
       </div>
 
-      {(activity.status === "ONGOING" || activity.status === "COMPLETED") && (
+      {returnToMyActivities &&
+        (activity.status === "ONGOING" || activity.status === "COMPLETED") && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1169,7 +1235,13 @@ export default function ActivityDetails() {
               {activity.title} 참여를 신청하시겠습니까?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {activityHasStarted ? (
+              {activity.activityType.code === "PROJECT" ? (
+                <>
+                  신청은 개설자 검토 후 참여가 확정됩니다. 모집 인원보다 많은
+                  신청을 받을 수 있으며, 신청 결과는 내 활동에서 확인할 수
+                  있습니다.
+                </>
+              ) : activityHasStarted ? (
                 <>신청 즉시 참여가 확정됩니다.</>
               ) : (
                 <>
@@ -1179,6 +1251,46 @@ export default function ActivityDetails() {
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {activity.activityType.code === "PROJECT" && (
+            <div className="space-y-4 py-1">
+              {activity.recruitmentPositions && (
+                <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                  <p className="mb-1 font-medium">모집 포지션</p>
+                  <p className="whitespace-pre-wrap text-muted-foreground">
+                    {activity.recruitmentPositions}
+                  </p>
+                </div>
+              )}
+              <div className="space-y-2">
+                <label htmlFor="applied-position" className="text-sm font-medium">
+                  지원 포지션 <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  id="applied-position"
+                  value={appliedPosition}
+                  onChange={(event) => setAppliedPosition(event.target.value)}
+                  placeholder="예: 프론트엔드"
+                  maxLength={100}
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="application-message" className="text-sm font-medium">
+                  관련 경험 및 지원 내용 <span className="text-muted-foreground">(선택)</span>
+                </label>
+                <textarea
+                  id="application-message"
+                  value={applicationMessage}
+                  onChange={(event) => setApplicationMessage(event.target.value)}
+                  placeholder="포지션과 관련된 경험이나 함께하고 싶은 이유를 작성해주세요."
+                  maxLength={1000}
+                  rows={4}
+                  disabled={actionLoading}
+                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={actionLoading}>
               돌아가기

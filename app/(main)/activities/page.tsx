@@ -149,6 +149,12 @@ const ACTIVITY_TYPE_ORDER: Record<string, number> = {
   LECTURE: 3,
 };
 
+function acceptsParticipantApplications(activity: ActivityResponse): boolean {
+  return Boolean(
+    activity.recruitmentStartDate && activity.recruitmentEndDate,
+  );
+}
+
 const ActivityPage = () => {
   const router = useRouter();
   const [activities, setActivities] = useState<ActivityResponse[]>([]);
@@ -227,7 +233,7 @@ const ActivityPage = () => {
             activityTypeFilter !== "all" ? activityTypeFilter : undefined,
           quarterId: currentQuarterId,
         });
-        setActivities(data);
+        setActivities(data.filter(acceptsParticipantApplications));
       } catch (error: unknown) {
         console.error("Failed to fetch activities:", error);
         toast.error(
@@ -303,7 +309,7 @@ const ActivityPage = () => {
     <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-6">
       {/* Page Header */}
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">모든 활동</h1>
+        <h1 className="text-2xl font-bold tracking-tight">학회 활동</h1>
         <p className="text-sm text-muted-foreground">
           이번 분기에 개설된 활동을 확인하고 참여하세요
         </p>
