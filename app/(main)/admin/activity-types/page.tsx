@@ -274,7 +274,7 @@ export default function ActivityTypesPage() {
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">이름</label>
               <Input
-                placeholder="예: 인강"
+                placeholder="예: 강의"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })

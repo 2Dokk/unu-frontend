@@ -60,7 +60,7 @@ export default function HomePage() {
 
   if (authLoading || (loading && isAuthenticated)) {
     return (
-      <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+      <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-8">
         <div className="grid gap-4 md:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i}>
@@ -81,7 +81,7 @@ export default function HomePage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+    <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-8">
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">내 활동</h1>
@@ -94,18 +94,19 @@ export default function HomePage() {
         <div className="space-y-8">
           {/* Summary Cards */}
           <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <Card className="gap-0 py-4">
+              <CardHeader className="flex flex-row items-center justify-between px-4">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   이번 분기 활동
                 </CardTitle>
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                  {currentQuarterActivities.length + currentQuarterHostedActivities.length}
-                  </div>
-                <p className="mt-1 text-xs text-muted-foreground">
+              <CardContent className="px-4">
+                <div className="text-2xl font-bold">
+                  {currentQuarterActivities.length +
+                    currentQuarterHostedActivities.length}
+                </div>
+                <p className="text-xs text-muted-foreground">
                   {currentQuarter?.name || ""}
                 </p>
               </CardContent>
@@ -116,19 +117,17 @@ export default function HomePage() {
               className="text-left"
               onClick={() => router.push("/home/completed")}
             >
-              <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <Card className="h-full cursor-pointer gap-0 py-4 transition-shadow hover:shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between px-4">
                   <CardTitle className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
                     수료 활동
                     <ArrowRight className="h-3 w-3" />
                   </CardTitle>
                   <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4">
                   <div className="text-2xl font-bold">{completedCount}</div>
-                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                    누적 수료 수
-                  </p>
+                  <p className="text-xs text-muted-foreground">누적 수료 수</p>
                 </CardContent>
               </Card>
             </button>
@@ -138,35 +137,33 @@ export default function HomePage() {
               className="text-left"
               onClick={() => router.push("/home/activities")}
             >
-              <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <Card className="h-full cursor-pointer gap-0 py-4 transition-shadow hover:shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between px-4">
                   <CardTitle className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
                     전체 참여 활동
                     <ArrowRight className="h-3 w-3" />
                   </CardTitle>
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4">
                   <div className="text-2xl font-bold">{totalActivities}</div>
-                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                    누적 활동 수
-                  </p>
+                  <p className="text-xs text-muted-foreground">누적 활동 수</p>
                 </CardContent>
               </Card>
             </button>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <Card className="gap-0 py-4">
+              <CardHeader className="flex flex-row items-center justify-between px-4">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   평균 출석률
                 </CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4">
                 <div className="text-2xl font-bold">
                   {averageAttendance.toFixed(0)}%
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">전체 평균</p>
+                <p className="text-xs text-muted-foreground">전체 평균</p>
               </CardContent>
             </Card>
           </div>
@@ -181,9 +178,9 @@ export default function HomePage() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-base font-semibold tracking-tight">
+              <h2 className="text-lg font-semibold tracking-tight">
                 내가 신청·참여한 활동
-              </h3>
+              </h2>
 
         {currentQuarterActivities.length === 0 ? (
           <Card>
@@ -195,7 +192,7 @@ export default function HomePage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {currentQuarterActivities.map(
               ({
                 participant,
@@ -209,62 +206,62 @@ export default function HomePage() {
                 return (
                   <Card
                     key={participant.id}
-                    className="hover:shadow-md transition-shadow"
+                    role="button"
+                    tabIndex={0}
+                    className="cursor-pointer gap-2 py-4 transition-shadow hover:shadow-md"
                     onClick={() =>
                       router.push(
                         `/activities/${participant.activity.id}?from=home`,
                       )
                     }
-                    onMouseOver={() => (document.body.style.cursor = "pointer")}
-                    onMouseOut={() => (document.body.style.cursor = "default")}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        router.push(
+                          `/activities/${participant.activity.id}?from=home`,
+                        );
+                      }
+                    }}
                   >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg">
-                            {participant.activity?.title || "활동명 없음"}
-                          </CardTitle>
-                          <div className="flex items-center gap-2">
-                            <ParticipantStatusBadge
-                              status={participant.status}
-                            />
-                            {participant.status === "APPLIED" ? (
-                              <Badge variant="outline">시작 전</Badge>
-                            ) : participant.completed ? (
-                              <Badge
-                                variant="outline"
-                                className="bg-green-50 text-green-700 border-green-200"
-                              >
-                                수료
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline">진행 중</Badge>
-                            )}
-                          </div>
-                        </div>
+                    <CardHeader className="px-4">
+                      <CardTitle className="truncate text-base leading-snug">
+                        {participant.activity?.title || "활동명 없음"}
+                      </CardTitle>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <ParticipantStatusBadge status={participant.status} />
+                        {participant.status === "APPLIED" ? (
+                          <Badge variant="outline">시작 전</Badge>
+                        ) : participant.completed ? (
+                          <Badge
+                            variant="outline"
+                            className="border-green-200 bg-green-50 text-green-700"
+                          >
+                            수료
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">진행 중</Badge>
+                        )}
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="px-4">
                       {participant.status === "APPLIED" ? (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {formatDate(participant.activity.startDate)}에 참여가
                           확정됩니다.
                         </p>
                       ) : (
-                        <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            출석
-                          </span>
-                          <span className="font-medium">
-                            {attendedCount} / {totalSessions} 출석
-                          </span>
-                        </div>
-                        <Progress value={attendanceRate} className="h-2" />
-                        <p className="text-xs text-right text-muted-foreground">
-                          {attendanceRate.toFixed(0)}%
-                        </p>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              출석
+                            </span>
+                            <span className="font-medium">
+                              {attendedCount} / {totalSessions} ·{" "}
+                              {attendanceRate.toFixed(0)}%
+                            </span>
+                          </div>
+                          <Progress value={attendanceRate} className="h-1.5" />
                         </div>
                       )}
                     </CardContent>
@@ -277,7 +274,7 @@ export default function HomePage() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-base font-semibold tracking-tight">
+              <h3 className="text-lg font-semibold tracking-tight">
                 내가 개설한 활동
               </h3>
               {currentQuarterHostedActivities.length === 0 ? (
@@ -290,7 +287,7 @@ export default function HomePage() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {currentQuarterHostedActivities.map(
                     ({ activity, participantCount }) => (
                       <button
@@ -303,34 +300,33 @@ export default function HomePage() {
                           )
                         }
                       >
-                        <Card className="h-full transition-shadow hover:shadow-md">
-                          <CardHeader className="space-y-3">
-                            <div className="flex items-start justify-between gap-4">
-                              <CardTitle className="min-w-0 text-lg leading-snug">
-                                {activity.title}
-                              </CardTitle>
+                        <Card className="h-full gap-2 py-4 transition-shadow hover:shadow-md">
+                          <CardHeader className="px-4">
+                            <CardTitle className="truncate text-base leading-snug">
+                              {activity.title}
+                            </CardTitle>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <ActivityTypeBadge
+                                activityType={activity.activityType}
+                              />
                               <ActivityStatusBadge status={activity.status} />
                             </div>
-                            <ActivityTypeBadge
-                              activityType={activity.activityType}
-                            />
                           </CardHeader>
-                          <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="flex items-center gap-2 text-muted-foreground">
-                                <Users className="h-4 w-4" />
-                                참여자
+                          <CardContent className="px-4">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                참여자{" "}
+                                <strong className="text-foreground">
+                                  {participantCount}명
+                                </strong>
                               </span>
-                              <strong>{participantCount}명</strong>
+                              <ArrowRight className="h-3.5 w-3.5" />
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {formatDate(activity.startDate)} -{" "}
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {formatDate(activity.startDate)} ~{" "}
                               {formatDate(activity.endDate)}
                             </p>
-                            <div className="flex items-center justify-end gap-1 text-sm font-medium">
-                              관리 화면 열기
-                              <ArrowRight className="h-4 w-4" />
-                            </div>
                           </CardContent>
                         </Card>
                       </button>

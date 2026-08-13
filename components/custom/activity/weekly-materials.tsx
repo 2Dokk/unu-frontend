@@ -5,6 +5,7 @@ import {
   BookOpen,
   ChevronDown,
   ExternalLink,
+  MessageCircle,
   Pencil,
   Plus,
   Trash2,
@@ -88,6 +89,8 @@ function getErrorMessage(error: unknown, fallback: string): string {
 interface Props {
   activityId: string;
   materials: LectureMaterial[];
+  /** 활동에 등록된 디스코드 초대 링크 (선택) */
+  discordUrl?: string | null;
   /** 주차 자료를 추가할 수 있는지 */
   canManage?: boolean;
   /** 기존 주차 자료를 수정·삭제할 수 있는지 */
@@ -99,6 +102,7 @@ interface Props {
 export function WeeklyMaterials({
   activityId,
   materials,
+  discordUrl,
   canManage = false,
   canModify = false,
   onChanged,
@@ -224,6 +228,20 @@ export function WeeklyMaterials({
           )}
         </CardHeader>
         <CardContent className="px-6 pb-4 pt-0">
+          {discordUrl && (
+            <a
+              href={discordUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mb-3 flex items-center gap-3 rounded-md border bg-[#5865F2]/5 px-4 py-3 transition-colors hover:bg-[#5865F2]/10"
+            >
+              <MessageCircle className="h-4 w-4 shrink-0 text-[#5865F2]" />
+              <span className="min-w-0 flex-1 text-sm font-medium">
+                디스코드 참여하기
+              </span>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            </a>
+          )}
           {weekGroups.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               등록된 주차별 강의 내용이 없습니다.

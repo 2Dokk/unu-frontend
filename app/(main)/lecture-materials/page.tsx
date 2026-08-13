@@ -226,10 +226,10 @@ function LectureMaterialsContent() {
       </header>
 
       {loading || authLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2, 3, 4].map((item) => (
-            <Skeleton key={item} className="h-52 w-full rounded-lg" />
-          ))}
+        <div className="flex min-h-[300px] items-center justify-center">
+          <p className="text-sm text-muted-foreground">
+            자료를 불러오는 중입니다.
+          </p>
         </div>
       ) : materials.length === 0 ? (
         <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed px-6 text-center">
@@ -240,69 +240,69 @@ function LectureMaterialsContent() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
           {materials.map((material) => (
-            <Card key={material.id} className="flex min-h-52 flex-col">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#edf5f1] text-[#174b3a]">
-                      <FileText className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 space-y-1">
-                      <CardTitle className="break-words text-base leading-6">
-                        {material.title}
-                      </CardTitle>
-                      <CardDescription>
-                        {formatDate(material.createdAt)} 등록
-                      </CardDescription>
-                      <p className="text-xs font-medium text-[#174b3a]">
-                        {material.activityTitle ?? "공용 자료"}
-                      </p>
-                    </div>
-                  </div>
-                  {canManage && (
-                    <div className="flex shrink-0 gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`${material.title} 수정`}
-                        title="수정"
-                        onClick={() => openEditDialog(material)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`${material.title} 삭제`}
-                        title="삭제"
-                        onClick={() => setDeleteTarget(material)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  )}
+            <Card key={material.id} className="px-4 py-2.5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#edf5f1] text-[#174b3a]">
+                <FileText className="h-4 w-4" />
+              </div>
+          
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-medium">
+                    {material.title}
+                  </p>
+                  <span className="shrink-0 text-xs font-medium text-[#174b3a]">
+                    {material.activityTitle ?? "공용 자료"}
+                  </span>
                 </div>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col justify-between gap-5">
-                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
+          
+                <p className="mt-0.5 whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">
                   {material.description || "별도의 자료 설명이 없습니다."}
                 </p>
-                <Button variant="outline" className="w-full" asChild>
-                  <a
-                    href={material.driveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+              </div>
+          
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {formatDate(material.createdAt)}
+              </span>
+          
+              {canManage && (
+                <div className="flex shrink-0">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => openEditDialog(material)}
                   >
-                    Google Drive에서 열기
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+          
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setDeleteTarget(material)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
+                </div>
+              )}
+          
+              <Button variant="outline" size="sm" className="shrink-0" asChild>
+                <a
+                  href={material.driveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  열기
+                  <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                </a>
+              </Button>
+            </div>
+          </Card>
           ))}
         </div>
       )}

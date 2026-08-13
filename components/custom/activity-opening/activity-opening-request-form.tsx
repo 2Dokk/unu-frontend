@@ -39,6 +39,9 @@ import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { ActivityOpeningRequestPayload } from "@/lib/interfaces/activity-opening-request";
 import { ActivityOpeningPeriodResponse } from "@/lib/interfaces/activity-opening-period";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import {
+  ExternalLink,
+} from "lucide-react";
 
 interface Props {
   requestId?: string;
@@ -54,6 +57,7 @@ interface FormState {
   endDate: string;
   acceptsNewMembers: boolean;
   participantLimit: string;
+  recruitmentPositions: string;
   personalProject: boolean | null;
   parentActivityId: string;
 }
@@ -68,6 +72,7 @@ const EMPTY_FORM: FormState = {
   endDate: "",
   acceptsNewMembers: false,
   participantLimit: "",
+  recruitmentPositions: "",
   personalProject: null,
   parentActivityId: "none",
 };
@@ -131,7 +136,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
         ]);
         if (!active) return;
         setApplicant(me);
-        setActivityTypes(types.filter((type) => ["PROJECT", "STUDY"].includes(type.code)));
+        setActivityTypes(types.filter((type) => ["PROJECT", "STUDY", "SPECIAL_LECTURE"].includes(type.code)));
         setPreviousActivities(
           activities.filter((activity) => activity.assignee.id === userId),
         );
@@ -163,6 +168,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
             endDate: existing.endDate,
             acceptsNewMembers: existing.acceptsNewMembers,
             participantLimit: String(existing.participantLimit ?? ""),
+            recruitmentPositions: existing.recruitmentPositions ?? "",
             personalProject: existing.personalProject,
             parentActivityId: existing.parentActivityId ?? "none",
           });
@@ -245,28 +251,85 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
   }
 
   function validate(): string | null {
-    if (!form.activityTypeId) return "활동 유형을 선택해주세요.";
+    const missingFields: string[] = [];
+  
+    if (!form.activityTypeId) {
+      missingFields.push("활동 유형");
+    }
+  
     if (
       selectedActivityType?.code === "PROJECT" &&
       form.personalProject === null
-    )
-      return "프로젝트 진행 방식을 선택해주세요.";
-    if (!form.title.trim()) return "활동명을 입력해주세요.";
-    if (!form.description.trim()) return "활동 소개를 입력해주세요.";
-    if (!form.operationPlan.trim()) return "운영 계획을 입력해주세요.";
-    if (!form.startDate || !form.endDate) return "활동 기간을 입력해주세요.";
-    if (new Date(form.startDate) > new Date(form.endDate))
+    ) {
+      missingFields.push("프로젝트 진행 방식");
+    }
+  
+    if (!form.title.trim()) {
+      missingFields.push("활동명");
+    }
+  
+    if (!form.description.trim()) {
+      missingFields.push("활동 소개");
+    }
+  
+    if (!form.operationPlan.trim()) {
+      if (selectedActivityType?.code === "STUDY") {
+        missingFields.push("스터디 계획서 링크");
+      } else if (
+        selectedActivityType?.code === "LECTURE" ||
+        selectedActivityType?.code === "SPECIAL_LECTURE"
+      ) {
+        missingFields.push("강의 계획서 링크");
+      } else {
+        missingFields.push("운영 계획");
+      }
+    }
+  
+    if (!form.startDate || !form.endDate) {
+      missingFields.push("활동 기간");
+    }
+  
+    if (missingFields.length > 1) {
+      return "필수 항목을 모두 입력해주세요.";
+    }
+  
+    if (missingFields.length === 1) {
+      switch (missingFields[0]) {
+        case "활동 유형":
+          return "활동 유형을 선택해주세요.";
+        case "프로젝트 진행 방식":
+          return "프로젝트 진행 방식을 선택해주세요.";
+        case "활동명":
+          return "활동명을 입력해주세요.";
+        case "활동 소개":
+          return "활동 소개를 입력해주세요.";
+        case "스터디 계획서 링크":
+          return "스터디 계획서 링크를 첨부해주세요.";
+        case "강의 계획서 링크":
+          return "강의 계획서 링크를 첨부해주세요.";
+        case "운영 계획":
+          return "운영 계획을 입력해주세요.";
+        case "활동 기간":
+          return "활동 기간을 입력해주세요.";
+      }
+    }
+  
+    if (new Date(form.startDate) > new Date(form.endDate)) {
       return "종료일은 시작일 이후여야 합니다.";
+    }
+  
     const participantLimit = Number(form.participantLimit);
+  
     if (
       form.acceptsNewMembers &&
       form.participantLimit &&
       (!Number.isInteger(participantLimit) ||
         participantLimit < 1 ||
-        participantLimit > 1000)
+        participantLimit > 100)
     ) {
-      return "참여 정원은 1명 이상 1,000명 이하로 입력해주세요.";
+      return "참여 정원은 1명 이상 100명 이하로 입력해주세요.";
     }
+  
     if (
       form.acceptsNewMembers &&
       form.participantLimit &&
@@ -274,6 +337,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
     ) {
       return "참여 정원은 함께 시작할 인원보다 적을 수 없습니다.";
     }
+  
     return null;
   }
 
@@ -298,6 +362,9 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
         form.acceptsNewMembers && form.participantLimit
           ? Number(form.participantLimit)
           : undefined,
+      recruitmentPositions: form.acceptsNewMembers
+        ? form.recruitmentPositions.trim() || undefined
+        : undefined,
       personalProject: Boolean(form.personalProject),
       parentActivityId:
         form.parentActivityId === "none" ? undefined : form.parentActivityId,
@@ -361,7 +428,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
             {requestId ? "활동 개설 신청 수정" : "활동 개설 신청"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            제출한 내용은 임원진 검토와 승인 후 정식 활동으로 등록됩니다.
+            제출한 내용은 운영진 검토와 승인 후 정식 활동으로 등록됩니다.
           </p>
         </div>
         <Button variant="outline" onClick={() => router.push("/activity-opening/my")}>
@@ -384,7 +451,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
         <CardHeader><CardTitle className="text-base">활동 정보</CardTitle></CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
-            <Label>활동 유형</Label>
+            <Label>활동 유형<span className="text-red-500">*</span></Label>
             <Select
               value={form.activityTypeId}
               onValueChange={(value) =>
@@ -404,26 +471,117 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
               <SelectContent>{activityTypes.map((type) => <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
+          {selectedActivityType?.code === "SPECIAL_LECTURE" && (
+            <div className="rounded-md border bg-muted/40 px-4 py-3">
+              <p className="text-sm font-medium">강의 개설 안내</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                - 본 개설 신청을 통해 최대 2개의 강의를 선정하며, 신청 후 검토 결과에 따라 개설이 승인되지 않을 수 있습니다. <br></br>
+                - 강의 주제는 컴퓨터공학 관련 분야 전반을 대상으로 하며, 웹 개발 및 컴퓨터 시스템 관련 강의를 우선적으로 선정합니다. <br></br>
+                - 강의자에게는 강의 시간 기준 시간당 20,000원의 강의비가 지급됩니다.<br></br>
+                - 승인된 강의는 제출한 강의 계획을 바탕으로 성실하게 운영해야 하며, 
+                정당한 사유 없이 강의 진행이 지속적으로 이루어지지 않는 경우 강의료 지급 또는 이후 강의 개설 승인에 제한이 있을 수 있습니다.
+              </p>
+            </div>
+          )}
           <div className="space-y-2">
-            <Label htmlFor="opening-title">활동명</Label>
+            <Label htmlFor="opening-title">활동명<span className="text-red-500">*</span></Label>
             <Input id="opening-title" maxLength={100} value={form.title} onChange={(event) => change("title", event.target.value)} placeholder="활동명을 입력하세요" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="opening-description">활동 소개 및 목적</Label>
-            <Textarea id="opening-description" rows={5} maxLength={3000} value={form.description} onChange={(event) => change("description", event.target.value)} placeholder="어떤 활동인지, 무엇을 목표로 하는지 작성해주세요." />
+            <Label htmlFor="opening-description">활동 소개 및 목적<span className="text-red-500">*</span></Label>
+            <Textarea id="opening-description" rows={5} maxLength={3000} value={form.description} onChange={(event) => change("description", event.target.value)} placeholder="어떤 활동인지, 무엇을 목표로 하는지 간단하게 작성해주세요." />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="opening-plan">운영 계획</Label>
-            <Textarea id="opening-plan" rows={8} maxLength={10000} value={form.operationPlan} onChange={(event) => change("operationPlan", event.target.value)} placeholder="진행 방식, 일정, 예상 결과물을 중심으로 작성해주세요." />
-          </div>
+          {selectedActivityType?.code === "PROJECT" && (
+            <div className="space-y-2">
+              <Label htmlFor="opening-plan">
+                운영 계획
+                <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="opening-plan"
+                rows={8}
+                maxLength={10000}
+                value={form.operationPlan}
+                onChange={(event) => change("operationPlan", event.target.value)}
+                placeholder="진행 방식, 일정, 예상 결과물을 중심으로 작성해주세요."
+              /> 
+            </div>
+          )}
+          {selectedActivityType?.code === "STUDY" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="study-plan-link">
+                  스터디 계획서 링크
+                  <span className="text-red-500">*</span>
+
+                  <div className="space-y-2">
+                    <a
+                      href="..."
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 whitespace-nowrap text-sm underline underline-offset-4"
+                    >
+                      스터디 계획서 양식 확인하기
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </div>
+                </Label>
+
+                <Input
+                  id="study-plan-link"
+                  type="url"
+                  value={form.operationPlan}
+                  onChange={(event) => change("operationPlan", event.target.value)}
+                  placeholder="작성한 스터디 계획서 구글 드라이브 링크를 입력해주세요."
+                />
+
+                <p className="text-xs text-muted-foreground">
+                  양식대로 작성한 뒤 열람 가능한 구글 드라이브 링크를 첨부해주세요.
+                </p>
+              </div>
+            </div>
+          )}
+          {selectedActivityType?.code === "SPECIAL_LECTURE" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="study-plan-link">
+                  강의 계획서 링크
+                  <span className="text-red-500">*</span>
+
+                  <div className="space-y-2">
+                    <a
+                      href="..."
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 whitespace-nowrap text-sm underline underline-offset-4"
+                    >
+                      강의 계획서 양식 확인하기
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </div>
+                </Label>
+
+                <Input
+                  id="study-plan-link"
+                  type="url"
+                  value={form.operationPlan}
+                  onChange={(event) => change("operationPlan", event.target.value)}
+                  placeholder="작성한 강의 계획서 구글 드라이브 링크를 입력해주세요."
+                />
+                <p className="text-xs text-muted-foreground">
+                  양식대로 작성한 뒤 열람 가능한 구글 드라이브 링크를 첨부해주세요.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2"><Label htmlFor="opening-start">시작일</Label><Input id="opening-start" type="date" value={form.startDate} onChange={(event) => change("startDate", event.target.value)} /></div>
-            <div className="space-y-2"><Label htmlFor="opening-end">종료일</Label><Input id="opening-end" type="date" value={form.endDate} onChange={(event) => change("endDate", event.target.value)} /></div>
+            <div className="space-y-2"><Label htmlFor="opening-start">시작일<span className="text-red-500">*</span></Label><Input id="opening-start" type="date" value={form.startDate} onChange={(event) => change("startDate", event.target.value)} /></div>
+            <div className="space-y-2"><Label htmlFor="opening-end">종료일<span className="text-red-500">*</span></Label><Input id="opening-end" type="date" value={form.endDate} onChange={(event) => change("endDate", event.target.value)} /></div>
           </div>
           {selectedActivityType?.code === "PROJECT" ? (
             <div className="space-y-3">
               <div>
-                <p className="text-sm font-medium">프로젝트 진행 방식</p>
+                <p className="text-sm font-medium">프로젝트 진행 방식 <span className="text-red-500">*</span></p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   함께 시작할 팀원과 승인 후 추가 모집 여부를 선택해주세요.
                 </p>
@@ -438,6 +596,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                       ...prev,
                       personalProject: true,
                       acceptsNewMembers: false,
+                      recruitmentPositions: "",
                     }));
                     setInitialMembers([]);
                     setMemberResults([]);
@@ -445,7 +604,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                 >
                   <span className="block text-sm font-medium">개인 프로젝트</span>
                   <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                    신청자만 참여하며 모든 활동 목록에는 공개하지 않습니다.
+                    신청자만 참여하며 모든 활동 목록에 공개하지 않습니다.
                   </span>
                 </button>
                 <button
@@ -457,6 +616,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                       ...prev,
                       personalProject: false,
                       acceptsNewMembers: false,
+                      recruitmentPositions: "",
                     }))
                   }
                 >
@@ -485,7 +645,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
               </div>
             </div>
           ) : null}
-          {selectedActivityType && selectedActivityType.code !== "PROJECT" && (
+          {selectedActivityType && selectedActivityType.code !== "PROJECT" && selectedActivityType.code !== "SPECIAL_LECTURE" &&(
               <div className="flex items-center justify-between gap-4 rounded-md border px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">추가 참여자 모집</p>
@@ -496,11 +656,36 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                 <Switch
                   checked={form.acceptsNewMembers}
                   onCheckedChange={(checked) =>
-                    change("acceptsNewMembers", checked)
+                    setForm((prev) => ({
+                      ...prev,
+                      acceptsNewMembers: checked,
+                      recruitmentPositions: checked
+                        ? prev.recruitmentPositions
+                        : "",
+                    }))
                   }
                 />
               </div>
             )}
+          {selectedActivityType?.code === "PROJECT" && form.acceptsNewMembers &&  (
+            <div className="space-y-2">
+              <Label htmlFor="opening-recruitment-positions">희망 포지션</Label>
+              <Textarea
+                id="opening-recruitment-positions"
+                value={form.recruitmentPositions}
+                onChange={(event) =>
+                  change("recruitmentPositions", event.target.value)
+                }
+                placeholder="예: 프론트엔드 1명 (React), 백엔드 1명 (Spring)"
+                rows={2}
+                maxLength={500}
+              />
+              <p className="text-xs text-muted-foreground">
+                어떤 포지션의 팀원을 찾는지 적어두면 신청자가 활동 상세에서
+                확인할 수 있습니다.
+              </p>
+            </div>
+          )}
           {form.acceptsNewMembers && (
             <div className="space-y-2">
               <Label htmlFor="opening-participant-limit">참여 정원</Label>
@@ -526,8 +711,9 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                비워두면 제한 없이 신청받습니다. 담당자는 제외하고 함께 시작할
-                학회원을 포함한 전체 참여 정원입니다.
+                {selectedActivityType?.code === "STUDY"
+                  ? "비워두면 제한 없이 신청받습니다. 담당자도 참여자로 등록되어 정원에 포함됩니다."
+                  : "비워두면 제한 없이 신청받습니다. 담당자는 제외하고 함께 시작할 학회원을 포함한 전체 참여 정원입니다."}
               </p>
             </div>
           )}
@@ -541,7 +727,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
         </CardContent>
       </Card>
 
-      {canSelectInitialMembers && <Card>
+      {canSelectInitialMembers && selectedActivityType?.code !== "SPECIAL_LECTURE" && <Card>
         <CardHeader><CardTitle className="text-base">함께 시작할 학회원</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">

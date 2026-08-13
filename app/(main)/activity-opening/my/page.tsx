@@ -77,7 +77,7 @@ export default function MyActivityOpeningRequestsPage() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight">내 활동 개설 신청</h1>
-          <p className="text-sm text-muted-foreground">신청 상태와 임원진 검토 의견을 확인할 수 있습니다.</p>
+          <p className="text-sm text-muted-foreground">신청 상태와 운영진 검토 의견을 확인할 수 있습니다.</p>
         </div>
         {openingPeriod?.canApply ? (
           <Button asChild><Link href="/activity-opening/apply"><Plus className="h-4 w-4" />새 신청</Link></Button>
@@ -89,7 +89,7 @@ export default function MyActivityOpeningRequestsPage() {
       {loading ? (
         <p className="py-12 text-center text-sm text-muted-foreground">신청 내역을 불러오는 중입니다.</p>
       ) : requests.length === 0 ? (
-        <Card><CardContent className="flex flex-col items-center gap-4 py-14 text-center"><FilePenLine className="h-8 w-8 text-muted-foreground" /><div><p className="font-medium">아직 신청 내역이 없습니다.</p><p className="mt-1 text-sm text-muted-foreground">새 활동을 제안하고 임원진 검토를 요청해보세요.</p></div></CardContent></Card>
+        <Card><CardContent className="flex flex-col items-center gap-4 py-14 text-center"><FilePenLine className="h-8 w-8 text-muted-foreground" /><div><p className="font-medium">아직 신청 내역이 없습니다.</p><p className="mt-1 text-sm text-muted-foreground">새 활동을 제안하고 운영진 검토를 요청해보세요.</p></div></CardContent></Card>
       ) : (
         <div className="space-y-4">
           {requests.map((request) => {
@@ -121,7 +121,7 @@ export default function MyActivityOpeningRequestsPage() {
                       )}
                     </div>
                   </div>
-                  {request.reviewComment && <div className="rounded-md bg-muted px-4 py-3"><p className="text-xs font-medium text-muted-foreground">임원진 검토 의견</p><p className="mt-1 whitespace-pre-wrap text-sm">{request.reviewComment}</p></div>}
+                  {request.reviewComment && <div className="rounded-md bg-muted px-4 py-3"><p className="text-xs font-medium text-muted-foreground">운영진 검토 의견</p><p className="mt-1 whitespace-pre-wrap text-sm">{request.reviewComment}</p></div>}
                   <p className="text-xs text-muted-foreground">{request.submittedAt ? `제출 ${formatDate(request.submittedAt)}` : `저장 ${formatDate(request.createdAt)}`}</p>
                 </CardContent>
               </Card>

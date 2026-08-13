@@ -58,7 +58,7 @@ export default function AllActivitiesPage() {
 
   if (authLoading || (loading && isAuthenticated)) {
     return (
-      <div className="mx-auto w-full max-w-4xl space-y-8 px-6 py-8">
+      <div className="mx-auto w-full max-w-6xl space-y-8 px-6 py-8">
         <Skeleton className="h-9 w-40" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -68,7 +68,7 @@ export default function AllActivitiesPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-8 px-6 py-8">
+    <div className="mx-auto w-full max-w-6xl space-y-8 px-6 py-8">
       <div className="space-y-3">
         <Button
           variant="ghost"

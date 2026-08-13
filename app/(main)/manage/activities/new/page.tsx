@@ -37,6 +37,12 @@ import {
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import { ParticipantsCard } from "@/components/custom/activity/participants-card";
+import {
+  PROJECT_MODE_OPTIONS,
+  ProjectMode,
+  projectModeFields,
+} from "@/lib/constants/project-mode";
+import { isDiscordUrl, supportsDiscordLink } from "@/lib/constants/discord-link";
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "준비 중" },
@@ -70,7 +76,10 @@ export default function ActivityNewPage() {
     endDate: "",
     depositAmount: "30000",
     participantLimit: "",
+    recruitmentPositions: "",
+    discordUrl: "",
   });
+  const [projectMode, setProjectMode] = useState<ProjectMode>("FIXED_TEAM");
 
   const selectedActivityType = activityTypes.find(
     (type) => type.id === formData.activityTypeId,
@@ -78,6 +87,28 @@ export default function ActivityNewPage() {
   const requiresDeposit =
     selectedActivityType?.code === "STUDY" ||
     selectedActivityType?.code === "SPECIAL_LECTURE";
+  const isProject = selectedActivityType?.code === "PROJECT";
+  // 스터디는 담당자도 참여자로 자동 등록되므로 정원에 포함된다.
+  const countsAssignee = selectedActivityType?.code === "STUDY";
+  const allowsDiscordLink = supportsDiscordLink(selectedActivityType?.code);
+  const modeFields = projectModeFields(projectMode);
+  const allowsInitialMembers = !isProject || modeFields.allowsInitialMembers;
+  const showsParticipantLimit = !isProject || modeFields.allowsParticipantLimit;
+
+  function handleProjectModeChange(mode: ProjectMode) {
+    setProjectMode(mode);
+    const fields = projectModeFields(mode);
+    setFormData((prev) => ({
+      ...prev,
+      status: fields.status,
+      participantLimit: fields.allowsParticipantLimit
+        ? prev.participantLimit
+        : "",
+      recruitmentPositions:
+        mode === "RECRUITING" ? prev.recruitmentPositions : "",
+    }));
+    if (!fields.allowsInitialMembers) setNewParticipantIds([]);
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -130,9 +161,19 @@ export default function ActivityNewPage() {
       formData.participantLimit &&
       participantLimit <
         newParticipantIds.filter((userId) => userId !== formData.assigneeId)
-          .length
+          .length +
+          (countsAssignee ? 1 : 0)
     ) {
-      return "참여 정원은 미리 추가한 참여자 수보다 적을 수 없습니다.";
+      return countsAssignee
+        ? "참여 정원은 담당자를 포함한 참여자 수보다 적을 수 없습니다."
+        : "참여 정원은 미리 추가한 참여자 수보다 적을 수 없습니다.";
+    }
+    if (
+      allowsDiscordLink &&
+      formData.discordUrl.trim() &&
+      !isDiscordUrl(formData.discordUrl.trim())
+    ) {
+      return "디스코드 초대 링크를 확인해주세요.";
     }
     return null;
   }
@@ -163,12 +204,23 @@ export default function ActivityNewPage() {
         participantLimit: formData.participantLimit
           ? Number(formData.participantLimit)
           : undefined,
+        listed: isProject ? modeFields.listed : undefined,
+        recruitmentPositions:
+          projectMode === "RECRUITING" && isProject
+            ? formData.recruitmentPositions.trim() || undefined
+            : undefined,
+        discordUrl: allowsDiscordLink
+          ? formData.discordUrl.trim() || undefined
+          : undefined,
       };
 
       const created = await createActivity(data);
-      if (newParticipantIds.length > 0) {
+      const participantIdsToAdd = countsAssignee
+        ? newParticipantIds.filter((userId) => userId !== formData.assigneeId)
+        : newParticipantIds;
+      if (participantIdsToAdd.length > 0) {
         await Promise.all(
-          newParticipantIds.map((userId) =>
+          participantIdsToAdd.map((userId) =>
             createActivityParticipant({
               activityId: created.id,
               userId,
@@ -229,6 +281,9 @@ export default function ActivityNewPage() {
                   }
                   if (type?.code === "LECTURE" && !formData.participantLimit) {
                     handleInputChange("participantLimit", "5");
+                  }
+                  if (type?.code === "PROJECT") {
+                    handleProjectModeChange(projectMode);
                   }
                 }}
               >
@@ -300,35 +355,78 @@ export default function ActivityNewPage() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="participantLimit">참여 정원</Label>
-                <div className="relative w-48">
-                  <Input
-                    id="participantLimit"
-                    value={formData.participantLimit}
+              {isProject && (
+                <div className="space-y-2 md:col-span-2">
+                  <p className="text-sm font-medium">프로젝트 진행 방식</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PROJECT_MODE_OPTIONS.map((option) => (
+                      <button
+                        key={option.mode}
+                        type="button"
+                        aria-pressed={projectMode === option.mode}
+                        className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                          projectMode === option.mode
+                            ? "border-[#264638] bg-[#264638]/5 text-[#264638]"
+                            : "text-muted-foreground hover:bg-muted"
+                        }`}
+                        onClick={() => handleProjectModeChange(option.mode)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {
+                      PROJECT_MODE_OPTIONS.find(
+                        (option) => option.mode === projectMode,
+                      )?.description
+                    }
+                  </p>
+                </div>
+              )}
+
+              {isProject && projectMode === "RECRUITING" && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="recruitmentPositions">희망 포지션</Label>
+                  <Textarea
+                    id="recruitmentPositions"
+                    value={formData.recruitmentPositions}
                     onChange={(event) =>
                       handleInputChange(
-                        "participantLimit",
-                        event.target.value.replace(/\D/g, ""),
+                        "recruitmentPositions",
+                        event.target.value,
                       )
                     }
-                    placeholder="제한 없음"
-                    inputMode="numeric"
-                    className="pr-9"
-                    maxLength={4}
+                    placeholder="예: 프론트엔드 1명 (React), 백엔드 1명 (Spring), 디자이너 1명"
+                    rows={2}
+                    maxLength={500}
                   />
-                  {formData.participantLimit && (
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                      명
-                    </span>
-                  )}
+                  <p className="text-xs text-muted-foreground">
+                    어떤 포지션의 팀원을 찾는지 적어두면 신청자가 활동 상세에서
+                    확인할 수 있습니다.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {selectedActivityType?.code === "LECTURE"
-                    ? "인강 활동은 기본 정원이 5명이며 담당자는 제외됩니다."
-                    : "비워두면 제한이 없으며 담당자는 정원에서 제외됩니다."}
-                </p>
-              </div>
+              )}
+
+              {allowsDiscordLink && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="discordUrl">디스코드 링크 (선택)</Label>
+                  <Input
+                    id="discordUrl"
+                    type="url"
+                    value={formData.discordUrl}
+                    onChange={(event) =>
+                      handleInputChange("discordUrl", event.target.value)
+                    }
+                    placeholder="https://discord.gg/..."
+                    maxLength={2048}
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    입력하면 활동 상세의 활동 내용 탭에 참여 링크로 표시됩니다.
+                  </p>
+                </div>
+              )}
 
               {/* Quarter */}
               <div className="space-y-2">
@@ -355,24 +453,50 @@ export default function ActivityNewPage() {
                 </Select>
               </div>
 
-              {/* Status */}
-              <div className="space-y-2">
-                <Label htmlFor="status">상태</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleInputChange("status", value)}
-                >
-                  <SelectTrigger id="status" className="w-48">
-                    <SelectValue placeholder="상태 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {isProject && !showsParticipantLimit && (
+                <div className="space-y-2">
+                  <Label>참여 정원</Label>
+                  <p className="text-sm">
+                    {projectMode === "PERSONAL"
+                      ? "담당자 혼자 진행하므로 정원을 설정하지 않습니다."
+                      : `함께 시작할 팀원 ${newParticipantIds.length}명으로 확정되며, 추가 신청은 받지 않습니다.`}
+                  </p>
+                </div>
+              )}
+
+              <div className={showsParticipantLimit ? "space-y-2" : "hidden"}>
+                <Label htmlFor="participantLimit">참여 정원</Label>
+                <div className="relative w-48">
+                  <Input
+                    id="participantLimit"
+                    value={formData.participantLimit}
+                    onChange={(event) =>
+                      handleInputChange(
+                        "participantLimit",
+                        event.target.value.replace(/\D/g, ""),
+                      )
+                    }
+                    placeholder="제한 없음"
+                    inputMode="numeric"
+                    className="pr-9"
+                    maxLength={4}
+                  />
+                  {formData.participantLimit && (
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      명
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {selectedActivityType?.code === "LECTURE"
+                    ? "인강 활동은 기본 정원이 5명이며 담당자는 제외됩니다."
+                    : countsAssignee
+                      ? "비워두면 제한이 없으며 담당자도 참여자로 등록되어 정원에 포함됩니다."
+                      : "비워두면 제한이 없으며 담당자는 정원에서 제외됩니다."}
+                  {isProject &&
+                    newParticipantIds.length > 0 &&
+                    ` 현재 ${newParticipantIds.length}명을 미리 추가했습니다.`}
+                </p>
               </div>
 
               {/* Assignee */}
@@ -473,6 +597,34 @@ export default function ActivityNewPage() {
                   </PopoverContent>
                 </Popover>
               </div>
+              {/* Status */}
+              <div className="space-y-2">
+                <Label htmlFor="status">상태</Label>
+                {isProject ? (
+                  <p className="text-sm">
+                    {modeFields.status === "OPEN"
+                      ? "모집중 — 진행 방식에 따라 자동으로 설정됩니다."
+                      : "생성됨 — 진행 방식에 따라 자동으로 설정됩니다."}
+                  </p>
+                ) : (
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => handleInputChange("status", value)}
+                  >
+                    <SelectTrigger id="status" className="w-48">
+                      <SelectValue placeholder="상태 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
             </div>
           </CardContent>
         </Card>
@@ -575,15 +727,19 @@ export default function ActivityNewPage() {
         </Card>
 
         {/* 참여자 Card */}
-        <ParticipantsCard
-          allUsers={users}
-          newUserIds={newParticipantIds}
-          onToggleNew={(uid) =>
-            setNewParticipantIds((prev) =>
-              prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid],
-            )
-          }
-        />
+        {allowsInitialMembers && (
+          <ParticipantsCard
+            allUsers={users}
+            newUserIds={newParticipantIds}
+            onToggleNew={(uid) =>
+              setNewParticipantIds((prev) =>
+                prev.includes(uid)
+                  ? prev.filter((id) => id !== uid)
+                  : [...prev, uid],
+              )
+            }
+          />
+        )}
 
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-4">

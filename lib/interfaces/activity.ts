@@ -28,6 +28,8 @@ export interface ActivityResponse {
   listed?: boolean;
   depositAmount: number;
   participantLimit: number | null;
+  recruitmentPositions?: string | null;
+  discordUrl?: string | null;
   createdAt: string;
   modifiedAt: string;
   createdBy: AuditorDto;
@@ -46,6 +48,9 @@ export interface ActivityRequest {
   parentActivityId?: string;
   depositAmount?: number;
   participantLimit?: number;
+  listed?: boolean;
+  recruitmentPositions?: string | null;
+  discordUrl?: string | null;
 }
 
 export interface ActivityTypeReponse {

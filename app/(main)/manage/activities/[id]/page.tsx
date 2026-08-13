@@ -16,8 +16,10 @@ import {
   MoreVertical,
   PlusSquare,
   SquarePlus,
+  ExternalLink,
   UserPlus,
   X,
+  MessageCircle,
   Search,
   CalendarRange,
   ChevronLeft,
@@ -98,7 +100,10 @@ import {
   ActivityParticipantRefundAccount,
   ActivityParticipantResponse,
 } from "@/lib/interfaces/activity-participant";
-import {
+import{
+  supportsDiscordLink
+} from "@/lib/constants/discord-link";
+import { 
   ActivitySessionResponseDto,
   ActivitySessionWeekday,
 } from "@/lib/interfaces/activity-session";
@@ -1499,10 +1504,10 @@ export default function ActivityDetailManagePage() {
             공지
           </TabsTrigger>
           <TabsTrigger value="schedule" className="px-4 py-2">
-            일정 관리
+            일정·출석 관리
           </TabsTrigger>
           <TabsTrigger value="attendance" className="px-4 py-2">
-            출석 관리
+            출석·수료 현황
           </TabsTrigger>
         </TabsList>
 
@@ -1538,6 +1543,24 @@ export default function ActivityDetailManagePage() {
                   label="유형"
                   value={activity.activityType.name}
                 />
+                {supportsDiscordLink(activity.activityType.code) &&
+                    activity.discordUrl && (
+                      <InfoRow
+                        icon={<MessageCircle className="h-4 w-4" />}
+                        label="디스코드"
+                        value={
+                          <a
+                            href={activity.discordUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-sm underline whitespace-nowrap "
+                          >
+                            디스코드 바로가기 
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        }
+                      />
+                    )}
                 {(activity.activityType.code === "STUDY" ||
                   activity.activityType.code === "SPECIAL_LECTURE") && (
                   <InfoRow
@@ -1935,6 +1958,7 @@ export default function ActivityDetailManagePage() {
           <WeeklyMaterials
             activityId={activityId}
             materials={lectureMaterials}
+            discordUrl={activity?.discordUrl}
             canManage
             canModify
             onChanged={refreshMaterials}

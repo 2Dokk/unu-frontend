@@ -54,6 +54,13 @@ import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participa
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import { ParticipantsCard } from "@/components/custom/activity/participants-card";
+import {
+  PROJECT_MODE_OPTIONS,
+  ProjectMode,
+  deriveProjectMode,
+  projectModeFields,
+} from "@/lib/constants/project-mode";
+import { isDiscordUrl, supportsDiscordLink } from "@/lib/constants/discord-link";
 import { useAuth } from "@/lib/contexts/AuthContext";
 
 // ========================
@@ -137,7 +144,10 @@ export default function ActivityEditPage() {
     endDate: "",
     depositAmount: "30000",
     participantLimit: "",
+    recruitmentPositions: "",
+    discordUrl: "",
   });
+  const [projectMode, setProjectMode] = useState<ProjectMode>("FIXED_TEAM");
 
   const selectedActivityType = activityTypes.find(
     (type) => type.id === formData.activityTypeId,
@@ -145,6 +155,30 @@ export default function ActivityEditPage() {
   const requiresDeposit =
     selectedActivityType?.code === "STUDY" ||
     selectedActivityType?.code === "SPECIAL_LECTURE";
+  const isProject = selectedActivityType?.code === "PROJECT";
+  // 스터디는 담당자도 참여자로 등록되어 정원에 포함된다.
+  const countsAssignee = selectedActivityType?.code === "STUDY";
+  const allowsDiscordLink = supportsDiscordLink(selectedActivityType?.code);
+  const modeFields = projectModeFields(projectMode);
+  const showsParticipantLimit = !isProject || modeFields.allowsParticipantLimit;
+
+  function handleProjectModeChange(mode: ProjectMode) {
+    setProjectMode(mode);
+    const fields = projectModeFields(mode);
+    setFormData((prev) => ({
+      ...prev,
+      // 이미 진행/완료된 활동의 상태는 진행 방식 변경으로 되돌리지 않는다.
+      status:
+        prev.status === "CREATED" || prev.status === "OPEN"
+          ? fields.status
+          : prev.status,
+      participantLimit: fields.allowsParticipantLimit
+        ? prev.participantLimit
+        : "",
+      recruitmentPositions:
+        mode === "RECRUITING" ? prev.recruitmentPositions : "",
+    }));
+  }
 
   // Dirty tracking
   const [isDirty, setIsDirty] = useState(false);
@@ -190,7 +224,10 @@ export default function ActivityEditPage() {
         endDate: toDateInputValue(activityData.endDate),
         depositAmount: String(activityData.depositAmount ?? 30000),
         participantLimit: String(activityData.participantLimit ?? ""),
+        recruitmentPositions: activityData.recruitmentPositions ?? "",
+        discordUrl: activityData.discordUrl ?? "",
       });
+      setProjectMode(deriveProjectMode(activityData));
     } catch (err) {
       console.error("Failed to load activity:", err);
       toast.error("활동 정보를 불러오는데 실패했습니다.");
@@ -256,9 +293,21 @@ export default function ActivityEditPage() {
     ).length;
     if (
       formData.participantLimit &&
-      participantLimit < currentParticipantCount + newParticipantCount
+      participantLimit <
+        currentParticipantCount +
+          newParticipantCount +
+          (countsAssignee ? 1 : 0)
     ) {
-      return "참여 정원은 현재 신청·참여 인원보다 적을 수 없습니다.";
+      return countsAssignee
+        ? "참여 정원은 담당자를 포함한 현재 신청·참여 인원보다 적을 수 없습니다."
+        : "참여 정원은 현재 신청·참여 인원보다 적을 수 없습니다.";
+    }
+    if (
+      allowsDiscordLink &&
+      formData.discordUrl.trim() &&
+      !isDiscordUrl(formData.discordUrl.trim())
+    ) {
+      return "디스코드 초대 링크를 확인해주세요.";
     }
 
     return null;
@@ -290,6 +339,14 @@ export default function ActivityEditPage() {
         participantLimit: formData.participantLimit
           ? Number(formData.participantLimit)
           : undefined,
+        listed: isProject ? modeFields.listed : undefined,
+        recruitmentPositions:
+          isProject && projectMode === "RECRUITING"
+            ? formData.recruitmentPositions.trim() || null
+            : null,
+        discordUrl: allowsDiscordLink
+          ? formData.discordUrl.trim() || null
+          : null,
       };
 
       await updateActivity(activityId, updateData);
@@ -454,7 +511,84 @@ export default function ActivityEditPage() {
                   </div>
                 )}
 
-                <div className="space-y-2">
+                {isProject && (
+                  <div className="space-y-2 md:col-span-2">
+                    <p className="text-sm font-medium">프로젝트 진행 방식</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {PROJECT_MODE_OPTIONS.map((option) => (
+                        <button
+                          key={option.mode}
+                          type="button"
+                          aria-pressed={projectMode === option.mode}
+                          className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                            projectMode === option.mode
+                              ? "border-[#264638] bg-[#264638]/5 text-[#264638]"
+                              : "text-muted-foreground hover:bg-muted"
+                          }`}
+                          onClick={() => handleProjectModeChange(option.mode)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      {
+                        PROJECT_MODE_OPTIONS.find(
+                          (option) => option.mode === projectMode,
+                        )?.description
+                      }
+                    </p>
+                  </div>
+                )}
+
+                {isProject && projectMode === "RECRUITING" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="recruitmentPositions">희망 포지션</Label>
+                    <Textarea
+                      id="recruitmentPositions"
+                      value={formData.recruitmentPositions}
+                      onChange={(event) =>
+                        handleInputChange(
+                          "recruitmentPositions",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="예: 프론트엔드 1명 (React), 백엔드 1명 (Spring)"
+                      rows={2}
+                      maxLength={500}
+                    />
+                  </div>
+                )}
+
+                {allowsDiscordLink && (
+                  <div className="space-y-2">
+                    <Label htmlFor="discordUrl">디스코드 링크 (선택)</Label>
+                    <Input
+                      id="discordUrl"
+                      type="url"
+                      value={formData.discordUrl}
+                      onChange={(event) =>
+                        handleInputChange("discordUrl", event.target.value)
+                      }
+                      placeholder="https://discord.gg/..."
+                      maxLength={2048}
+                      autoComplete="off"
+                    />
+                  </div>
+                )}
+
+                {isProject && !showsParticipantLimit && (
+                  <div className="space-y-2">
+                    <Label>참여 정원</Label>
+                    <p className="text-sm">
+                      {projectMode === "PERSONAL"
+                        ? "담당자 혼자 진행하므로 정원을 설정하지 않습니다."
+                        : "현재 참여자로 확정되며, 추가 신청은 받지 않습니다."}
+                    </p>
+                  </div>
+                )}
+
+                <div className={showsParticipantLimit ? "space-y-2" : "hidden"}>
                   <Label htmlFor="participantLimit">참여 정원</Label>
                   <div className="relative w-48">
                     <Input
@@ -480,7 +614,9 @@ export default function ActivityEditPage() {
                   <p className="text-xs text-muted-foreground">
                     {selectedActivityType?.code === "LECTURE"
                       ? "인강 활동은 기본 정원이 5명이며 담당자는 제외됩니다."
-                      : "비워두면 제한이 없으며 담당자는 정원에서 제외됩니다."}
+                      : countsAssignee
+                        ? "비워두면 제한이 없으며 담당자도 정원에 포함됩니다."
+                        : "비워두면 제한이 없으며 담당자는 정원에서 제외됩니다."}
                   </p>
                 </div>
 

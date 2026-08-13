@@ -904,6 +904,22 @@ export default function ActivityDetails() {
                 }
               />
 
+              {activity.recruitmentPositions && (
+                <div className="flex items-start gap-3 py-3">
+                  <div className="mt-0.5 text-muted-foreground">
+                    <ClipboardList className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-0.5 text-xs text-muted-foreground">
+                      희망 포지션
+                    </p>
+                    <p className="whitespace-pre-wrap text-sm font-medium">
+                      {activity.recruitmentPositions}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <InfoRow
                 icon={<User className="h-4 w-4" />}
                 label="담당자"
@@ -1037,6 +1053,7 @@ export default function ActivityDetails() {
             <WeeklyMaterials
               activityId={activityId}
               materials={lectureMaterials}
+              discordUrl={activity.discordUrl}
               canManage={canManage}
               onChanged={refreshMaterials}
             />

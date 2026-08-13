@@ -111,11 +111,16 @@ export async function reviewActivityOpeningRequest(
 
 export async function approveActivityOpeningRequest(
   id: string,
-  comment?: string,
+  data: {
+    comment?: string;
+    depositAmount?: number;
+  },
 ): Promise<ActivityOpeningRequestResponse> {
-  const response = await axiosInstance.post<ActivityOpeningRequestResponse>(
-    `${MANAGE_PATH}/${id}/approve`,
-    { comment },
-  );
+  const response =
+    await axiosInstance.post<ActivityOpeningRequestResponse>(
+      `${MANAGE_PATH}/${id}/approve`,
+      data,
+    );
+
   return response.data;
 }

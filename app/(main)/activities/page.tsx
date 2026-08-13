@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { searchActivities } from "@/lib/api/activity";
+import { getMyActivityParticipants } from "@/lib/api/activity-participant";
 import { getAllActivityTypes } from "@/lib/api/activity-type";
 import { getCurrentQuarter } from "@/lib/api/quarter";
 import { getCurrentActivityOpeningPeriod } from "@/lib/api/activity-opening-period";
@@ -37,21 +38,44 @@ import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-ba
 import { toast } from "sonner";
 
 // ========================
-// ACTIVITY CARD COMPONENT
+// ACTIVITY ROW COMPONENT
 // ========================
 
-interface ActivityCardProps {
+function isRecruiting(activity: ActivityResponse) {
+  return activity.status === "OPEN" || activity.status === "RECRUITING";
+}
+
+interface ActivityRowProps {
   activity: ActivityResponse;
+  participantStatus?: string;
   onClick: (id: string) => void;
 }
 
-function ActivityCard({ activity, onClick }: ActivityCardProps) {
+function getActionLabel(
+  activity: ActivityResponse,
+  participantStatus?: string,
+): string {
+  if (activity.status === "COMPLETED") return "종료";
+  if (participantStatus === "APPLIED") return "신청 완료";
+  if (participantStatus === "APPROVED") return "참여 중";
+  if (participantStatus === "REJECTED") {
+    return isRecruiting(activity) ? "다시 신청" : "보기";
+  }
+  return isRecruiting(activity) ? "참여 신청" : "보기";
+}
+
+function ActivityRow({
+  activity,
+  participantStatus,
+  onClick,
+}: ActivityRowProps) {
   const isClosed = activity.status === "COMPLETED";
-  const recruiting = activity.status === "OPEN";
+  const canApply = isRecruiting(activity) && participantStatus !== "APPLIED" &&
+    participantStatus !== "APPROVED";
 
   return (
-    <Card
-      className={`cursor-pointer transition-all hover:shadow-md p-0`}
+    <div
+      className="flex cursor-pointer items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-all hover:border-slate-300 hover:shadow-sm"
       onClick={() => onClick(activity.id)}
       role="button"
       tabIndex={0}
@@ -62,65 +86,54 @@ function ActivityCard({ activity, onClick }: ActivityCardProps) {
         }
       }}
     >
-      <CardContent className="p-5 flex flex-col h-full">
-        {/* Top badges */}
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <ActivityTypeBadge activityType={activity.activityType} />
-          <ActivityStatusBadge status={activity.status} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="shrink-0">
+            <ActivityTypeBadge activityType={activity.activityType} />
+          </span>
+          <span className="truncate text-sm font-semibold">
+            {activity.title}
+          </span>
         </div>
 
-        {/* Title */}
-        <h3 className="text-base font-semibold tracking-tight mb-1.5 leading-snug">
-          {activity.title}
-        </h3>
-
-        {/* Description — always reserve 2 lines to keep card heights consistent */}
-        <p
-          className={`text-sm text-muted-foreground line-clamp-2 leading-relaxed flex-1 whitespace-pre-line ${
-            !activity.description ? "invisible select-none" : ""
-          }`}
-        >
-          {activity.description || "　"}
-        </p>
-
-        {/* Divider */}
-        <div className="border-t border-slate-100 mt-3 mb-3" />
-
-        {/* Footer */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex flex-col gap-0.5 text-xs text-muted-foreground min-w-0">
-            <div className="flex items-center gap-1.5 truncate">
-              <User className="h-3 w-3 shrink-0" />
-              <span className="truncate font-medium text-foreground">
-                {activity.assignee.name || activity.assignee.username}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Calendar className="h-3 w-3 shrink-0" />
-              <span>
-                {formatDate(activity.startDate)} ~{" "}
-                {formatDate(activity.endDate)}
-              </span>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            variant={recruiting ? "default" : "outline"}
-            disabled={isClosed}
-            className="h-8 shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick(activity.id);
-            }}
-          >
-            <span className="text-xs">
-              {recruiting ? "참여 신청" : isClosed ? "종료" : "보기"}
+        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="flex shrink-0 items-center gap-1">
+            <User className="h-3 w-3" />
+            <span className="max-w-24 truncate">
+              {activity.assignee.name || activity.assignee.username}
             </span>
-            {!isClosed && <ChevronRight className="h-3 w-3 ml-1" />}
-          </Button>
+          </span>
+          <span className="hidden shrink-0 items-center gap-1 sm:flex">
+            <Calendar className="h-3 w-3" />
+            {formatDate(activity.startDate)} ~ {formatDate(activity.endDate)}
+          </span>
+          {activity.description && (
+            <span className="hidden min-w-0 flex-1 truncate xl:block">
+              {activity.description}
+            </span>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <ActivityStatusBadge status={activity.status} />
+
+      <Button
+        size="sm"
+        variant={canApply ? "default" : "outline"}
+        disabled={isClosed}
+        className="hidden h-8 shrink-0 sm:inline-flex"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick(activity.id);
+        }}
+      >
+        <span className="text-xs">
+          {getActionLabel(activity, participantStatus)}
+        </span>
+      </Button>
+
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground sm:hidden" />
+    </div>
   );
 }
 
@@ -128,7 +141,7 @@ function ActivityCard({ activity, onClick }: ActivityCardProps) {
 // MAIN COMPONENT
 // ========================
 
-const ACTIVITIES_PER_PAGE = 10;
+const ACTIVITIES_PER_PAGE = 20;
 const ACTIVITY_TYPE_ORDER: Record<string, number> = {
   SPECIAL_LECTURE: 0,
   PROJECT: 1,
@@ -146,6 +159,8 @@ const ActivityPage = () => {
   const [openingPeriod, setOpeningPeriod] =
     useState<ActivityOpeningPeriodResponse | null>(null);
   const [openingPeriodLoaded, setOpeningPeriodLoaded] = useState(false);
+  const [participantStatusByActivity, setParticipantStatusByActivity] =
+    useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
 
@@ -179,6 +194,25 @@ const ActivityPage = () => {
       .then(setOpeningPeriod)
       .catch(() => setOpeningPeriod(null))
       .finally(() => setOpeningPeriodLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    getMyActivityParticipants()
+      .then((participations) =>
+        setParticipantStatusByActivity(
+          Object.fromEntries(
+            participations
+              .filter((participation) => participation.activity?.id)
+              .map((participation) => [
+                participation.activity.id,
+                participation.status,
+              ]),
+          ),
+        ),
+      )
+      .catch((error) => {
+        console.error("Failed to fetch my participations:", error);
+      });
   }, []);
 
   useEffect(() => {
@@ -218,11 +252,15 @@ const ActivityPage = () => {
   );
   const sortedActivities = useMemo(
     () =>
-      [...activities].sort(
-        (a, b) =>
-          (ACTIVITY_TYPE_ORDER[a.activityType.code] ?? Number.MAX_SAFE_INTEGER) -
-          (ACTIVITY_TYPE_ORDER[b.activityType.code] ?? Number.MAX_SAFE_INTEGER),
-      ),
+      [...activities].sort((a, b) => {
+        const recruitDiff = Number(isRecruiting(b)) - Number(isRecruiting(a));
+        if (recruitDiff !== 0) return recruitDiff;
+        return (
+          (ACTIVITY_TYPE_ORDER[a.activityType.code] ??
+            Number.MAX_SAFE_INTEGER) -
+          (ACTIVITY_TYPE_ORDER[b.activityType.code] ?? Number.MAX_SAFE_INTEGER)
+        );
+      }),
     [activities],
   );
   const paginatedActivities = sortedActivities.slice(
@@ -362,26 +400,22 @@ const ActivityPage = () => {
 
       {/* Loading skeleton */}
       {loading && initialLoad && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {Array.from({ length: ACTIVITIES_PER_PAGE }, (_, index) => (
-            <Card key={index} className="p-0">
-              <CardContent className="p-5 space-y-3">
-                <div className="flex justify-between">
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                  <Skeleton className="h-5 w-14 rounded-full" />
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {Array.from({ length: 10 }, (_, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3"
+            >
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-14 shrink-0 rounded-full" />
+                  <Skeleton className="h-4 w-1/2" />
                 </div>
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-2/3" />
-                <div className="border-t pt-3 flex justify-between items-end">
-                  <div className="space-y-1.5">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-3 w-28" />
-                  </div>
-                  <Skeleton className="h-8 w-20" />
-                </div>
-              </CardContent>
-            </Card>
+                <Skeleton className="h-3 w-3/5" />
+              </div>
+              <Skeleton className="h-5 w-14 shrink-0 rounded-full" />
+              <Skeleton className="hidden h-8 w-16 shrink-0 sm:block" />
+            </div>
           ))}
         </div>
       )}
@@ -411,13 +445,14 @@ const ActivityPage = () => {
         </Card>
       )}
 
-      {/* Activity grid */}
+      {/* Activity list */}
       {!loading && activities.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {paginatedActivities.map((activity) => (
-            <ActivityCard
+            <ActivityRow
               key={activity.id}
               activity={activity}
+              participantStatus={participantStatusByActivity[activity.id]}
               onClick={(id) => router.push(`/activities/${id}`)}
             />
           ))}
