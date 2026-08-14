@@ -24,10 +24,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getPublicNotices } from "@/lib/api/notice";
 import { Notice } from "@/lib/interfaces/notice";
 import { formatDotDate } from "@/lib/utils/date-utils";
+import { useNoticeUnread } from "@/lib/contexts/NoticeUnreadContext";
 
 const NOTICES_PER_PAGE = 10;
 
 export default function NoticesPage() {
+  const { unreadNoticeIds, markRead, refresh } = useNoticeUnread();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
   const [query, setQuery] = useState("");
@@ -35,6 +37,7 @@ export default function NoticesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    void refresh();
     getPublicNotices()
       .then(({ notices: loadedNotices }) => setNotices(loadedNotices))
       .catch((error) => {
@@ -42,7 +45,15 @@ export default function NoticesPage() {
         toast.error("학회 공지를 불러오지 못했습니다.");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [refresh]);
+
+  function openNotice(notice: Notice) {
+    setSelectedNotice(notice);
+    if (!unreadNoticeIds.has(notice.id)) return;
+    void markRead(notice.id).catch(() => {
+      toast.error("공지 읽음 상태를 저장하지 못했습니다.");
+    });
+  }
 
   const filteredNotices = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("ko-KR");
@@ -64,11 +75,16 @@ export default function NoticesPage() {
   );
 
   useEffect(() => {
-    setCurrentPage(1);
+    const resetPageId = window.setTimeout(() => setCurrentPage(1), 0);
+    return () => window.clearTimeout(resetPageId);
   }, [query]);
 
   useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
+    const clampPageId = window.setTimeout(
+      () => setCurrentPage((page) => Math.min(page, totalPages)),
+      0,
+    );
+    return () => window.clearTimeout(clampPageId);
   }, [totalPages]);
 
   return (
@@ -128,7 +144,7 @@ export default function NoticesPage() {
               <button
                 key={notice.id}
                 type="button"
-                onClick={() => setSelectedNotice(notice)}
+                onClick={() => openNotice(notice)}
                 className="group flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-muted/50 sm:px-6 sm:py-5"
               >
                 <Badge variant="secondary" className="max-w-24 shrink-0 truncate">
@@ -142,6 +158,11 @@ export default function NoticesPage() {
                     {notice.content}
                   </p>
                 </div>
+                {unreadNoticeIds.has(notice.id) && (
+                  <span className="shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600">
+                    새 공지
+                  </span>
+                )}
                 <span className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground sm:flex">
                   <CalendarDays className="h-3.5 w-3.5" />
                   {formatDotDate(notice.createdAt)}

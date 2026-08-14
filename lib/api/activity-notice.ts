@@ -2,6 +2,7 @@ import axiosInstance from "./axiosInstance";
 import {
   ActivityNotice,
   ActivityNoticeRequest,
+  ActivityNoticeUnreadSummary,
 } from "@/lib/interfaces/activity-notice";
 
 export async function getActivityNotices(
@@ -37,4 +38,15 @@ export async function updateActivityNotice(
 
 export async function deleteActivityNotice(id: string): Promise<void> {
   await axiosInstance.delete(`/activity-notices/${id}`);
+}
+
+export async function getActivityNoticeUnreadSummary(): Promise<ActivityNoticeUnreadSummary> {
+  const response = await axiosInstance.get<ActivityNoticeUnreadSummary>(
+    "/activity-notices/unread-summary",
+  );
+  return response.data;
+}
+
+export async function markActivityNoticeRead(id: string): Promise<void> {
+  await axiosInstance.post(`/activity-notices/${id}/read`);
 }

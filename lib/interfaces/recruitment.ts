@@ -2,6 +2,8 @@ import { AuditorDto } from "./auth";
 import { FormResponse } from "./form";
 import { QuarterResponse } from "./quarter";
 
+export type RecruitmentType = "NEW_MEMBER" | "INTERNAL_OPERATION";
+
 export interface RecruitmentRequest {
   title: string;
   description: string;
@@ -11,6 +13,7 @@ export interface RecruitmentRequest {
   quarterId: string;
   formId: string;
   active: boolean;
+  type: RecruitmentType;
 }
 
 export interface RecruitmentResponse {
@@ -22,6 +25,7 @@ export interface RecruitmentResponse {
   endAt: string;
   quarter: QuarterResponse;
   active: boolean;
+  type: RecruitmentType;
   form: FormResponse;
   createdAt: string;
   modifiedAt: string;

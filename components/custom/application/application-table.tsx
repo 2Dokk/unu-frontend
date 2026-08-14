@@ -31,8 +31,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ApplicationResponse } from "@/lib/interfaces/application";
-import { reviewApplication } from "@/lib/api/application";
+import {
+  importApplicationLectureRoomSchedule,
+  reviewApplication,
+} from "@/lib/api/application";
 import { toast } from "sonner";
+import { CalendarPlus, Loader2 } from "lucide-react";
 
 const BULK_STATUS_OPTIONS = [
   { value: "APPLIED", label: "신청" },
@@ -47,6 +51,7 @@ type StatusFilter = "all" | "PASSED" | "REJECTED" | "WAITING";
 
 interface ApplicationsTableProps {
   applications: ApplicationResponse[];
+  enableBulkScheduleImport?: boolean;
 }
 
 // Helper function to determine if status is in waiting group
@@ -102,6 +107,7 @@ function formatDate(dateString: string): string {
 
 export default function ApplicationsTable({
   applications: initialApplications,
+  enableBulkScheduleImport = false,
 }: ApplicationsTableProps) {
   const router = useRouter();
   const [applications, setApplications] = useState(initialApplications);
@@ -111,6 +117,8 @@ export default function ApplicationsTable({
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkTargetStatus, setBulkTargetStatus] = useState<string>("");
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [bulkScheduleDialogOpen, setBulkScheduleDialogOpen] = useState(false);
+  const [bulkScheduleImporting, setBulkScheduleImporting] = useState(false);
 
   // Filter applications
   const filteredApplications = useMemo(() => {
@@ -210,6 +218,49 @@ export default function ApplicationsTable({
     }
   }
 
+  async function handleBulkScheduleImport() {
+    setBulkScheduleImporting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const results = await Promise.allSettled(
+        ids.map(importApplicationLectureRoomSchedule),
+      );
+      const successfulResults = results.flatMap((result) =>
+        result.status === "fulfilled" ? [result.value] : [],
+      );
+      const failedIds = ids.filter(
+        (_, index) => results[index].status === "rejected",
+      );
+      const createdCount = successfulResults.reduce(
+        (sum, result) => sum + result.createdCount,
+        0,
+      );
+      const existingCount = successfulResults.reduce(
+        (sum, result) => sum + result.existingCount,
+        0,
+      );
+
+      setSelectedIds(new Set(failedIds));
+
+      if (failedIds.length === 0) {
+        toast.success(
+          createdCount > 0
+            ? `${successfulResults.length}명의 관리 시간 ${createdCount}개를 반영했습니다.${existingCount > 0 ? ` 기존 ${existingCount}개 블록은 유지했습니다.` : ""}`
+            : "선택한 신청자의 관리 시간이 이미 모두 반영되어 있습니다.",
+        );
+      } else if (successfulResults.length === 0) {
+        toast.error("선택한 신청자의 관리 시간을 반영하지 못했습니다.");
+      } else {
+        toast.warning(
+          `${successfulResults.length}명은 반영했고, ${failedIds.length}명은 반영하지 못했습니다.`,
+        );
+      }
+    } finally {
+      setBulkScheduleImporting(false);
+      setBulkScheduleDialogOpen(false);
+    }
+  }
+
   // Calculate counts for tabs (exclude CANCELED from total)
   const allCount = applications.filter(
     (app) => app.status !== "CANCELED",
@@ -227,7 +278,7 @@ export default function ApplicationsTable({
   return (
     <div className="space-y-4">
       {/* Filters / Bulk toolbar */}
-      <div className="flex items-center gap-3 h-9">
+      <div className="flex min-h-9 flex-wrap items-center gap-2">
         {selectedIds.size > 0 ? (
           <>
             <span className="text-xs text-muted-foreground font-medium">
@@ -251,6 +302,17 @@ export default function ApplicationsTable({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            {enableBulkScheduleImport && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={() => setBulkScheduleDialogOpen(true)}
+              >
+                <CalendarPlus className="h-3.5 w-3.5" />
+                시간표 일괄 반영
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -403,6 +465,39 @@ export default function ApplicationsTable({
               disabled={bulkUpdating}
             >
               {bulkUpdating ? "변경 중..." : "변경"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={bulkScheduleDialogOpen}
+        onOpenChange={setBulkScheduleDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>관리 시간을 일괄 반영할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              선택한 신청자 <strong>{selectedIds.size}명</strong>의 관리 가능
+              시간을 모집 공고에 연결된 분기 시간표에 반영합니다. 이미 등록된
+              시간은 중복으로 추가되지 않습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkScheduleImporting}>
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void handleBulkScheduleImport();
+              }}
+              disabled={bulkScheduleImporting}
+            >
+              {bulkScheduleImporting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              일괄 반영
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

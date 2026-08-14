@@ -46,16 +46,26 @@ const DAYS = [
   { key: "FRIDAY", label: "금요일", short: "금" },
 ];
 
-// 90-minute school class periods: 09:00, 10:30, 12:00, 13:30, 15:00, 16:30, 18:00
 const TIME_SLOTS: string[] = [
   "09:00:00",
-  "10:30:00",
-  "12:00:00",
-  "13:30:00",
-  "15:00:00",
-  "16:30:00",
-  "18:00:00",
-  "19:30:00",
+  "10:15:00",
+  "11:45:00",
+  "13:15:00",
+  "14:45:00",
+  "16:15:00",
+  "17:45:00",
+  "19:15:00",
+];
+
+const TIME_SLOT_ENDS = [
+  "10:15",
+  "11:45",
+  "13:15",
+  "14:45",
+  "16:15",
+  "17:45",
+  "19:15",
+  "20:45",
 ];
 
 const USER_COLORS = [
@@ -75,13 +85,9 @@ function formatSlotTime(slot: string) {
   return slot.slice(0, 5);
 }
 
-// Returns class end time (slot start + 75 min, excludes 15-min break)
 function getClassEndTime(slot: string): string {
-  const [h, m] = slot.split(":").map(Number);
-  const total = h * 60 + m + 75;
-  return `${Math.floor(total / 60)
-    .toString()
-    .padStart(2, "0")}:${(total % 60).toString().padStart(2, "0")}`;
+  const index = TIME_SLOTS.indexOf(slot);
+  return TIME_SLOT_ENDS[index] ?? formatSlotTime(slot);
 }
 
 function getEndTime(toIdx: number): string {
@@ -92,10 +98,7 @@ function getEndTime(toIdx: number): string {
 
 export default function LectureRoomSchedulePage() {
   const { userRole, userId } = useAuth();
-  const canAssign =
-    userRole === "ADMIN" ||
-    userRole === "MANAGER" ||
-    userRole === "LECTURE_ROOM_MANAGER";
+  const canManageAll = userRole === "ADMIN" || userRole === "MANAGER";
 
   // Data
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
@@ -112,7 +115,7 @@ export default function LectureRoomSchedulePage() {
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // User search (canAssign only)
+  // User search (admin/manager only)
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [userSearchResults, setUserSearchResults] = useState<UserSummaryDto[]>(
     [],
@@ -217,7 +220,7 @@ export default function LectureRoomSchedulePage() {
     setCreating(true);
     const slot = TIME_SLOTS[selectedSlotIdx];
 
-    if (canAssign && selectedUsers.length > 0) {
+    if (canManageAll && selectedUsers.length > 0) {
       await Promise.all(
         selectedUsers.map((u) =>
           createLectureRoomSchedule({
@@ -231,7 +234,7 @@ export default function LectureRoomSchedulePage() {
       setSelectedUsers([]);
       setUserSearchResults([]);
       setUserSearchQuery("");
-    } else if (!canAssign) {
+    } else if (!canManageAll) {
       await createLectureRoomScheduleForMe({
         quarterId: selectedQuarterId,
         dayOfWeek: selectedDay,
@@ -241,7 +244,7 @@ export default function LectureRoomSchedulePage() {
 
     await loadSchedules();
     setCreating(false);
-    if (!canAssign) closeSlotDialog();
+    if (!canManageAll) closeSlotDialog();
   };
 
   // ─── Delete ─────────────────────────────────────────────────────────────────
@@ -253,7 +256,7 @@ export default function LectureRoomSchedulePage() {
       await loadSchedules();
     } finally {
       setDeletingId(null);
-      if (!canAssign) closeSlotDialog();
+      if (!canManageAll) closeSlotDialog();
     }
   };
 
@@ -430,7 +433,7 @@ export default function LectureRoomSchedulePage() {
                           return (
                             <td
                               key={day.key}
-                              className="border cursor-pointer"
+                              className="border cursor-pointer overflow-hidden"
                               style={{
                                 height: "56px",
                                 padding: 0,
@@ -448,6 +451,9 @@ export default function LectureRoomSchedulePage() {
                                     display: "flex",
                                     height: "100%",
                                     width: "100%",
+                                    maxWidth: "100%",
+                                    minWidth: 0,
+                                    overflow: "hidden",
                                   }}
                                 >
                                   {slotSchedules.map((s) => {
@@ -458,11 +464,37 @@ export default function LectureRoomSchedulePage() {
                                         key={s.id}
                                         title={`${s.userName} (${formatSlotTime(slot)})`}
                                         style={{
-                                          flex: 1,
+                                          flex: "1 1 0",
+                                          width: 0,
+                                          minWidth: 0,
+                                          height: "100%",
+                                          position: "relative",
+                                          overflow: "hidden",
                                           backgroundColor: c.bg,
                                           borderRight: `1px solid ${c.border}`,
                                         }}
-                                      />
+                                      >
+                                        <span
+                                          style={{
+                                            position: "absolute",
+                                            top: "4px",
+                                            left: "4px",
+                                            maxWidth: "calc(100% - 8px)",
+                                            padding: "1px 4px",
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                            backgroundColor: "rgba(255, 255, 255, 0.72)",
+                                            borderRadius: "10px",
+                                            color: c.text,
+                                            fontSize: "9px",
+                                            fontWeight: 600,
+                                            lineHeight: "14px",
+                                          }}
+                                        >
+                                          {s.userName}
+                                        </span>
+                                      </div>
                                     );
                                   })}
                                 </div>
@@ -490,7 +522,7 @@ export default function LectureRoomSchedulePage() {
             <DialogTitle>{selectedTimeLabel}</DialogTitle>
           </DialogHeader>
 
-          {canAssign ? (
+          {canManageAll ? (
             /* ── Manager view: see all + add/delete ── */
             <div className="space-y-4">
               {/* Current users */}

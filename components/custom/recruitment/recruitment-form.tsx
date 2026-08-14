@@ -23,7 +23,10 @@ import { getAllForms, getFormById } from "@/lib/api/form";
 import { getAllQuarters } from "@/lib/api/quarter";
 import { FormResponse } from "@/lib/interfaces/form";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
-import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
+import {
+  RecruitmentResponse,
+  RecruitmentType,
+} from "@/lib/interfaces/recruitment";
 import {
   FormSchema,
   parseSchema,
@@ -59,6 +62,9 @@ export default function RecruitmentForm({
   const [quarterId, setQuarterId] = useState(initialData?.quarter.id || "");
   const [formId, setFormId] = useState(initialData?.form.id || "");
   const [active, setActive] = useState(initialData?.active ?? true);
+  const [type, setType] = useState<RecruitmentType>(
+    initialData?.type || "NEW_MEMBER",
+  );
 
   // Data loading
   const [forms, setForms] = useState<FormResponse[]>([]);
@@ -161,6 +167,7 @@ export default function RecruitmentForm({
         quarterId: quarterId,
         formId: formId,
         active,
+        type,
       };
 
       if (mode === "create") {
@@ -196,6 +203,34 @@ export default function RecruitmentForm({
               <CardTitle>모집 정보</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="recruitmentType">
+                  모집 유형 <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={type}
+                  onValueChange={(value: RecruitmentType) => setType(value)}
+                >
+                  <SelectTrigger id="recruitmentType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NEW_MEMBER">
+                      신규 학회원 모집
+                    </SelectItem>
+                    <SelectItem value="INTERNAL_OPERATION">
+                      학회 내 모집
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  신규 학회원 모집은 홈과 지원 안내에, 학회 내 모집은
+                  로그인 후 학회 내 모집 탭에 표시됩니다.
+                </p>
+              </div>
+
+              <Separator />
+
               {/* Title */}
               <div className="space-y-2">
                 <Label htmlFor="title">
@@ -223,18 +258,26 @@ export default function RecruitmentForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="completionMessage">지원 완료 안내 메세지</Label>
+                <Label htmlFor="completionMessage">
+                  {type === "INTERNAL_OPERATION"
+                    ? "신청 완료 안내 메세지"
+                    : "지원 완료 안내 메세지"}
+                </Label>
                 <Textarea
                   id="completionMessage"
-                  placeholder="신청자가 지원 완료 시 볼 수 있는 메세지입니다."
+                  placeholder={
+                    type === "INTERNAL_OPERATION"
+                      ? "신청자가 신청 완료 시 볼 수 있는 메세지입니다."
+                      : "지원자가 지원 완료 시 볼 수 있는 메세지입니다."
+                  }
                   value={completionMessage}
                   onChange={(e) => setCompletionMessage(e.target.value)}
                   rows={3}
                   maxLength={1000}
                 />
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  지원 완료 화면에 표시됩니다. 비워두면 기본 안내만
-                  표시됩니다.
+                  {type === "INTERNAL_OPERATION" ? "신청" : "지원"} 완료
+                  화면에 표시됩니다. 비워두면 기본 안내만 표시됩니다.
                 </p>
               </div>
 
@@ -292,7 +335,8 @@ export default function RecruitmentForm({
               {/* Form Selection */}
               <div className="space-y-2">
                 <Label htmlFor="form">
-                  사용 지원서 양식 선택{" "}
+                  사용 {type === "INTERNAL_OPERATION" ? "신청서" : "지원서"}
+                  양식 선택{" "}
                   <span className="text-destructive">*</span>
                 </Label>
                 {formsLoading ? (
@@ -300,7 +344,9 @@ export default function RecruitmentForm({
                 ) : (
                   <Select value={formId} onValueChange={handleFormSelect}>
                     <SelectTrigger id="form">
-                      <SelectValue placeholder="지원서 양식을 선택하세요" />
+                      <SelectValue
+                        placeholder={`${type === "INTERNAL_OPERATION" ? "신청서" : "지원서"} 양식을 선택하세요`}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {forms.map((form) => (
@@ -312,7 +358,8 @@ export default function RecruitmentForm({
                   </Select>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  선택한 지원서 양식의 질문 목록이 오른쪽에 표시됩니다.
+                  선택한 {type === "INTERNAL_OPERATION" ? "신청서" : "지원서"}
+                  양식의 질문 목록이 오른쪽에 표시됩니다.
                 </p>
               </div>
 
@@ -335,13 +382,16 @@ export default function RecruitmentForm({
         <div className="lg:sticky lg:top-8 lg:self-start">
           <Card>
             <CardHeader>
-              <CardTitle>지원서 미리보기</CardTitle>
+              <CardTitle>
+                {type === "INTERNAL_OPERATION" ? "신청서" : "지원서"} 미리보기
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {!formId ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <p className="text-sm">
-                    왼쪽에서 지원서 양식을 선택하면 질문 목록이 표시됩니다.
+                    왼쪽에서 {type === "INTERNAL_OPERATION" ? "신청서" : "지원서"}
+                    양식을 선택하면 질문 목록이 표시됩니다.
                   </p>
                 </div>
               ) : formLoading ? (
@@ -432,7 +482,8 @@ export default function RecruitmentForm({
               ) : (
                 <div className="text-center py-8 text-destructive">
                   <p className="text-sm">
-                    지원서 양식을 불러오는데 실패했습니다.
+                    {type === "INTERNAL_OPERATION" ? "신청서" : "지원서"}
+                    양식을 불러오는데 실패했습니다.
                   </p>
                 </div>
               )}

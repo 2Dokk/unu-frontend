@@ -100,6 +100,9 @@ import { ActivityStatusBadge } from "@/components/custom/activity/activity-statu
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { activityMaterialLabel } from "@/lib/constants/activity-material";
+import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
+import { formatUnreadCount } from "@/lib/utils/unread-count";
+import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
 
 // ========================
 // TYPES & HELPERS
@@ -333,6 +336,15 @@ export default function ActivityDetails() {
   const [applicationMessage, setApplicationMessage] = useState("");
 
   const { userRole, hasRole, userId } = useAuth();
+  const { markItemViewed } = useMenuNotification();
+  const { byActivity: unreadNoticesByActivity } = useActivityNoticeUnread();
+  const unreadNoticeCount = unreadNoticesByActivity[activityId] ?? 0;
+
+  useEffect(() => {
+    void markItemViewed("activities", activityId).catch((error) => {
+      console.error("Failed to mark activity card read:", error);
+    });
+  }, [activityId, markItemViewed]);
 
   useEffect(() => {
     const fetchActivityDetails = async () => {
@@ -878,7 +890,14 @@ export default function ActivityDetails() {
                       : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  공지
+                  <span className="inline-flex items-center gap-1.5">
+                    공지
+                    {unreadNoticeCount > 0 && (
+                      <span className="flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-4 text-white">
+                        {formatUnreadCount(unreadNoticeCount)}
+                      </span>
+                    )}
+                  </span>
                 </button>
               )}
             </div>

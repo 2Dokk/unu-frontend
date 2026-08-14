@@ -22,6 +22,8 @@ import { ActivityStatusBadge } from "@/components/custom/activity/activity-statu
 import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
 import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
 import { formatDate } from "@/lib/utils/date-utils";
+import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
+import { ActivityNoticeUnreadBadge } from "@/components/custom/activity/activity-notice-unread-badge";
 
 type Filter = "all" | "hosted" | "joined";
 
@@ -35,6 +37,7 @@ export default function AllActivitiesPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { loading, participations, hostedActivities } = useMyActivities();
+  const { byActivity: unreadNoticesByActivity } = useActivityNoticeUnread();
   const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
@@ -214,6 +217,13 @@ export default function AllActivitiesPage() {
                                 <p className="font-medium">
                                   {participant.activity?.title || "활동명 없음"}
                                 </p>
+                                <ActivityNoticeUnreadBadge
+                                  count={
+                                    unreadNoticesByActivity[
+                                      participant.activity.id
+                                    ] ?? 0
+                                  }
+                                />
                                 {participant.activity.status === "COMPLETED" &&
                                 !participant.completed ? (
                                   <Badge

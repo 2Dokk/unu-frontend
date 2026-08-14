@@ -22,12 +22,15 @@ import { ActivityStatusBadge } from "@/components/custom/activity/activity-statu
 import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { formatDate } from "@/lib/utils/date-utils";
+import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
+import { ActivityNoticeUnreadBadge } from "@/components/custom/activity/activity-notice-unread-badge";
 
 export default function HomePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { loading, currentQuarter, participations, hostedActivities } =
     useMyActivities();
+  const { byActivity: unreadNoticesByActivity } = useActivityNoticeUnread();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -227,9 +230,16 @@ export default function HomePage() {
                     }}
                   >
                     <CardHeader className="px-4">
-                      <CardTitle className="truncate text-base leading-snug">
-                        {participant.activity?.title || "활동명 없음"}
-                      </CardTitle>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <CardTitle className="min-w-0 flex-1 truncate text-base leading-snug">
+                          {participant.activity?.title || "활동명 없음"}
+                        </CardTitle>
+                        <ActivityNoticeUnreadBadge
+                          count={
+                            unreadNoticesByActivity[participant.activity.id] ?? 0
+                          }
+                        />
+                      </div>
                       <div className="flex flex-wrap items-center gap-1.5">
                         <ParticipantStatusBadge status={participant.status} />
                         {participant.status === "APPLIED" ? (

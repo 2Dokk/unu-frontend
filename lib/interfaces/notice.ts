@@ -16,3 +16,8 @@ export interface NoticeListResponse {
   notices: Notice[];
   total: number;
 }
+
+export interface NoticeUnreadSummary {
+  totalCount: number;
+  noticeIds: string[];
+}

@@ -4,6 +4,8 @@ import {
   ApplicationSearchQuery,
   ApplicationLookupResponse,
   ApplicationVerificationResponse,
+  ApplicationLectureRoomScheduleImportResponse,
+  OperationApplicationRequest,
 } from "../interfaces/application";
 import axiosInstance from "./axiosInstance";
 import publicClient from "./publicClient";
@@ -19,6 +21,54 @@ export async function createApplication(
   data: ApplicationRequest,
 ): Promise<ApplicationResponse> {
   return publicClient.post<ApplicationResponse>("/public/applications", data);
+}
+
+export async function createOperationApplication(
+  recruitmentId: string,
+  data: OperationApplicationRequest,
+): Promise<ApplicationResponse> {
+  const response = await axiosInstance.post<ApplicationResponse>(
+    `/operation-recruitments/${recruitmentId}/applications`,
+    data,
+  );
+  return response.data;
+}
+
+export async function getMyOperationApplications(): Promise<
+  ApplicationResponse[]
+> {
+  const response = await axiosInstance.get<ApplicationResponse[]>(
+    "/operation-recruitments/applications/me",
+  );
+  return response.data;
+}
+
+export async function getMyOperationApplication(
+  applicationId: string,
+): Promise<ApplicationResponse> {
+  const response = await axiosInstance.get<ApplicationResponse>(
+    `/operation-recruitments/applications/${applicationId}`,
+  );
+  return response.data;
+}
+
+export async function cancelMyOperationApplication(
+  applicationId: string,
+): Promise<void> {
+  await axiosInstance.delete(
+    `/operation-recruitments/applications/${applicationId}`,
+  );
+}
+
+export async function updateMyOperationApplication(
+  applicationId: string,
+  data: OperationApplicationRequest,
+): Promise<ApplicationResponse> {
+  const response = await axiosInstance.put<ApplicationResponse>(
+    `/operation-recruitments/applications/${applicationId}`,
+    data,
+  );
+  return response.data;
 }
 
 /**
@@ -120,6 +170,16 @@ export async function reviewApplication(
     `/applications/${id}/review`,
     { status },
   );
+  return response.data;
+}
+
+export async function importApplicationLectureRoomSchedule(
+  id: string,
+): Promise<ApplicationLectureRoomScheduleImportResponse> {
+  const response =
+    await axiosInstance.post<ApplicationLectureRoomScheduleImportResponse>(
+      `/applications/${id}/lecture-room-schedule`,
+    );
   return response.data;
 }
 

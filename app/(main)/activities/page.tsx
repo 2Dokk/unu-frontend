@@ -39,7 +39,9 @@ import {
 } from "@/lib/utils/activity-recruitment";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
 
 // ========================
 // ACTIVITY ROW COMPONENT
@@ -48,6 +50,7 @@ import { toast } from "sonner";
 interface ActivityRowProps {
   activity: ActivityResponse;
   participantStatus?: string;
+  isNew: boolean;
   onClick: (id: string) => void;
 }
 
@@ -67,6 +70,7 @@ function getActionLabel(
 function ActivityRow({
   activity,
   participantStatus,
+  isNew,
   onClick,
 }: ActivityRowProps) {
   const isClosed = activity.status === "COMPLETED";
@@ -91,6 +95,11 @@ function ActivityRow({
           <span className="shrink-0">
             <ActivityTypeBadge activityType={activity.activityType} />
           </span>
+          {isNew && (
+            <Badge className="shrink-0 border-red-200 bg-red-50 text-[10px] font-semibold text-red-600 hover:bg-red-50">
+              신규
+            </Badge>
+          )}
           <span className="truncate text-sm font-semibold">
             {activity.title}
           </span>
@@ -157,6 +166,7 @@ function acceptsParticipantApplications(activity: ActivityResponse): boolean {
 
 const ActivityPage = () => {
   const router = useRouter();
+  const { newActivityIds } = useMenuNotification();
   const [activities, setActivities] = useState<ActivityResponse[]>([]);
   const [activityTypes, setActivityTypes] = useState<ActivityTypeResponse[]>(
     [],
@@ -459,6 +469,7 @@ const ActivityPage = () => {
               key={activity.id}
               activity={activity}
               participantStatus={participantStatusByActivity[activity.id]}
+              isNew={newActivityIds.includes(activity.id)}
               onClick={(id) => router.push(`/activities/${id}`)}
             />
           ))}

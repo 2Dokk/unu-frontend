@@ -143,7 +143,7 @@ export default function ActivityOpeningRequestsManagementPage() {
               개설 신청 기간
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {period?.quarter?.name ?? "현재 분기 미설정"} 학회원 신청과 보완 제출 기간을 관리합니다.
+              {period?.quarter?.name ?? "현재 분기 미설정"} 학회원의 활동 개설 신청과 보완 제출 기간을 관리합니다.
             </p>
           </div>
           {period && (

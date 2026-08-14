@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronDown,
   Megaphone,
@@ -40,6 +40,7 @@ import {
 import { ActivityNotice } from "@/lib/interfaces/activity-notice";
 import { formatDate } from "@/lib/utils/date-utils";
 import { cn } from "@/lib/utils";
+import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
 
 function getErrorMessage(error: unknown, fallback: string): string {
   const data = (error as { response?: { data?: unknown } })?.response?.data;
@@ -71,13 +72,43 @@ export function ActivityNotices({
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ActivityNotice | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [readNoticeIds, setReadNoticeIds] = useState<Set<string>>(new Set());
+  const { byActivity, markRead, refresh: refreshUnread } =
+    useActivityNoticeUnread();
+  const hasActivityUnread = (byActivity[activityId] ?? 0) > 0;
 
-  function toggleNotice(id: string) {
+  useEffect(() => {
+    setReadNoticeIds(
+      new Set(notices.filter((notice) => notice.read).map((notice) => notice.id)),
+    );
+  }, [notices]);
+
+  function toggleNotice(notice: ActivityNotice) {
+    const opening = !expandedIds.has(notice.id);
     setExpandedIds((current) => {
       const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(notice.id)) next.delete(notice.id);
+      else next.add(notice.id);
       return next;
+    });
+
+    if (
+      !opening ||
+      !hasActivityUnread ||
+      notice.read ||
+      readNoticeIds.has(notice.id)
+    ) {
+      return;
+    }
+
+    setReadNoticeIds((current) => new Set(current).add(notice.id));
+    void markRead(notice.id, activityId).catch(() => {
+      setReadNoticeIds((current) => {
+        const next = new Set(current);
+        next.delete(notice.id);
+        return next;
+      });
+      toast.error("공지 읽음 상태를 저장하지 못했습니다.");
     });
   }
 
@@ -115,6 +146,7 @@ export function ActivityNotices({
       }
       setDialogOpen(false);
       await onChanged();
+      await refreshUnread();
     } catch (error) {
       toast.error(
         getErrorMessage(
@@ -137,6 +169,7 @@ export function ActivityNotices({
       toast.success("공지가 삭제되었습니다.");
       setDeleteTarget(null);
       await onChanged();
+      await refreshUnread();
     } catch (error) {
       toast.error(getErrorMessage(error, "공지를 삭제하지 못했습니다."));
     } finally {
@@ -171,19 +204,25 @@ export function ActivityNotices({
             <div className="divide-y divide-border">
               {notices.map((notice) => {
                 const isOpen = expandedIds.has(notice.id);
+                const isRead = notice.read || readNoticeIds.has(notice.id);
                 return (
                   <div key={notice.id} className="py-1">
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => toggleNotice(notice.id)}
+                        onClick={() => toggleNotice(notice)}
                         className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left"
                       >
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#edf5f1] text-[#174b3a]">
                           <Megaphone className="h-4 w-4" />
                         </div>
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                          {notice.title}
+                        <span className="flex min-w-0 flex-1 items-center gap-2">
+                          <span className="truncate text-sm font-semibold">
+                            {notice.title}
+                          </span>
+                          {hasActivityUnread && !isRead && (
+                            <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />
+                          )}
                         </span>
                         <span className="shrink-0 text-xs text-muted-foreground">
                           {formatDate(notice.createdAt)}
@@ -261,7 +300,7 @@ export function ActivityNotices({
                     title: event.target.value,
                   }))
                 }
-                placeholder="예: 이번 주 모임 장소 변경 안내"
+                placeholder="공지 제목을 입력해주세요."
               />
             </div>
             <div className="space-y-2">

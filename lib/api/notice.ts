@@ -1,4 +1,9 @@
-import { Notice, NoticeListResponse, NoticeRequest } from "@/lib/interfaces/notice";
+import {
+  Notice,
+  NoticeListResponse,
+  NoticeRequest,
+  NoticeUnreadSummary,
+} from "@/lib/interfaces/notice";
 import publicClient from "./publicClient";
 import axiosInstance from "./axiosInstance";
 
@@ -28,4 +33,15 @@ export async function updateNotice(id: string, data: NoticeRequest): Promise<Not
 
 export async function deleteNotice(id: string): Promise<void> {
   await axiosInstance.delete(`/notices/${id}`);
+}
+
+export async function getNoticeUnreadSummary(): Promise<NoticeUnreadSummary> {
+  const response = await axiosInstance.get<NoticeUnreadSummary>(
+    "/notices/unread-summary",
+  );
+  return response.data;
+}
+
+export async function markNoticeRead(id: string): Promise<void> {
+  await axiosInstance.post(`/notices/${id}/read`);
 }

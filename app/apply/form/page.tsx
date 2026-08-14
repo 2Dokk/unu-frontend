@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   getActiveRecruitment,
+  getOperationRecruitmentById,
 } from "@/lib/api/recruitment";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 import { ApplicationAnswers } from "@/lib/interfaces/application";
@@ -24,9 +25,16 @@ import {
   Question,
   validateRequiredAnswers,
 } from "@/lib/interfaces/form-builder";
-import { createApplication } from "@/lib/api/application";
+import {
+  createApplication,
+  createOperationApplication,
+} from "@/lib/api/application";
 import { getPublicApiErrorMessage } from "@/lib/api/publicClient";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { getMe } from "@/lib/api/auth";
+import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 type RecruitmentStatus = "모집중" | "모집 예정" | "모집 마감";
 
@@ -37,8 +45,14 @@ function formatPhoneNumber(value: string): string {
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
 }
 
-export default function ApplicationFormPage() {
+function ApplicationFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const recruitmentId = searchParams.get("operationRecruitmentId");
+  const operation = Boolean(recruitmentId);
+  const backHref = operation ? "/operation-recruitments" : "/apply";
+  const { userId, isLoading: authLoading } = useAuth();
+  const { markItemViewed } = useMenuNotification();
 
   const [recruitment, setRecruitment] = useState<RecruitmentResponse | null>(
     null,
@@ -67,28 +81,62 @@ export default function ApplicationFormPage() {
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const recruitmentData = await getActiveRecruitment();
+      if (operation && !userId) {
+        return;
+      }
+
+      const [recruitmentData, profile] = await Promise.all([
+        operation && recruitmentId
+          ? getOperationRecruitmentById(recruitmentId)
+          : getActiveRecruitment(),
+        operation && userId ? getMe() : Promise.resolve(null),
+      ]);
 
       setRecruitment(recruitmentData);
-      console.log("Fetched recruitment data:", recruitmentData);
+      if (profile) {
+        setName(profile.name || "");
+        setStudentId(profile.studentId || "");
+        setEmail(profile.email || "");
+        setGithubId(profile.githubId || "");
+        setPhoneNumber(profile.phoneNumber || "");
+      }
 
       const parsedSchema = parseSchema(recruitmentData.form.schema);
       setSchema(parsedSchema);
     } catch (error: unknown) {
       console.error("Failed to load form:", error);
-      setError("지원서를 불러오는데 실패했습니다.");
+      setError(
+        operation
+          ? "신청서를 불러오는데 실패했습니다."
+          : "지원서를 불러오는데 실패했습니다.",
+      );
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [operation, recruitmentId, userId]);
+
+  useEffect(() => {
+    if (operation && authLoading) return;
+    if (operation && !userId) {
+      const target = `/apply/form?operationRecruitmentId=${encodeURIComponent(recruitmentId || "")}`;
+      router.replace(`/login?redirect=${encodeURIComponent(target)}`);
+      return;
+    }
+    void loadData();
+  }, [authLoading, loadData, operation, recruitmentId, router, userId]);
+
+  useEffect(() => {
+    if (!operation || !recruitment?.id) return;
+    void markItemViewed("operation-recruitments", recruitment.id).catch(
+      (markError) => {
+        console.error("Failed to mark recruitment card read:", markError);
+      },
+    );
+  }, [markItemViewed, operation, recruitment?.id]);
 
   function getRecruitmentStatus(): RecruitmentStatus {
     if (!recruitment) return "모집 마감";
@@ -111,21 +159,23 @@ export default function ApplicationFormPage() {
   function validateForm(): boolean {
     const newErrors: Record<string, string> = {};
 
-    // Validate basic info
-    if (!name.trim()) newErrors.name = "이름을 입력해주세요.";
-    if (!/^\d{8}$/.test(studentId))
-      newErrors.studentId = "학번은 숫자 8자리로 입력해주세요.";
-    if (!major.trim()) newErrors.major = "전공을 입력해주세요.";
-    if (!email.trim()) newErrors.email = "이메일을 입력해주세요.";
-    if (!/^\d{3}-\d{4}-\d{4}$/.test(phoneNumber))
-      newErrors.phoneNumber = "연락처를 000-0000-0000 형식으로 입력해주세요.";
-    if (!password.trim()) newErrors.password = "비밀번호를 입력해주세요.";
-    else if (password.length < 6)
-      newErrors.password = "비밀번호는 6자 이상이어야 합니다.";
-    if (!passwordConfirm.trim())
-      newErrors.passwordConfirm = "비밀번호 확인을 입력해주세요.";
-    else if (password !== passwordConfirm)
-      newErrors.passwordConfirm = "비밀번호가 일치하지 않습니다.";
+    if (!operation) {
+      if (!name.trim()) newErrors.name = "이름을 입력해주세요.";
+      if (!/^\d{8}$/.test(studentId))
+        newErrors.studentId = "학번은 숫자 8자리로 입력해주세요.";
+      if (!major.trim()) newErrors.major = "전공을 입력해주세요.";
+      if (!email.trim()) newErrors.email = "이메일을 입력해주세요.";
+      if (!/^\d{3}-\d{4}-\d{4}$/.test(phoneNumber))
+        newErrors.phoneNumber =
+          "연락처를 000-0000-0000 형식으로 입력해주세요.";
+      if (!password.trim()) newErrors.password = "비밀번호를 입력해주세요.";
+      else if (password.length < 6)
+        newErrors.password = "비밀번호는 6자 이상이어야 합니다.";
+      if (!passwordConfirm.trim())
+        newErrors.passwordConfirm = "비밀번호 확인을 입력해주세요.";
+      else if (password !== passwordConfirm)
+        newErrors.passwordConfirm = "비밀번호가 일치하지 않습니다.";
+    }
 
     if (schema) {
       Object.assign(newErrors, validateRequiredAnswers(schema, answers));
@@ -150,29 +200,37 @@ export default function ApplicationFormPage() {
 
     try {
       setIsSubmitting(true);
-      await createApplication({
-        name,
-        studentId,
-        major,
-        subMajor: subMajor || undefined,
-        email,
-        githubId: githubId || undefined,
-        phoneNumber,
-        answers,
-        recruitmentId: recruitment!.id,
-        formId: recruitment!.form.id,
-        password: password,
-      });
+      if (operation) {
+        await createOperationApplication(recruitment!.id, { answers });
+      } else {
+        await createApplication({
+          name,
+          studentId,
+          major,
+          subMajor: subMajor || undefined,
+          email,
+          githubId: githubId || undefined,
+          phoneNumber,
+          answers,
+          recruitmentId: recruitment!.id,
+          formId: recruitment!.form.id,
+          password,
+        });
+      }
 
       router.push(
-        `/apply/complete?recruitmentId=${encodeURIComponent(recruitment!.id)}`,
+        operation
+          ? `/operation-recruitments/complete?recruitmentId=${encodeURIComponent(recruitment!.id)}`
+          : `/apply/complete?recruitmentId=${encodeURIComponent(recruitment!.id)}`,
       );
     } catch (error: unknown) {
       console.error("Failed to submit application:", error);
       toast.error(
         getPublicApiErrorMessage(
           error,
-          "지원서 제출에 실패했습니다. 다시 시도해주세요.",
+          operation
+            ? "신청서 제출에 실패했습니다. 다시 시도해주세요."
+            : "지원서 제출에 실패했습니다. 다시 시도해주세요.",
         ),
       );
       setIsSubmitting(false);
@@ -278,10 +336,17 @@ export default function ApplicationFormPage() {
                         : [];
 
                       if (checked) {
-                        handleAnswerChange(question.id, [
-                          ...currentValues,
-                          option,
-                        ]);
+                        handleAnswerChange(
+                          question.id,
+                          option.trim() === "없음"
+                            ? [option]
+                            : [
+                                ...currentValues.filter(
+                                  (value) => value.trim() !== "없음",
+                                ),
+                                option,
+                              ],
+                        );
                       } else {
                         handleAnswerChange(
                           question.id,
@@ -329,13 +394,16 @@ export default function ApplicationFormPage() {
           <CardContent className="pt-12 pb-12">
             <div className="text-center space-y-4">
               <p className="text-lg text-muted-foreground">
-                {error || "지원서를 불러올 수 없습니다"}
+                {error ||
+                  (operation
+                    ? "신청서를 불러올 수 없습니다"
+                    : "지원서를 불러올 수 없습니다")}
               </p>
               <div className="flex justify-center gap-3">
                 <Button onClick={() => loadData()} variant="outline">
                   다시 시도
                 </Button>
-                <Button onClick={() => router.push("/apply")}>돌아가기</Button>
+                <Button onClick={() => router.push(backHref)}>돌아가기</Button>
               </div>
             </div>
           </CardContent>
@@ -352,7 +420,7 @@ export default function ApplicationFormPage() {
       {/* Back Button */}
       <Button
         variant="ghost"
-        onClick={() => router.push("/apply")}
+        onClick={() => router.push(backHref)}
         className="mb-6"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -400,8 +468,26 @@ export default function ApplicationFormPage() {
 
         <Separator />
 
-        {/* Basic Info Section */}
-        <Card>
+        {operation ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>신청자 정보</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-1 rounded-md bg-muted/50 px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+                <span className="font-medium">{name}</span>
+                <span className="hidden text-muted-foreground sm:inline">·</span>
+                <span className="text-sm text-muted-foreground">
+                  {studentId}
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                로그인한 학회원 정보로 제출됩니다.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
           <CardHeader>
             <CardTitle>기본 정보</CardTitle>
           </CardHeader>
@@ -455,7 +541,8 @@ export default function ApplicationFormPage() {
                   maxLength={8}
                   placeholder=""
                   disabled={!canSubmitForm}
-                  className={`text-sm${errors.studentId ? " border-destructive" : ""}`}
+                  readOnly={operation}
+                  className={`text-sm${operation ? " bg-muted" : ""}${errors.studentId ? " border-destructive" : ""}`}
                 />
                 {errors.studentId && (
                   <p className="text-sm text-destructive">{errors.studentId}</p>
@@ -684,12 +771,13 @@ export default function ApplicationFormPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        )}
 
         {/* Questions Section */}
         <Card>
           <CardHeader>
-            <CardTitle>지원서 질문</CardTitle>
+            <CardTitle>{operation ? "신청서 질문" : "지원서 질문"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {schema.questions.length === 0 ? (
@@ -709,7 +797,7 @@ export default function ApplicationFormPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push("/apply")}
+            onClick={() => router.push(backHref)}
             disabled={isSubmitting}
           >
             취소
@@ -719,10 +807,42 @@ export default function ApplicationFormPage() {
             size="lg"
             disabled={!canSubmitForm || isSubmitting}
           >
-            {isSubmitting ? "제출 중..." : "제출하기"}
+            {isSubmitting
+              ? "제출 중..."
+              : operation
+                ? "신청하기"
+                : "제출하기"}
           </Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+export default function ApplicationFormPage() {
+  return (
+    <Suspense fallback={null}>
+      <ApplicationFormLayout />
+    </Suspense>
+  );
+}
+
+function ApplicationFormLayout() {
+  const searchParams = useSearchParams();
+  const isOperationRecruitment = Boolean(
+    searchParams.get("operationRecruitmentId"),
+  );
+
+  if (!isOperationRecruitment) {
+    return <ApplicationFormContent />;
+  }
+
+  return (
+    <div className="flex flex-1">
+      <Sidebar />
+      <main className="min-w-0 flex-1 overflow-auto [scrollbar-gutter:stable]">
+        <ApplicationFormContent />
+      </main>
     </div>
   );
 }

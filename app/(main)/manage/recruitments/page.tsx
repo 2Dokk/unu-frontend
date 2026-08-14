@@ -265,7 +265,7 @@ export default function AdminRecruitmentsPage() {
                       기간
                     </TableHead>
                     <TableHead className="hidden text-center xl:table-cell">
-                      지원서
+                      양식
                     </TableHead>
                     <TableHead className="hidden text-center xl:table-cell">
                       분기
@@ -286,7 +286,14 @@ export default function AdminRecruitmentsPage() {
                       }
                     >
                       <TableCell className="whitespace-normal">
-                        <div className="font-medium">{recruitment.title}</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{recruitment.title}</span>
+                          <Badge variant="outline" className="text-[10px]">
+                            {recruitment.type === "INTERNAL_OPERATION"
+                              ? "내부 모집"
+                              : "신규 학회원"}
+                          </Badge>
+                        </div>
                         {recruitment.description && (
                           <div className="text-xs text-muted-foreground truncate max-w-75">
                             {recruitment.description}

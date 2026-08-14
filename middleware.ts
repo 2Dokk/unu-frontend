@@ -47,6 +47,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/home", request.url));
   }
 
+  if (
+    request.nextUrl.pathname.startsWith("/manage/interviews") &&
+    !hasAnyRole(token, ["ADMIN", "MANAGER"])
+  ) {
+    return NextResponse.redirect(new URL("/home", request.url));
+  }
+
   return NextResponse.next();
 }
 

@@ -5,6 +5,7 @@ import {
   ActivityOpeningRequestResponse,
   ActivityOpeningRequestStatus,
 } from "../interfaces/activity-opening-request";
+import { requestMenuNotificationRefresh } from "@/lib/utils/menu-notification-events";
 
 const BASE_PATH = "/activity-opening-requests";
 const MANAGE_PATH = "/manage/activity-opening-requests";
@@ -124,5 +125,6 @@ export async function approveActivityOpeningRequest(
       data,
     );
 
+  requestMenuNotificationRefresh();
   return response.data;
 }

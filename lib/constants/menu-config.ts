@@ -13,6 +13,8 @@ import {
   FilePen,
   ClipboardCheck,
   LibraryBig,
+  BriefcaseBusiness,
+  MessagesSquare,
 } from "lucide-react";
 
 export type MenuItem =
@@ -46,6 +48,11 @@ export const menuConfig: MenuConfig = {
       label: "학회 공지",
       href: "/notices",
       icon: Bell,
+    },
+    {
+      label: "학회 내부 모집",
+      href: "/operation-recruitments",
+      icon: BriefcaseBusiness,
     },
     {
       label: "내 활동",
@@ -93,6 +100,11 @@ export const menuConfig: MenuConfig = {
       label: "모집 관리",
       href: "/manage/recruitments",
       icon: UserRoundPlus,
+    },
+    {
+      label: "면접 관리",
+      href: "/manage/interviews",
+      icon: MessagesSquare,
     },
     {
       label: "활동 관리",

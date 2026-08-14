@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -50,10 +51,19 @@ import {
 } from "@/lib/api/notice";
 import { Notice } from "@/lib/interfaces/notice";
 import { formatDateTime } from "@/lib/utils/date-utils";
+import { useNoticeUnread } from "@/lib/contexts/NoticeUnreadContext";
+
+function getNoticeErrorMessage(error: unknown, fallback: string) {
+  if (axios.isAxiosError(error) && typeof error.response?.data === "string") {
+    return error.response.data;
+  }
+  return fallback;
+}
 
 export default function NoticesPage() {
   const router = useRouter();
   const { isAuthenticated, hasRole, isLoading: authLoading } = useAuth();
+  const { refresh: refreshUnreadNotices } = useNoticeUnread();
 
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,9 +94,11 @@ export default function NoticesPage() {
     try {
       const data = await getNotices();
       setNotices(data.notices);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to load notices:", error);
-      toast.error(error.response?.data || "공지를 불러오는데 실패했습니다.");
+      toast.error(
+        getNoticeErrorMessage(error, "공지를 불러오는데 실패했습니다."),
+      );
     } finally {
       setLoading(false);
     }
@@ -123,14 +135,17 @@ export default function NoticesPage() {
         await createNotice(formData);
         toast.success("공지가 등록되었습니다.");
       }
-      await loadNotices();
+      await Promise.all([loadNotices(), refreshUnreadNotices()]);
       setShowDialog(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to save notice:", error);
       toast.error(
-        error.response?.data || (editingNotice
-          ? "공지 수정에 실패했습니다."
-          : "공지 등록에 실패했습니다."),
+        getNoticeErrorMessage(
+          error,
+          editingNotice
+            ? "공지 수정에 실패했습니다."
+            : "공지 등록에 실패했습니다.",
+        ),
       );
     } finally {
       setSubmitting(false);
@@ -144,11 +159,11 @@ export default function NoticesPage() {
     try {
       await deleteNotice(deleteConfirm.notice.id);
       toast.success("공지가 삭제되었습니다.");
-      await loadNotices();
+      await Promise.all([loadNotices(), refreshUnreadNotices()]);
       setDeleteConfirm({ open: false, notice: null });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to delete notice:", error);
-      toast.error(error.response?.data || "공지 삭제에 실패했습니다.");
+      toast.error(getNoticeErrorMessage(error, "공지 삭제에 실패했습니다."));
     } finally {
       setDeleting(false);
     }

@@ -5,6 +5,7 @@ import {
 } from "../interfaces/recruitment";
 import axiosInstance from "./axiosInstance";
 import publicClient from "./publicClient";
+import { requestMenuNotificationRefresh } from "@/lib/utils/menu-notification-events";
 
 export async function getAllRecruitments(): Promise<RecruitmentResponse[]> {
   const response =
@@ -28,6 +29,7 @@ export async function createRecruitment(
     "/recruitments",
     data,
   );
+  requestMenuNotificationRefresh();
   return response.data;
 }
 
@@ -52,6 +54,34 @@ export async function getActiveRecruitment(): Promise<RecruitmentResponse> {
 
 export async function getClosestRecruitment(): Promise<RecruitmentResponse> {
   return publicClient.get<RecruitmentResponse>(`/public/recruitments/closest`);
+}
+
+export async function getOperationRecruitments(): Promise<
+  RecruitmentResponse[]
+> {
+  const response = await axiosInstance.get<RecruitmentResponse[]>(
+    "/operation-recruitments",
+  );
+  return response.data;
+}
+
+export async function getOperationRecruitmentById(
+  id: string,
+): Promise<RecruitmentResponse> {
+  const response = await axiosInstance.get<RecruitmentResponse>(
+    `/operation-recruitments/${id}`,
+  );
+  return response.data;
+}
+
+export async function getOperationRecruitmentCompletionMessage(
+  id: string,
+): Promise<RecruitmentCompletionMessageResponse> {
+  const response =
+    await axiosInstance.get<RecruitmentCompletionMessageResponse>(
+      `/operation-recruitments/${id}/completion-message`,
+    );
+  return response.data;
 }
 
 export async function getRecruitmentCompletionMessage(

@@ -6,6 +6,9 @@ import { SiteFooter } from "@/components/custom/site-footer";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { SidebarProvider } from "@/lib/contexts/SidebarContext";
 import { Toaster } from "@/components/ui/sonner";
+import { ActivityNoticeUnreadProvider } from "@/lib/contexts/ActivityNoticeUnreadContext";
+import { MenuNotificationProvider } from "@/lib/contexts/MenuNotificationContext";
+import { NoticeUnreadProvider } from "@/lib/contexts/NoticeUnreadContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,14 +49,20 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${instrumentSans.variable} antialiased`}
       >
         <AuthProvider>
-          <div className="min-h-screen flex flex-col">
-            <SidebarProvider>
-              <NavigationBar />
-              {children}
-              <SiteFooter />
-            </SidebarProvider>
-          </div>
-          <Toaster />
+          <NoticeUnreadProvider>
+            <ActivityNoticeUnreadProvider>
+              <MenuNotificationProvider>
+                <div className="min-h-screen flex flex-col">
+                  <SidebarProvider>
+                    <NavigationBar />
+                    {children}
+                    <SiteFooter />
+                  </SidebarProvider>
+                </div>
+                <Toaster />
+              </MenuNotificationProvider>
+            </ActivityNoticeUnreadProvider>
+          </NoticeUnreadProvider>
         </AuthProvider>
       </body>
     </html>

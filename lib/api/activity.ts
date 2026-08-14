@@ -1,5 +1,6 @@
 import { ActivityRequest, ActivityResponse } from "../interfaces/activity";
 import axiosInstance from "./axiosInstance";
+import { requestMenuNotificationRefresh } from "@/lib/utils/menu-notification-events";
 
 export async function getAllActivities(): Promise<ActivityResponse[]> {
   const response =
@@ -30,6 +31,7 @@ export async function createActivity(
     "/activities",
     data,
   );
+  requestMenuNotificationRefresh();
   return response.data;
 }
 

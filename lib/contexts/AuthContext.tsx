@@ -10,18 +10,23 @@ import React, {
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import {
+  isRefreshSessionExpiredError,
+  refreshAccessToken,
+} from "@/lib/api/axiosInstance";
+import {
   AUTH_STATE_CHANGED_EVENT,
   clearAuthCookies,
   setAuthCookies,
 } from "@/lib/utils/auth-cookies";
 import {
+  beginManualLogout,
+  isManualLogoutInProgress,
   markSessionExpired,
   sessionExpiredLoginUrl,
 } from "@/lib/utils/auth-session";
 
-// 30분간 활동이 없으면 자동 로그아웃
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
-const IDLE_EVENTS = ["mousemove", "keydown", "click", "scroll", "touchstart"] as const;
+const TOKEN_REFRESH_BUFFER_MS = 2 * 60 * 1000;
+const TOKEN_REFRESH_RETRY_MS = 30 * 1000;
 
 interface DecodedToken {
   sub?: string;
@@ -143,8 +148,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTokenExpiresAt(null);
   }, []);
 
-  const syncAuthState = useCallback(() => {
-    const token = Cookies.get("token");
+  const expireSession = useCallback(() => {
+    if (isManualLogoutInProgress()) return;
+    markSessionExpired();
+    clearAuthCookies();
+    clearAuthState();
+    window.location.replace(sessionExpiredLoginUrl());
+  }, [clearAuthState]);
+
+  const applyToken = useCallback((token: string) => {
+    const role = extractRoleFromToken(token);
+    if (role === "GUEST") return false;
+
+    const decoded = jwtDecode<DecodedToken>(token);
+    setIsAuthenticated(true);
+    setUserRole(role);
+    setRoles(extractRolesFromToken(token));
+    setUserId(decoded.sub ?? null);
+    setTokenExpiresAt(decoded.exp ? decoded.exp * 1000 : null);
+    return true;
+  }, []);
+
+  const syncAuthState = useCallback(async () => {
+    let token = Cookies.get("token");
+    const tokenExpired = Boolean(token && isExpiredToken(token));
+    const hasRefreshToken = Boolean(Cookies.get("refreshToken"));
+
+    if ((!token || tokenExpired) && hasRefreshToken) {
+      try {
+        token = await refreshAccessToken();
+      } catch (error) {
+        if (isRefreshSessionExpiredError(error)) {
+          expireSession();
+        }
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    if (tokenExpired && !hasRefreshToken) {
+      expireSession();
+      setIsLoading(false);
+      return;
+    }
 
     if (!token) {
       clearAuthState();
@@ -153,19 +199,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const role = extractRoleFromToken(token);
-
-      if (role === "GUEST") {
-        if (isExpiredToken(token)) markSessionExpired();
+      if (!applyToken(token)) {
         clearAuthCookies();
         clearAuthState();
-      } else {
-        const decoded = jwtDecode<DecodedToken>(token);
-        setIsAuthenticated(true);
-        setUserRole(role);
-        setRoles(extractRolesFromToken(token));
-        setUserId(decoded.sub ?? null);
-        setTokenExpiresAt(decoded.exp ? decoded.exp * 1000 : null);
       }
     } catch (error) {
       console.error("Auth synchronization error:", error);
@@ -174,86 +210,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [clearAuthState]);
+  }, [applyToken, clearAuthState, expireSession]);
 
   // 최초 진입과 브라우저 캐시 복원, 다른 탭에서의 인증 변경을 함께 반영한다.
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") syncAuthState();
+      if (document.visibilityState === "visible") void syncAuthState();
     };
+    const handleSync = () => void syncAuthState();
 
-    syncAuthState();
-    window.addEventListener("focus", syncAuthState);
-    window.addEventListener("pageshow", syncAuthState);
-    window.addEventListener(AUTH_STATE_CHANGED_EVENT, syncAuthState);
+    void syncAuthState();
+    window.addEventListener("focus", handleSync);
+    window.addEventListener("pageshow", handleSync);
+    window.addEventListener(AUTH_STATE_CHANGED_EVENT, handleSync);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.removeEventListener("focus", syncAuthState);
-      window.removeEventListener("pageshow", syncAuthState);
-      window.removeEventListener(AUTH_STATE_CHANGED_EVENT, syncAuthState);
+      window.removeEventListener("focus", handleSync);
+      window.removeEventListener("pageshow", handleSync);
+      window.removeEventListener(AUTH_STATE_CHANGED_EVENT, handleSync);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [syncAuthState]);
 
   const login = (token: string, refreshToken?: string) => {
     setAuthCookies(token, refreshToken);
-
-    const role = extractRoleFromToken(token);
-    const decoded = jwtDecode<DecodedToken>(token);
-    setIsAuthenticated(true);
-    setUserRole(role);
-    setRoles(extractRolesFromToken(token));
-    setUserId(decoded.sub ?? null);
-    setTokenExpiresAt(decoded.exp ? decoded.exp * 1000 : null);
+    applyToken(token);
   };
-
-  const clearSession = useCallback(() => {
-    clearAuthCookies();
-    clearAuthState();
-  }, [clearAuthState]);
 
   const logout = useCallback(() => {
     if (typeof window !== "undefined") {
+      beginManualLogout();
       clearAuthCookies({ notify: false });
+      clearAuthState();
       window.location.replace("/");
     }
-  }, []);
-
-  const expireSession = useCallback(() => {
-    markSessionExpired();
-    clearSession();
-    window.location.replace(sessionExpiredLoginUrl());
-  }, [clearSession]);
+  }, [clearAuthState]);
 
   useEffect(() => {
     if (!isAuthenticated || tokenExpiresAt === null) return;
 
-    const timer = window.setTimeout(
-      expireSession,
-      Math.max(0, tokenExpiresAt - Date.now()),
-    );
-    return () => window.clearTimeout(timer);
-  }, [expireSession, isAuthenticated, tokenExpiresAt]);
+    let timer: number;
+    let disposed = false;
 
-  // 비활동 자동 로그아웃
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    let timer: ReturnType<typeof setTimeout>;
-    const resetTimer = () => {
-      clearTimeout(timer);
-      timer = setTimeout(expireSession, IDLE_TIMEOUT_MS);
+    const renewSession = async () => {
+      try {
+        const token = await refreshAccessToken();
+        if (!disposed) applyToken(token);
+      } catch (error) {
+        if (disposed || isManualLogoutInProgress()) return;
+        if (isRefreshSessionExpiredError(error)) {
+          expireSession();
+          return;
+        }
+        timer = window.setTimeout(renewSession, TOKEN_REFRESH_RETRY_MS);
+      }
     };
 
-    IDLE_EVENTS.forEach((event) => window.addEventListener(event, resetTimer));
-    resetTimer();
+    timer = window.setTimeout(
+      renewSession,
+      Math.max(0, tokenExpiresAt - Date.now() - TOKEN_REFRESH_BUFFER_MS),
+    );
 
     return () => {
-      clearTimeout(timer);
-      IDLE_EVENTS.forEach((event) => window.removeEventListener(event, resetTimer));
+      disposed = true;
+      window.clearTimeout(timer);
     };
-  }, [expireSession, isAuthenticated]);
+  }, [applyToken, expireSession, isAuthenticated, tokenExpiresAt]);
 
   const getAuthToken = (): string | undefined => {
     return Cookies.get("token");

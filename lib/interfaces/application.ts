@@ -1,4 +1,10 @@
+import { RecruitmentType } from "./recruitment";
+
 export type ApplicationAnswers = Record<string, string | string[]>;
+
+export interface OperationApplicationRequest {
+  answers: ApplicationAnswers;
+}
 
 export interface ApplicationRequest {
   recruitmentId: string;
@@ -17,6 +23,8 @@ export interface ApplicationRequest {
 export interface ApplicationResponse {
   id: string;
   recruitmentId: string;
+  recruitmentTitle: string;
+  recruitmentType: RecruitmentType;
   formId: string;
   formSnapshot: string | Record<string, unknown>;
   name: string;
@@ -28,6 +36,8 @@ export interface ApplicationResponse {
   phoneNumber: string;
   answers: string | ApplicationAnswers;
   status: string;
+  submittedAt: string;
+  reviewedAt: string | null;
   createdAt: string;
   modifiedAt: string;
 }
@@ -56,4 +66,12 @@ export interface ApplicationLookupResponse {
 export interface ApplicationVerificationResponse {
   application: ApplicationResponse;
   accessToken: string;
+}
+
+export interface ApplicationLectureRoomScheduleImportResponse {
+  quarterId: string;
+  userId: string;
+  userName: string;
+  createdCount: number;
+  existingCount: number;
 }

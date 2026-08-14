@@ -102,9 +102,9 @@ async function RecruitmentCTA() {
       <h2 className="font-cnu-body mt-12 text-[40px] leading-[1.06] font-bold sm:text-6xl lg:text-[83px] lg:leading-[86px]">
         {status === "open" && recruitment ? (
           <>
-            {recruitment.quarter.name}
+            {recruitment.quarter.name} 
             <br />
-            모집 진행 중
+            신입 학회원 모집 진행 중
           </>
         ) : (
           <>
