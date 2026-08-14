@@ -174,7 +174,10 @@ export default function InterviewManagementPage() {
       };
       const sheetQuestions = parseSchema(
         orderedApplications[0].formSnapshot,
-      ).questions;
+      ).questions.filter(
+        (question) =>
+          question.type === "SHORT_TEXT" || question.type === "LONG_TEXT",
+      );
       const rows: SheetCell[][] = orderedApplications.flatMap(
         (application, applicationIndex) => {
         const applicationAnswers = parseAnswers(application.answers);
