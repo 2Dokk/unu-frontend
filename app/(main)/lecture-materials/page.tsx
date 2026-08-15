@@ -6,6 +6,7 @@ import {
   ExternalLink,
   FileText,
   FolderOpen,
+  GripVertical,
   Pencil,
   Plus,
   Trash2,
@@ -16,6 +17,7 @@ import {
   createLectureMaterial,
   deleteLectureMaterial,
   getLectureMaterials,
+  reorderLectureMaterials,
   updateLectureMaterial,
 } from "@/lib/api/lecture-material";
 import {
@@ -92,6 +94,9 @@ function LectureMaterialsContent() {
   const [deleteTarget, setDeleteTarget] = useState<LectureMaterial | null>(null);
   const [deleting, setDeleting] = useState(false);
   const handledCreateQuery = useRef(false);
+  const dragIndex = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   const loadMaterials = useCallback(async () => {
     setLoading(true);
@@ -193,6 +198,51 @@ function LectureMaterialsContent() {
     }
   }
 
+  async function persistOrder(next: LectureMaterial[]) {
+    const previous = materials;
+    setMaterials(next);
+    setSavingOrder(true);
+    try {
+      await reorderLectureMaterials(next.map((material) => material.id));
+    } catch (error) {
+      setMaterials(previous);
+      toast.error(getErrorMessage(error, "자료 순서를 저장하지 못했습니다."));
+    } finally {
+      setSavingOrder(false);
+    }
+  }
+
+  function moveMaterial(from: number, to: number) {
+    if (from === to) return;
+    const next = [...materials];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    void persistOrder(next);
+  }
+
+  function handleDragStart(index: number) {
+    dragIndex.current = index;
+    setDragOverIndex(index);
+  }
+
+  function handleDragEnterItem(index: number) {
+    if (dragIndex.current === null) return;
+    setDragOverIndex(index);
+  }
+
+  function handleDropItem(index: number) {
+    const from = dragIndex.current;
+    dragIndex.current = null;
+    setDragOverIndex(null);
+    if (from === null) return;
+    moveMaterial(from, index);
+  }
+
+  function handleDragEnd() {
+    dragIndex.current = null;
+    setDragOverIndex(null);
+  }
+
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -241,13 +291,56 @@ function LectureMaterialsContent() {
         </div>
       ) : (
         <div className="space-y-2">
-          {materials.map((material) => (
-            <Card key={material.id} className="px-4 py-2.5">
+          {canManage && (
+            <p className="text-xs text-muted-foreground">
+              왼쪽 손잡이를 잡고 위아래로 드래그하면 표시 순서를 바꿀 수 있습니다.
+            </p>
+          )}
+          {materials.map((material, index) => (
+            <Card
+              key={material.id}
+              className={`px-4 py-2.5 transition ${
+                canManage ? "select-none" : ""
+              } ${
+                dragOverIndex === index && dragIndex.current !== null
+                  ? "ring-2 ring-[#174b3a]"
+                  : ""
+              } ${
+                dragIndex.current === index ? "opacity-50" : ""
+              } ${savingOrder ? "pointer-events-none opacity-70" : ""}`}
+              draggable={canManage && !savingOrder}
+              onDragStart={
+                canManage ? () => handleDragStart(index) : undefined
+              }
+              onDragEnter={
+                canManage ? () => handleDragEnterItem(index) : undefined
+              }
+              onDragOver={
+                canManage ? (event) => event.preventDefault() : undefined
+              }
+              onDrop={
+                canManage
+                  ? (event) => {
+                      event.preventDefault();
+                      handleDropItem(index);
+                    }
+                  : undefined
+              }
+              onDragEnd={canManage ? handleDragEnd : undefined}
+            >
             <div className="flex items-center gap-3">
+              {canManage && (
+                <span
+                  className="flex h-8 w-5 shrink-0 cursor-grab items-center justify-center text-muted-foreground active:cursor-grabbing"
+                  aria-label="드래그하여 순서 변경"
+                >
+                  <GripVertical className="h-4 w-4" />
+                </span>
+              )}
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#edf5f1] text-[#174b3a]">
                 <FileText className="h-4 w-4" />
               </div>
-          
+
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-medium">
@@ -296,6 +389,7 @@ function LectureMaterialsContent() {
                   href={material.driveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  draggable={false}
                 >
                   열기
                   <ExternalLink className="ml-1.5 h-3.5 w-3.5" />

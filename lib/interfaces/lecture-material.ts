@@ -6,6 +6,7 @@ export interface LectureMaterial {
   materialName: string | null;
   driveUrl: string;
   weekNumber: number | null;
+  displayOrder: number | null;
   primary: boolean;
   activityId: string | null;
   activityTitle: string | null;

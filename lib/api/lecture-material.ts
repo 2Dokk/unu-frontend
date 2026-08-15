@@ -44,3 +44,9 @@ export async function updateLectureMaterial(
 export async function deleteLectureMaterial(id: string): Promise<void> {
   await axiosInstance.delete(`/lecture-materials/${id}`);
 }
+
+export async function reorderLectureMaterials(
+  orderedIds: string[],
+): Promise<void> {
+  await axiosInstance.patch("/lecture-materials/reorder", { orderedIds });
+}
