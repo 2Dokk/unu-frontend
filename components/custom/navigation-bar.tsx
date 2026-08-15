@@ -66,28 +66,50 @@ export function NavigationBar() {
         )} 없어도 될듯 해서 뺍니다 */}
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="font-cnu-body relative gap-2 rounded-none text-white/80 hover:bg-white/10 hover:text-white"
-            >
-              <span className="relative">
-                <User className="size-4" />
-                {hasAnyUnread && (
-                  <span
-                    className="absolute -right-1 -top-1 size-2 rounded-full bg-red-500 ring-2 ring-[#14231b]"
-                    aria-label="새 알림"
-                  />
-                )}
-              </span>
-              <span className="hidden sm:inline">프로필</span>
-              <ChevronDown className="size-4" />
-            </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="font-cnu-body gap-2 rounded-none text-white/80 hover:bg-white/10 hover:text-white"
+          >
+            <span className="relative">
+              <User className="size-4" />
+
+              {hasAnyUnread && (
+                <span
+                  className="absolute -right-1 -top-1 size-2 rounded-full bg-red-500 ring-2 ring-[#14231b] sm:hidden"
+                  aria-label="새 알림"
+                />
+              )}
+            </span>
+
+            <span className="hidden items-center gap-1.5 sm:flex">
+              프로필
+              {hasAnyUnread && (
+                <span
+                  className="size-2 rounded-full bg-red-500"
+                  aria-label="새 알림"
+                />
+              )}
+            </span>
+
+            <ChevronDown className="size-4" />
+          </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => router.push("/home")}>
-              <Home className="mr-2 size-4" />홈
-            </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => router.push("/home")}
+            className="flex items-center"
+          >
+            <Home className="mr-2 size-4" />
+            <span>홈</span>
+
+            {hasAnyUnread && (
+              <span
+                className="ml-auto size-2 rounded-full bg-red-500"
+                aria-label="새 알림"
+              />
+            )}
+          </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push("/profile")}>
               <User className="mr-2 size-4" />프로필
             </DropdownMenuItem>
