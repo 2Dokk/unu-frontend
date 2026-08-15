@@ -549,7 +549,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
 
                   <div className="space-y-2">
                     <a
-                      href="..."
+                      href="https://drive.google.com/drive/folders/1FPdT5Enpbw4Mo2tL3suzg8QEGdaGOuE-?usp=drive_link"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 whitespace-nowrap text-sm underline underline-offset-4"
@@ -565,7 +565,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                   type="url"
                   value={form.operationPlan}
                   onChange={(event) => change("operationPlan", event.target.value)}
-                  placeholder="작성한 스터디 계획서 구글 드라이브 링크를 입력해주세요."
+                  placeholder="작성한 스터디 계획서 구글 드라이브/노션 링크를 입력해주세요."
                 />
 
                 <p className="text-xs text-muted-foreground">
@@ -599,7 +599,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                   type="url"
                   value={form.operationPlan}
                   onChange={(event) => change("operationPlan", event.target.value)}
-                  placeholder="작성한 강의 계획서 구글 드라이브 링크를 입력해주세요."
+                  placeholder="작성한 강의 계획서 구글 드라이브/노션 링크를 입력해주세요."
                 />
                 <p className="text-xs text-muted-foreground">
                   양식대로 작성한 뒤 열람 가능한 구글 드라이브/노션 링크를 첨부해주세요.
