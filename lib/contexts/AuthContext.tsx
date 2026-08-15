@@ -28,6 +28,20 @@ import {
 const TOKEN_REFRESH_BUFFER_MS = 2 * 60 * 1000;
 const TOKEN_REFRESH_RETRY_MS = 30 * 1000;
 
+// 미활동 자동 로그아웃: 30분간 입력이 없으면 세션을 만료 처리한다.
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+const IDLE_CHECK_INTERVAL_MS = 30 * 1000;
+const IDLE_STORAGE_THROTTLE_MS = 10 * 1000;
+const IDLE_ACTIVITY_KEY = "cnu_last_activity";
+const IDLE_EVENTS = [
+  "mousemove",
+  "mousedown",
+  "keydown",
+  "scroll",
+  "touchstart",
+  "click",
+] as const;
+
 interface DecodedToken {
   sub?: string;
   email?: string;
@@ -277,6 +291,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.clearTimeout(timer);
     };
   }, [applyToken, expireSession, isAuthenticated, tokenExpiresAt]);
+
+  // 미활동 자동 로그아웃. 입력이 30분간 없으면 세션 만료 파이프라인을 태운다.
+  // 탭 간에는 마지막 활동 시각을 localStorage로 공유해, 한 탭에서만 활동해도
+  // 다른 탭이 혼자 로그아웃시키지 않도록 한다.
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === "undefined") return;
+
+    const readSharedActivity = (): number => {
+      const raw = window.localStorage.getItem(IDLE_ACTIVITY_KEY);
+      const parsed = raw ? Number(raw) : 0;
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const writeSharedActivity = (timestamp: number) => {
+      try {
+        window.localStorage.setItem(IDLE_ACTIVITY_KEY, String(timestamp));
+      } catch {
+        /* 저장 실패는 무시 — 메모리 기준으로만 판단한다 */
+      }
+    };
+
+    // 진입(로그인 직후 포함)을 활동으로 본다.
+    let lastActivity = Date.now();
+    let lastWrite = lastActivity;
+    writeSharedActivity(lastActivity);
+
+    const markActivity = () => {
+      const now = Date.now();
+      lastActivity = now;
+      if (now - lastWrite >= IDLE_STORAGE_THROTTLE_MS) {
+        lastWrite = now;
+        writeSharedActivity(now);
+      }
+    };
+
+    let stopped = false;
+    const checkIdle = () => {
+      if (stopped || isManualLogoutInProgress()) return;
+      const effectiveLast = Math.max(lastActivity, readSharedActivity());
+      if (Date.now() - effectiveLast >= IDLE_TIMEOUT_MS) {
+        stopped = true;
+        window.clearInterval(interval);
+        expireSession();
+      }
+    };
+
+    const handleVisible = () => {
+      if (document.visibilityState === "visible") checkIdle();
+    };
+
+    IDLE_EVENTS.forEach((event) =>
+      window.addEventListener(event, markActivity, { passive: true }),
+    );
+    document.addEventListener("visibilitychange", handleVisible);
+    const interval = window.setInterval(checkIdle, IDLE_CHECK_INTERVAL_MS);
+
+    return () => {
+      stopped = true;
+      IDLE_EVENTS.forEach((event) =>
+        window.removeEventListener(event, markActivity),
+      );
+      document.removeEventListener("visibilitychange", handleVisible);
+      window.clearInterval(interval);
+    };
+  }, [isAuthenticated, expireSession]);
 
   const getAuthToken = (): string | undefined => {
     return Cookies.get("token");
