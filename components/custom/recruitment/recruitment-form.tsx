@@ -219,13 +219,13 @@ export default function RecruitmentForm({
                       신규 학회원 모집
                     </SelectItem>
                     <SelectItem value="INTERNAL_OPERATION">
-                      학회 내 모집
+                      학회 내부 신청/모집
                     </SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  신규 학회원 모집은 홈과 지원 안내에, 학회 내 모집은
-                  로그인 후 학회 내 모집 탭에 표시됩니다.
+                  신규 학회원 모집은 홈과 지원 안내에, 학회 내부 신청/모집은
+                  로그인 후 학회 내부 신청/모집 탭에 표시됩니다.
                 </p>
               </div>
 

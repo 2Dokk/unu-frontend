@@ -79,9 +79,9 @@ export default function OperationRecruitmentsPage() {
     <div className="mx-auto w-full max-w-4xl space-y-6 px-6 py-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">학회 내부 모집</h1>
+          <h1 className="text-2xl font-bold tracking-tight">학회 내부 신청/모집</h1>
           <p className="text-sm text-muted-foreground">
-            학회실 관리자 모집과 멘토 모집 등 학회 내부 모집을 확인할 수 있습니다.
+            학회실 관리자 모집과 멘토 모집 등 학회 내부 신청/모집을 확인할 수 있습니다.
           </p>
         </div>
         <Button
@@ -103,7 +103,7 @@ export default function OperationRecruitmentsPage() {
       ) : error ? (
         <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-center">
           <p className="text-sm text-muted-foreground">
-            학회 내부 모집을 불러오지 못했습니다.
+            학회 내부 신청/모집을 불러오지 못했습니다.
           </p>
           <Button variant="outline" onClick={() => void loadRecruitments()}>
             다시 시도
@@ -112,7 +112,7 @@ export default function OperationRecruitmentsPage() {
       ) : recruitments.length === 0 ? (
         <div className="flex min-h-64 items-center justify-center rounded-md border border-dashed">
           <p className="text-sm text-muted-foreground">
-            등록된 학회 내부 모집이 없습니다.
+            등록된 학회 내부 신청/모집이 없습니다.
           </p>
         </div>
       ) : (

@@ -569,7 +569,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                 />
 
                 <p className="text-xs text-muted-foreground">
-                  양식대로 작성한 뒤 열람 가능한 구글 드라이브 링크를 첨부해주세요.
+                  양식대로 작성한 뒤 열람 가능한 구글 드라이브/노션 링크를 첨부해주세요.
                 </p>
               </div>
             </div>
@@ -602,7 +602,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                   placeholder="작성한 강의 계획서 구글 드라이브 링크를 입력해주세요."
                 />
                 <p className="text-xs text-muted-foreground">
-                  양식대로 작성한 뒤 열람 가능한 구글 드라이브 링크를 첨부해주세요.
+                  양식대로 작성한 뒤 열람 가능한 구글 드라이브/노션 링크를 첨부해주세요.
                 </p>
               </div>
 

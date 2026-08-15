@@ -50,7 +50,7 @@ export const menuConfig: MenuConfig = {
       icon: Bell,
     },
     {
-      label: "학회 내부 모집",
+      label: "학회 내부 신청/모집",
       href: "/operation-recruitments",
       icon: BriefcaseBusiness,
     },

@@ -49,7 +49,7 @@ export default function OperationRecruitmentCompletePage() {
         onClick={() => router.push("/operation-recruitments")}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        학회 내부 모집 목록으로
+        학회 내부 신청/모집 목록으로
       </Button>
 
       <main className="pb-16 pt-12 sm:pt-16">

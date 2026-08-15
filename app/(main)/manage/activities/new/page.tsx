@@ -496,15 +496,12 @@ export default function ActivityNewPage() {
               {planLabel && (
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="operationPlan">{planLabel}</Label>
-                  <Textarea
-                    id="operationPlan"
-                    rows={6}
-                    maxLength={10000}
+                  <Input
+                    id="study-plan-link"
+                    type="url"
                     value={formData.operationPlan}
-                    onChange={(event) =>
-                      handleInputChange("operationPlan", event.target.value)
-                    }
-                    placeholder="진행 방식, 일정, 예상 결과물을 중심으로 작성해주세요."
+                    onChange={(event) => handleInputChange("operationPlan", event.target.value)}
+                    placeholder="Google Drive·Docs 또는 Notion 공유 링크"
                   />
                 </div>
               )}

@@ -675,7 +675,7 @@ export default function ActivityEditPage() {
                       onChange={(event) =>
                         handleInputChange("operationPlan", event.target.value)
                       }
-                      placeholder="열람 가능한 구글 드라이브 링크를 첨부해 주세요."
+                      placeholder="열람 가능한 구글 드라이브/노션 링크를 첨부해 주세요."
                       autoComplete="off"
                     />
                   </div>

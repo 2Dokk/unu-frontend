@@ -290,7 +290,7 @@ export default function AdminRecruitmentsPage() {
                           <span className="font-medium">{recruitment.title}</span>
                           <Badge variant="outline" className="text-[10px]">
                             {recruitment.type === "INTERNAL_OPERATION"
-                              ? "내부 모집"
+                              ? "내부 신청/모집"
                               : "신규 학회원"}
                           </Badge>
                         </div>

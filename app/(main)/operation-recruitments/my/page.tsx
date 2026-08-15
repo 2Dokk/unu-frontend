@@ -60,12 +60,12 @@ export default function MyOperationApplicationsPage() {
           onClick={() => router.push("/operation-recruitments")}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          학회 내부 모집
+          학회 내부 신청/모집
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">내 신청 내역</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            학회 내부 모집에 제출한 신청서를 확인할 수 있습니다.
+            학회 내부 신청/모집에 제출한 신청서를 확인할 수 있습니다.
           </p>
         </div>
       </div>
