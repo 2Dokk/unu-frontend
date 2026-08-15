@@ -291,7 +291,7 @@ export default function LectureAdminView() {
 
       <div className="mt-5 rounded-[18px] border border-line bg-white px-6 py-[22px]">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-bold">예약한 학회원</h2>
+          <h2 className="text-sm font-bold">예약한 학회원 전체</h2>
           <span className="text-xs font-semibold text-faint">{memberSummaries.length}명</span>
         </div>
 

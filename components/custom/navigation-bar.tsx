@@ -17,6 +17,7 @@ import { getCurrentQuarter } from "@/lib/api/quarter";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useSidebar } from "@/lib/contexts/SidebarContext";
+import { useSidebarBadges } from "@/lib/hooks/useSidebarBadges";
 import { PublicNavLinks } from "@/components/custom/public-nav-links";
 import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
 
@@ -25,6 +26,7 @@ export function NavigationBar() {
   const pathname = usePathname();
   const { userRole, logout, isLoading } = useAuth();
   const { setIsOpen } = useSidebar();
+  const { hasAnyUnread } = useSidebarBadges();
   const [currentQuarter, setCurrentQuarter] =
     React.useState<QuarterResponse | null>(null);
 
@@ -67,9 +69,17 @@ export function NavigationBar() {
             <Button
               variant="ghost"
               size="sm"
-              className="font-cnu-body gap-2 rounded-none text-white/80 hover:bg-white/10 hover:text-white"
+              className="font-cnu-body relative gap-2 rounded-none text-white/80 hover:bg-white/10 hover:text-white"
             >
-              <User className="size-4" />
+              <span className="relative">
+                <User className="size-4" />
+                {hasAnyUnread && (
+                  <span
+                    className="absolute -right-1 -top-1 size-2 rounded-full bg-red-500 ring-2 ring-[#14231b]"
+                    aria-label="새 알림"
+                  />
+                )}
+              </span>
               <span className="hidden sm:inline">프로필</span>
               <ChevronDown className="size-4" />
             </Button>

@@ -11,20 +11,13 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import { useSidebar } from "@/lib/contexts/SidebarContext";
 import { getMenuByRole } from "@/lib/constants/menu-config";
 import { useLectureParticipation } from "@/lib/hooks/useLectureParticipation";
-import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
-import { useNoticeUnread } from "@/lib/contexts/NoticeUnreadContext";
-import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
+import { useSidebarBadges } from "@/lib/hooks/useSidebarBadges";
 import { formatUnreadCount } from "@/lib/utils/unread-count";
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { userRole, roles, hasRole } = useAuth();
-  const { totalCount: unreadActivityNoticeCount } = useActivityNoticeUnread();
-  const { totalCount: unreadNoticeCount } = useNoticeUnread();
-  const {
-    activityCount: newActivityCount,
-    operationRecruitmentCount: newOperationRecruitmentCount,
-  } = useMenuNotification();
+  const { getUnreadCount } = useSidebarBadges();
   const { loading: lectureLoading, participant: lectureParticipant } =
     useLectureParticipation();
   const canSeeOnlineLecture = hasRole("MANAGER") || (!lectureLoading && !!lectureParticipant);
@@ -48,16 +41,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
             const isCurrentQuarterActive = pathname === item.href;
             const Icon = item.icon;
-            const unreadCount =
-              item.href === "/notices"
-                ? unreadNoticeCount
-                : item.href === "/operation-recruitments"
-                  ? newOperationRecruitmentCount
-                  : item.href === "/home"
-                    ? unreadActivityNoticeCount
-                    : item.href === "/activities"
-                      ? newActivityCount
-                      : 0;
+            const unreadCount = getUnreadCount(item.href);
 
             return (
               <Button

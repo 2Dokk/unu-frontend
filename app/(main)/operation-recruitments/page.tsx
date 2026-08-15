@@ -81,7 +81,7 @@ export default function OperationRecruitmentsPage() {
         <div className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight">학회 내부 모집</h1>
           <p className="text-sm text-muted-foreground">
-            학회실 관리와 멘토 모집 등 학회 내부 모집을 확인할 수 있습니다.
+            학회실 관리자 모집과 멘토 모집 등 학회 내부 모집을 확인할 수 있습니다.
           </p>
         </div>
         <Button
