@@ -38,16 +38,32 @@ export default function HomePage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
+  // 통계는 원본 participations 기준. "내가 신청·참여한 활동" 목록에서만 개설 활동과
+  // 겹치는 participant를 숨겨 중복 표시를 막는다.
+  const hostedActivityIds = new Set(
+    hostedActivities.map(({ activity }) => activity.id),
+  );
+
   const currentQuarterParticipations = participations.filter(
     (p) =>
       p.participant.activity?.quarter?.id === currentQuarter?.id,
   );
+  const visibleCurrentQuarterParticipations =
+    currentQuarterParticipations.filter(
+      (p) => !hostedActivityIds.has(p.participant.activity.id),
+    );
   const currentQuarterActivities = currentQuarterParticipations.filter(
     (p) => p.participant.status !== "REJECTED",
   );
   const currentQuarterHostedActivities = hostedActivities.filter(
     ({ activity }) => activity.quarter?.id === currentQuarter?.id,
   );
+
+  // 이번 분기 활동 수: 참여 활동 + 개설 활동을 activity ID로 합쳐 중복 제거.
+  const currentQuarterActivityCount = new Set([
+    ...currentQuarterActivities.map((p) => p.participant.activity.id),
+    ...currentQuarterHostedActivities.map(({ activity }) => activity.id),
+  ]).size;
 
   const completedCount = participations.filter(
     (p) => p.participant.completed,
@@ -56,7 +72,12 @@ export default function HomePage() {
   const confirmedActivities = participations.filter(
     (p) => p.participant.status === "APPROVED",
   );
-  const totalActivities = confirmedActivities.length + hostedActivities.length;
+
+  // 전체 참여 활동 수: 참여(APPROVED) + 개설을 activity ID로 합쳐 중복 제거.
+  const totalActivities = new Set([
+    ...confirmedActivities.map((p) => p.participant.activity.id),
+    ...hostedActivities.map(({ activity }) => activity.id),
+  ]).size;
 
   const averageAttendance =
     confirmedActivities.length > 0
@@ -109,8 +130,7 @@ export default function HomePage() {
               </CardHeader>
               <CardContent className="px-4">
                 <div className="text-2xl font-bold">
-                  {currentQuarterActivities.length +
-                    currentQuarterHostedActivities.length}
+                  {currentQuarterActivityCount}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {currentQuarter?.name || ""}
@@ -188,7 +208,7 @@ export default function HomePage() {
                 내가 신청·참여한 활동
               </h2>
 
-        {currentQuarterParticipations.length === 0 ? (
+        {visibleCurrentQuarterParticipations.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Activity className="h-12 w-12 text-muted-foreground mb-4" />
@@ -199,7 +219,7 @@ export default function HomePage() {
           </Card>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {currentQuarterParticipations.map(
+            {visibleCurrentQuarterParticipations.map(
               ({
                 participant,
                 attendanceStats,

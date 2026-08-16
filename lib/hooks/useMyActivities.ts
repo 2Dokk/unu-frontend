@@ -30,7 +30,10 @@ export interface HostedActivityWithParticipants {
 export interface MyActivitiesState {
   loading: boolean;
   currentQuarter: QuarterResponse | null;
-  /** 개설한 활동을 제외한 신청·참여 기록. 개설 활동과 겹쳐 세지 않도록 걸러져 있다. */
+  /**
+   * 내가 ActivityParticipant로 등록된 모든 활동(개설 여부와 무관).
+   * 개설 활동과의 중복 표시 제외는 여기서 걸러내지 않고 UI 렌더링 단계에서 처리한다.
+   */
   participations: ParticipationWithStats[];
   hostedActivities: HostedActivityWithParticipants[];
 }
@@ -127,16 +130,10 @@ export function useMyActivities(): MyActivitiesState {
           getMyHostedActivities(),
         ]);
 
-        const hostedIds = new Set(hostedData.map((activity) => activity.id));
-
+        // 개설 활동이라는 이유로 participant를 제거하지 않는다.
+        // (개설자라도 APPROVED participant면 출석·수료 집계에 포함돼야 하므로 전량 유지한다.)
         const [enrichedParticipations, enrichedHosted] = await Promise.all([
-          Promise.all(
-            participantData
-              .filter(
-                (participant) => !hostedIds.has(participant.activity.id),
-              )
-              .map(enrichParticipation),
-          ),
+          Promise.all(participantData.map(enrichParticipation)),
           Promise.all(hostedData.map(enrichHostedActivity)),
         ]);
 
