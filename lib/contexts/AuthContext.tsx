@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import Cookies from "js-cookie";
@@ -13,6 +14,7 @@ import {
   isRefreshSessionExpiredError,
   refreshAccessToken,
 } from "@/lib/api/axiosInstance";
+import { logout as requestLogout } from "@/lib/api/auth";
 import {
   AUTH_STATE_CHANGED_EVENT,
   clearAuthCookies,
@@ -27,20 +29,6 @@ import {
 
 const TOKEN_REFRESH_BUFFER_MS = 2 * 60 * 1000;
 const TOKEN_REFRESH_RETRY_MS = 30 * 1000;
-
-// 미활동 자동 로그아웃: 30분간 입력이 없으면 세션을 만료 처리한다.
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
-const IDLE_CHECK_INTERVAL_MS = 30 * 1000;
-const IDLE_STORAGE_THROTTLE_MS = 10 * 1000;
-const IDLE_ACTIVITY_KEY = "cnu_last_activity";
-const IDLE_EVENTS = [
-  "mousemove",
-  "mousedown",
-  "keydown",
-  "scroll",
-  "touchstart",
-  "click",
-] as const;
 
 interface DecodedToken {
   sub?: string;
@@ -59,7 +47,7 @@ interface AuthContextType {
   roles: string[];
   userId: string | null;
   isLoading: boolean;
-  login: (token: string, refreshToken?: string) => void;
+  login: (token: string) => void;
   logout: () => void;
   getAuthToken: () => string | undefined;
   hasRole: (requiredRole: UserRole) => boolean;
@@ -153,6 +141,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // 이번 로드에서 refresh가 이미 실패(복구 불가)로 판정됐는지 기록해, 비로그인/만료 사용자가
+  // focus·visibility마다 /auth/refresh를 반복 호출하지 않도록 한다. 로그인 시 초기화된다.
+  const sessionAbsentRef = useRef(false);
 
   const clearAuthState = useCallback(() => {
     setIsAuthenticated(false);
@@ -185,25 +176,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const syncAuthState = useCallback(async () => {
     let token = Cookies.get("token");
-    const tokenExpired = Boolean(token && isExpiredToken(token));
-    const hasRefreshToken = Boolean(Cookies.get("refreshToken"));
+    const tokenValid = Boolean(token && !isExpiredToken(token));
 
-    if ((!token || tokenExpired) && hasRefreshToken) {
-      try {
-        token = await refreshAccessToken();
-      } catch (error) {
-        if (isRefreshSessionExpiredError(error)) {
-          expireSession();
-        }
+    // Access Token이 없거나 만료됨 → refresh를 한 번 시도한다.
+    // Refresh Token은 HttpOnly 쿠키라 JS에서 존재 여부를 확인할 수 없으므로, 서버 응답으로만 판단한다.
+    if (!tokenValid) {
+      if (sessionAbsentRef.current) {
+        // 이미 이번 로드에서 복구 불가로 판정됨 → 불필요한 refresh 재시도를 막는다.
+        clearAuthState();
         setIsLoading(false);
         return;
       }
-    }
-
-    if (tokenExpired && !hasRefreshToken) {
-      expireSession();
-      setIsLoading(false);
-      return;
+      try {
+        token = await refreshAccessToken();
+        sessionAbsentRef.current = false;
+      } catch {
+        // 세션 만료·미로그인 모두 여기로 온다. 여기서 강제로 로그인 화면으로 보내지 않고
+        // 인증 상태만 초기화한다. 보호 경로 redirect는 middleware가, 활성 세션 만료 중
+        // API 401 redirect는 axios 인터셉터가 담당한다(공개 페이지의 비로그인 사용자 보호).
+        sessionAbsentRef.current = true;
+        clearAuthState();
+        setIsLoading(false);
+        return;
+      }
+    } else {
+      sessionAbsentRef.current = false;
     }
 
     if (!token) {
@@ -224,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [applyToken, clearAuthState, expireSession]);
+  }, [applyToken, clearAuthState]);
 
   // 최초 진입과 브라우저 캐시 복원, 다른 탭에서의 인증 변경을 함께 반영한다.
   useEffect(() => {
@@ -247,14 +244,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [syncAuthState]);
 
-  const login = (token: string, refreshToken?: string) => {
-    setAuthCookies(token, refreshToken);
+  const login = (token: string) => {
+    // refresh 토큰은 서버가 로그인 응답에서 HttpOnly 쿠키로 설정하므로 프론트에서 저장하지 않는다.
+    setAuthCookies(token);
+    sessionAbsentRef.current = false;
     applyToken(token);
   };
 
-  const logout = useCallback(() => {
-    if (typeof window !== "undefined") {
-      beginManualLogout();
+  const logout = useCallback(async () => {
+    if (typeof window === "undefined") return;
+    beginManualLogout();
+    try {
+      // 서버가 HttpOnly refresh 쿠키를 만료시켜 삭제한다.
+      await requestLogout();
+    } catch {
+      // 네트워크 문제 등으로 실패해도 클라이언트 상태는 반드시 정리한다.
+    } finally {
       clearAuthCookies({ notify: false });
       clearAuthState();
       window.location.replace("/");
@@ -291,70 +296,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.clearTimeout(timer);
     };
   }, [applyToken, expireSession, isAuthenticated, tokenExpiresAt]);
-
-  // 미활동 자동 로그아웃. 입력이 30분간 없으면 세션 만료 파이프라인을 태운다.
-  // 탭 간에는 마지막 활동 시각을 localStorage로 공유해, 한 탭에서만 활동해도
-  // 다른 탭이 혼자 로그아웃시키지 않도록 한다.
-  useEffect(() => {
-    if (!isAuthenticated || typeof window === "undefined") return;
-
-    const readSharedActivity = (): number => {
-      const raw = window.localStorage.getItem(IDLE_ACTIVITY_KEY);
-      const parsed = raw ? Number(raw) : 0;
-      return Number.isFinite(parsed) ? parsed : 0;
-    };
-    const writeSharedActivity = (timestamp: number) => {
-      try {
-        window.localStorage.setItem(IDLE_ACTIVITY_KEY, String(timestamp));
-      } catch {
-        /* 저장 실패는 무시 — 메모리 기준으로만 판단한다 */
-      }
-    };
-
-    // 진입(로그인 직후 포함)을 활동으로 본다.
-    let lastActivity = Date.now();
-    let lastWrite = lastActivity;
-    writeSharedActivity(lastActivity);
-
-    const markActivity = () => {
-      const now = Date.now();
-      lastActivity = now;
-      if (now - lastWrite >= IDLE_STORAGE_THROTTLE_MS) {
-        lastWrite = now;
-        writeSharedActivity(now);
-      }
-    };
-
-    let stopped = false;
-    const checkIdle = () => {
-      if (stopped || isManualLogoutInProgress()) return;
-      const effectiveLast = Math.max(lastActivity, readSharedActivity());
-      if (Date.now() - effectiveLast >= IDLE_TIMEOUT_MS) {
-        stopped = true;
-        window.clearInterval(interval);
-        expireSession();
-      }
-    };
-
-    const handleVisible = () => {
-      if (document.visibilityState === "visible") checkIdle();
-    };
-
-    IDLE_EVENTS.forEach((event) =>
-      window.addEventListener(event, markActivity, { passive: true }),
-    );
-    document.addEventListener("visibilitychange", handleVisible);
-    const interval = window.setInterval(checkIdle, IDLE_CHECK_INTERVAL_MS);
-
-    return () => {
-      stopped = true;
-      IDLE_EVENTS.forEach((event) =>
-        window.removeEventListener(event, markActivity),
-      );
-      document.removeEventListener("visibilitychange", handleVisible);
-      window.clearInterval(interval);
-    };
-  }, [isAuthenticated, expireSession]);
 
   const getAuthToken = (): string | undefined => {
     return Cookies.get("token");

@@ -16,6 +16,11 @@ export async function login(data: LoginRequest): Promise<LoginResponse> {
   return response.data;
 }
 
+// 서버가 HttpOnly refresh 쿠키를 만료시켜 삭제한다.
+export async function logout(): Promise<void> {
+  await axiosInstance.post("/auth/logout");
+}
+
 export async function getMe(): Promise<UserInfoResponseDto> {
   const response = await axiosInstance.get<UserInfoResponseDto>("/auth/me");
   return response.data;

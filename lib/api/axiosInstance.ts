@@ -33,6 +33,8 @@ export function isRefreshSessionExpiredError(error: unknown): boolean {
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
   timeout: 10000,
+  // HttpOnly refresh 쿠키가 요청에 자동으로 실리도록 한다.
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -60,6 +62,8 @@ axiosInstance.interceptors.request.use(
 const refreshClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
   timeout: 10000,
+  // refresh 토큰은 HttpOnly 쿠키로만 전달되므로 자격증명을 반드시 함께 보낸다.
+  withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -68,29 +72,22 @@ let refreshPromise: Promise<string> | null = null;
 export function refreshAccessToken(): Promise<string> {
   if (refreshPromise) return refreshPromise;
 
-  const refreshToken = Cookies.get("refreshToken");
-  if (!refreshToken) {
-    return Promise.reject(new RefreshSessionExpiredError());
-  }
-
+  // refresh 토큰은 JS로 읽지 않는다. 쿠키가 있으면 브라우저가 자동으로 실어 보내고,
+  // 없거나 만료됐으면 서버가 401을 반환한다.
   refreshPromise = refreshClient
-    .post("/auth/refresh", { refreshToken })
+    .post("/auth/refresh")
     .then((res) => {
-      if (
-        isManualLogoutInProgress() ||
-        Cookies.get("refreshToken") !== refreshToken
-      ) {
+      if (isManualLogoutInProgress()) {
         throw new axios.CanceledError("Authentication refresh was canceled");
       }
 
       const data = res.data || {};
       const newAccessToken = data.accessToken || data.token;
-      const newRefreshToken = data.refreshToken;
-      if (!newAccessToken || !newRefreshToken) {
+      if (!newAccessToken) {
         throw new RefreshSessionExpiredError("Invalid refresh response");
       }
 
-      setAuthCookies(newAccessToken, newRefreshToken);
+      setAuthCookies(newAccessToken);
       axiosInstance.defaults.headers.common.Authorization =
         `Bearer ${newAccessToken}`;
       return newAccessToken;
@@ -125,9 +122,7 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const hadSession = Boolean(
-      Cookies.get("token") || Cookies.get("refreshToken"),
-    );
+    const hadSession = Boolean(Cookies.get("token"));
     originalRequest._retry = true;
     try {
       const newAccessToken = await refreshAccessToken();

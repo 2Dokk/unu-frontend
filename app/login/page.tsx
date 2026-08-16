@@ -59,8 +59,7 @@ const LoginForm = () => {
       };
       const response = await loginApi(data);
 
-      // AuthContext를 통해 로그인 상태 업데이트
-      login(response.token, response.refreshToken);
+      login(response.token);
 
       // 로그인이 필요해서 여기로 밀려왔다면 원래 가려던 곳으로, 아니면 홈으로
       router.push(safeRedirect || "/home");
