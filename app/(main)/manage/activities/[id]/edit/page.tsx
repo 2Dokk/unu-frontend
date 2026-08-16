@@ -420,14 +420,8 @@ export default function ActivityEditPage() {
 
       await updateActivity(activityId, updateData);
 
-      const participantIdsToRemove = allowsInitialMembers
-        ? removedParticipantIds
-        : Array.from(
-            new Set([
-              ...removedParticipantIds,
-              ...existingParticipants.map((participant) => participant.id),
-            ]),
-          );
+      
+      const participantIdsToRemove = removedParticipantIds;
       const participantUserIdsToAdd = allowsInitialMembers
         ? newParticipantIds
         : [];

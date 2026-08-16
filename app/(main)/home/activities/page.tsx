@@ -21,7 +21,6 @@ import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-ba
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
 import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
 import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
-import { formatDate } from "@/lib/utils/date-utils";
 import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
 import { ActivityNoticeUnreadBadge } from "@/components/custom/activity/activity-notice-unread-badge";
 
@@ -159,8 +158,7 @@ export default function AllActivitiesPage() {
                             <ActivityStatusBadge status={activityDisplayStatus(activity)} />
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {formatDate(activity.startDate)} ~{" "}
-                            {formatDate(activity.endDate)}
+                            {activity.quarter?.name || "분기 정보 없음"}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
