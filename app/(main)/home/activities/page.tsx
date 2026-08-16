@@ -20,7 +20,6 @@ import {
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
 import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
-import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
 import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
 import { ActivityNoticeUnreadBadge } from "@/components/custom/activity/activity-notice-unread-badge";
 
@@ -229,20 +228,7 @@ export default function AllActivitiesPage() {
                                     ] ?? 0
                                   }
                                 />
-                                {participant.activity.status === "COMPLETED" &&
-                                !participant.completed ? (
-                                  <Badge
-                                    variant="outline"
-                                    className="border-amber-200 bg-amber-50 text-amber-700"
-                                  >
-                                    미수료
-                                  </Badge>
-                                ) : (
-                                  <ParticipantStatusBadge
-                                    status={participant.status}
-                                  />
-                                )}
-                                {participant.completed && (
+                                {participant.completed ? (
                                   <Badge
                                     variant="outline"
                                     className="border-green-200 bg-green-50 text-green-700"
@@ -250,6 +236,15 @@ export default function AllActivitiesPage() {
                                     <CheckCircle2 className="mr-1 h-3 w-3" />
                                     수료
                                   </Badge>
+                                ) : participant.activity.status === "COMPLETED" ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-amber-200 bg-amber-50 text-amber-700"
+                                  >
+                                    미수료
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline">진행 중</Badge>
                                 )}
                               </div>
                               <p className="mt-1 text-sm text-muted-foreground">
