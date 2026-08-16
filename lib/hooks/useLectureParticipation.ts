@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { getMyActivityParticipants } from "@/lib/api/activity-participant";
 import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
+import { getCurrentQuarter } from "@/lib/api/quarter";
 
 interface LectureParticipationState {
   /** 아직 서버 확인 중인지. true인 동안엔 접근/노출 여부를 판단하면 안 된다. */
@@ -37,11 +38,16 @@ export function useLectureParticipation(): LectureParticipationState {
 
     (async () => {
       try {
-        const myParticipations = await getMyActivityParticipants();
+        const [myParticipations, currentQuarter] = await Promise.all([
+          getMyActivityParticipants(),
+          getCurrentQuarter(),
+        ]);
+        
         const lectureParticipation = myParticipations.find(
           (p) =>
             p.status === "APPROVED" &&
-            p.activity?.activityType?.code === "LECTURE",
+            p.activity?.activityType?.code === "LECTURE" &&
+            p.activity?.quarter?.id === currentQuarter.id,
         );
         if (!cancelled) setParticipant(lectureParticipation ?? null);
       } catch {
