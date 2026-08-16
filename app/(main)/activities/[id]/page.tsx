@@ -314,6 +314,9 @@ export default function ActivityDetails() {
   const returnTarget = RETURN_TARGETS[from ?? ""] ?? DEFAULT_RETURN_TARGET;
   const returnPath = returnTarget.path;
   const returnLabel = returnTarget.label;
+  // "내 활동" 계열(홈/전체 활동/수료 활동)에서 진입했는지. 기존 returnToMyActivities 참조를 대체한다.
+  const isMyActivityContext =
+    from === "home" || from === "home-activities" || from === "home-completed";
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [myParticipant, setMyParticipant] =
     useState<ActivityParticipantResponse | null>(null);
@@ -370,7 +373,7 @@ export default function ActivityDetails() {
           activityData.status === "ONGOING" ||
           activityData.status === "COMPLETED";
         let membersData: ActivityParticipantSummary[] = [];
-        if (returnToMyActivities && recruitmentClosed) {
+        if (isMyActivityContext && recruitmentClosed) {
           try {
             membersData = await getActivityMemberSummaries(activityId);
           } catch (memberError) {
@@ -392,7 +395,7 @@ export default function ActivityDetails() {
     };
 
     fetchActivityDetails();
-  }, [activityId, returnToMyActivities]);
+  }, [activityId, isMyActivityContext]);
 
   // 공지는 참여 확정자·운영진·담당자만 볼 수 있어서, 권한이 확인된 뒤에 따로 불러온다.
   const canViewNotices =
@@ -400,8 +403,8 @@ export default function ActivityDetails() {
     (hasRole("MANAGER") ||
       activity.assignee?.id === userId ||
       myParticipant?.status === "APPROVED");
-  const showNotices = returnToMyActivities && canViewNotices;
-  const showActivityContent = returnToMyActivities && canViewNotices;
+  const showNotices = isMyActivityContext && canViewNotices;
+  const showActivityContent = isMyActivityContext && canViewNotices;
 
   useEffect(() => {
     getLectureMaterialsByActivity(activityId)
@@ -1222,7 +1225,7 @@ export default function ActivityDetails() {
         </div>
       </div>
 
-      {returnToMyActivities &&
+      {isMyActivityContext &&
         (activity.status === "ONGOING" || activity.status === "COMPLETED") && (
         <Card>
           <CardHeader>
