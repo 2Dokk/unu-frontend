@@ -10,25 +10,14 @@ import React, {
 } from "react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
-import {
-  isRefreshSessionExpiredError,
-  refreshAccessToken,
-} from "@/lib/api/axiosInstance";
+import { refreshAccessToken } from "@/lib/api/axiosInstance";
 import { logout as requestLogout } from "@/lib/api/auth";
 import {
   AUTH_STATE_CHANGED_EVENT,
   clearAuthCookies,
   setAuthCookies,
 } from "@/lib/utils/auth-cookies";
-import {
-  beginManualLogout,
-  isManualLogoutInProgress,
-  markSessionExpired,
-  sessionExpiredLoginUrl,
-} from "@/lib/utils/auth-session";
-
-const TOKEN_REFRESH_BUFFER_MS = 2 * 60 * 1000;
-const TOKEN_REFRESH_RETRY_MS = 30 * 1000;
+import { beginManualLogout } from "@/lib/utils/auth-session";
 
 interface DecodedToken {
   sub?: string;
@@ -139,7 +128,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole>("GUEST");
   const [roles, setRoles] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
-  const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // 이번 로드에서 refresh가 이미 실패(복구 불가)로 판정됐는지 기록해, 비로그인/만료 사용자가
   // focus·visibility마다 /auth/refresh를 반복 호출하지 않도록 한다. 로그인 시 초기화된다.
@@ -150,16 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserRole("GUEST");
     setRoles([]);
     setUserId(null);
-    setTokenExpiresAt(null);
   }, []);
-
-  const expireSession = useCallback(() => {
-    if (isManualLogoutInProgress()) return;
-    markSessionExpired();
-    clearAuthCookies();
-    clearAuthState();
-    window.location.replace(sessionExpiredLoginUrl());
-  }, [clearAuthState]);
 
   const applyToken = useCallback((token: string) => {
     const role = extractRoleFromToken(token);
@@ -170,7 +149,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserRole(role);
     setRoles(extractRolesFromToken(token));
     setUserId(decoded.sub ?? null);
-    setTokenExpiresAt(decoded.exp ? decoded.exp * 1000 : null);
     return true;
   }, []);
 
@@ -265,37 +243,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.location.replace("/");
     }
   }, [clearAuthState]);
-
-  useEffect(() => {
-    if (!isAuthenticated || tokenExpiresAt === null) return;
-
-    let timer: number;
-    let disposed = false;
-
-    const renewSession = async () => {
-      try {
-        const token = await refreshAccessToken();
-        if (!disposed) applyToken(token);
-      } catch (error) {
-        if (disposed || isManualLogoutInProgress()) return;
-        if (isRefreshSessionExpiredError(error)) {
-          expireSession();
-          return;
-        }
-        timer = window.setTimeout(renewSession, TOKEN_REFRESH_RETRY_MS);
-      }
-    };
-
-    timer = window.setTimeout(
-      renewSession,
-      Math.max(0, tokenExpiresAt - Date.now() - TOKEN_REFRESH_BUFFER_MS),
-    );
-
-    return () => {
-      disposed = true;
-      window.clearTimeout(timer);
-    };
-  }, [applyToken, expireSession, isAuthenticated, tokenExpiresAt]);
 
   const getAuthToken = (): string | undefined => {
     return Cookies.get("token");
