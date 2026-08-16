@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, ClipboardList, FileSearch } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  ClipboardList,
+  FileSearch,
+  FileText,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,17 +20,33 @@ import { ApplicationResponse } from "@/lib/interfaces/application";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
 
-type RecruitmentStatus = "모집중" | "모집 예정" | "모집 마감";
+type RecruitmentStatus = "신청 가능" | "예정" | "마감";
+
+// 상태별 soft pill 스타일. "신청 가능"은 초록으로 강조하고, 앞의 점으로 상태 표시등 느낌을 준다.
+const STATUS_STYLES: Record<RecruitmentStatus, { badge: string; dot: string }> = {
+  "신청 가능": {
+    badge: "border-green-200 bg-green-50 text-green-700 hover:bg-green-50",
+    dot: "bg-green-500",
+  },
+  예정: {
+    badge: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50",
+    dot: "bg-amber-500",
+  },
+  마감: {
+    badge: "border-border bg-muted text-muted-foreground hover:bg-muted",
+    dot: "bg-muted-foreground/50",
+  },
+};
 
 function getStatus(recruitment: RecruitmentResponse): RecruitmentStatus {
   const now = Date.now();
   if (!recruitment.active || now > new Date(recruitment.endAt).getTime()) {
-    return "모집 마감";
+    return "마감";
   }
   if (now < new Date(recruitment.startAt).getTime()) {
-    return "모집 예정";
+    return "예정";
   }
-  return "모집중";
+  return "신청 가능";
 }
 
 function formatDateTime(value: string) {
@@ -138,8 +160,12 @@ export default function OperationRecruitmentsPage() {
                         </Badge>
                       )}
                       <Badge
-                        variant={status === "모집중" ? "default" : "secondary"}
+                        variant="outline"
+                        className={STATUS_STYLES[status].badge}
                       >
+                        <span
+                          className={`size-1.5 rounded-full ${STATUS_STYLES[status].dot}`}
+                        />
                         {status}
                       </Badge>
                     </div>
@@ -160,15 +186,41 @@ export default function OperationRecruitmentsPage() {
                       </span>
                     </div>
                   </div>
-                  {/* 목록에서는 바로 폼으로 가지 않고 항상 모집 상세로 이동해 내용을 먼저 확인시킨다. */}
-                  <Button
-                    className="shrink-0"
-                    onClick={() =>
-                      router.push(`/operation-recruitments/${recruitment.id}`)
-                    }
-                  >
-                    {submittedApplication ? "내 신청 보기" : "신청하기"}
-                  </Button>
+                  {/* 목록에서는 바로 폼으로 가지 않고 항상 모집 상세로 이동해 내용을 먼저 확인시킨다.
+                      신청 가능일 때만 "신청하기"(강조), 예정·마감은 "상세 내용 확인하기"로 안내한다. */}
+                  {submittedApplication ? (
+                    <Button
+                      variant="outline"
+                      className="group shrink-0 rounded-full"
+                      onClick={() =>
+                        router.push(`/operation-recruitments/${recruitment.id}`)
+                      }
+                    >
+                      <FileText />
+                      내 신청 보기
+                    </Button>
+                  ) : status === "신청 가능" ? (
+                    <Button
+                      className="group shrink-0 rounded-full shadow-sm"
+                      onClick={() =>
+                        router.push(`/operation-recruitments/${recruitment.id}`)
+                      }
+                    >
+                      신청하기
+                      <ArrowRight className="transition-transform duration-200 group-hover:translate-x-0.5" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="group shrink-0 rounded-full"
+                      onClick={() =>
+                        router.push(`/operation-recruitments/${recruitment.id}`)
+                      }
+                    >
+                      상세 내용 확인하기
+                      <ArrowRight className="transition-transform duration-200 group-hover:translate-x-0.5" />
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             );
