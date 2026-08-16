@@ -108,6 +108,14 @@ import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
 // TYPES & HELPERS
 // ========================
 
+// 상세 진입 출처(from) → 돌아가기 목적지/라벨. 정의되지 않은 출처는 학회 활동 목록으로.
+const RETURN_TARGETS: Record<string, { path: string; label: string }> = {
+  home: { path: "/home", label: "내 활동으로" },
+  "home-activities": { path: "/home/activities", label: "전체 활동으로" },
+  "home-completed": { path: "/home/completed", label: "수료 활동으로" },
+};
+const DEFAULT_RETURN_TARGET = { path: "/activities", label: "학회 활동으로" };
+
 interface ActivityStatusMeta {
   label: string;
 }
@@ -301,9 +309,11 @@ export default function ActivityDetails() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activityId = params.id as string;
-  const returnToMyActivities = searchParams.get("from") === "home";
-  const returnPath = returnToMyActivities ? "/home" : "/activities";
-  const returnLabel = returnToMyActivities ? "내 활동으로" : "학회 활동으로";
+  // 상세로 진입한 출처(from)에 따라 돌아갈 목적지를 결정한다.
+  const from = searchParams.get("from");
+  const returnTarget = RETURN_TARGETS[from ?? ""] ?? DEFAULT_RETURN_TARGET;
+  const returnPath = returnTarget.path;
+  const returnLabel = returnTarget.label;
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [myParticipant, setMyParticipant] =
     useState<ActivityParticipantResponse | null>(null);

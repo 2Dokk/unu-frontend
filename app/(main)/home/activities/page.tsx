@@ -138,13 +138,13 @@ export default function AllActivitiesPage() {
                         tabIndex={0}
                         className="flex cursor-pointer items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/50"
                         onClick={() =>
-                          router.push(`/manage/activities/${activity.id}?from=home`)
+                          router.push(`/manage/activities/${activity.id}?from=home-activities`)
                         }
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
                             router.push(
-                              `/manage/activities/${activity.id}?from=home`,
+                              `/manage/activities/${activity.id}?from=home-activities`,
                             );
                           }
                         }}
@@ -207,14 +207,14 @@ export default function AllActivitiesPage() {
                             className="flex cursor-pointer items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/50"
                             onClick={() =>
                               router.push(
-                                `/activities/${participant.activity.id}?from=home`,
+                                `/activities/${participant.activity.id}?from=home-activities`,
                               )
                             }
                             onKeyDown={(event) => {
                               if (event.key === "Enter" || event.key === " ") {
                                 event.preventDefault();
                                 router.push(
-                                  `/activities/${participant.activity.id}?from=home`,
+                                  `/activities/${participant.activity.id}?from=home-activities`,
                                 );
                               }
                             }}

@@ -89,14 +89,14 @@ export default function CompletedActivitiesPage() {
                       className="flex cursor-pointer items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/50"
                       onClick={() =>
                         router.push(
-                          `/activities/${participant.activity.id}?from=home`,
+                          `/activities/${participant.activity.id}?from=home-completed`,
                         )
                       }
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
                           router.push(
-                            `/activities/${participant.activity.id}?from=home`,
+                            `/activities/${participant.activity.id}?from=home-completed`,
                           );
                         }
                       }}

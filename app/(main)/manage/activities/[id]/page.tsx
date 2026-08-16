@@ -309,7 +309,14 @@ export default function ActivityDetailManagePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activityId = params.id as string;
-  const returnToMyActivities = searchParams.get("from") === "home";
+  const from = searchParams.get("from");
+  const returnToMyActivities = from === "home";
+  const backLabel =
+    from === "home-activities"
+      ? "전체 활동으로"
+      : returnToMyActivities
+        ? "내 활동으로"
+        : "목록으로";
   const { userId, roles, isLoading: authLoading } = useAuth();
   const canAdministerActivity = roles.some(
     (role) => role === "ADMIN" || role === "MANAGER",
@@ -752,6 +759,10 @@ export default function ActivityDetailManagePage() {
   }
 
   function handleBackToList() {
+    if (from === "home-activities") {
+      router.push("/home/activities");
+      return;
+    }
     if (returnToMyActivities) {
       router.push("/home");
       return;
@@ -1522,7 +1533,7 @@ export default function ActivityDetailManagePage() {
         <p className="text-muted-foreground">활동을 찾을 수 없습니다</p>
         <Button onClick={handleBackToList} variant="outline">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          {returnToMyActivities ? "내 활동으로" : "목록으로"}
+          {backLabel}
         </Button>
       </div>
     );
@@ -1539,7 +1550,7 @@ export default function ActivityDetailManagePage() {
           className="mb-2"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          {returnToMyActivities ? "내 활동으로" : "목록으로"}
+          {backLabel}
         </Button>
 
         <h1 className="text-xl font-bold tracking-tight">{activity.title}</h1>
