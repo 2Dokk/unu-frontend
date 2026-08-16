@@ -98,7 +98,7 @@ export default function MyOperationApplicationsPage() {
               key={application.id}
               className="cursor-pointer transition-colors hover:bg-muted/30"
               onClick={() =>
-                router.push(`/operation-recruitments/my/${application.id}`)
+                router.push(`/operation-recruitments/my/${application.id}?from=my`)
               }
             >
               <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">

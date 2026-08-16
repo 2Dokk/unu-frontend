@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
 import {
   AlertDialog,
@@ -65,6 +65,18 @@ function displayAnswer(value: string | string[] | undefined) {
 export default function MyOperationApplicationDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from");
+  const fromRecruitmentId = searchParams.get("recruitmentId");
+  let backPath = "/operation-recruitments/my";
+  let backLabel = "내 신청 내역";
+  if (from === "recruitment-detail" && fromRecruitmentId) {
+    backPath = `/operation-recruitments/${fromRecruitmentId}`;
+    backLabel = "모집 안내";
+  } else if (from === "recruitments") {
+    backPath = "/operation-recruitments";
+    backLabel = "학회 내부 신청/모집";
+  }
   const [application, setApplication] = useState<ApplicationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
@@ -291,10 +303,10 @@ export default function MyOperationApplicationDetailPage() {
         variant="ghost"
         size="sm"
         className="-ml-3"
-        onClick={() => router.push("/operation-recruitments/my")}
+        onClick={() => router.push(backPath)}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        내 신청 내역
+        {backLabel}
       </Button>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

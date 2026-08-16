@@ -160,22 +160,14 @@ export default function OperationRecruitmentsPage() {
                       </span>
                     </div>
                   </div>
+                  {/* 목록에서는 바로 폼으로 가지 않고 항상 모집 상세로 이동해 내용을 먼저 확인시킨다. */}
                   <Button
                     className="shrink-0"
-                    disabled={!submittedApplication && status !== "모집중"}
                     onClick={() =>
-                      router.push(
-                        submittedApplication
-                          ? `/operation-recruitments/my/${submittedApplication.id}`
-                          : `/apply/form?operationRecruitmentId=${encodeURIComponent(recruitment.id)}`,
-                      )
+                      router.push(`/operation-recruitments/${recruitment.id}`)
                     }
                   >
-                    {submittedApplication
-                      ? "내 신청서 보기"
-                      : status === "모집중"
-                        ? "신청서 작성"
-                        : status}
+                    {submittedApplication ? "내 신청 보기" : "신청하기"}
                   </Button>
                 </CardContent>
               </Card>

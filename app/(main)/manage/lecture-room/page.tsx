@@ -102,6 +102,9 @@ export default function LectureRoomSchedulePage() {
 
   // Data
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
+  const [currentQuarter, setCurrentQuarter] = useState<QuarterResponse | null>(
+    null,
+  );
   const [selectedQuarterId, setSelectedQuarterId] = useState<string>("");
   const [schedules, setSchedules] = useState<LectureRoomScheduleResponseDto[]>(
     [],
@@ -166,14 +169,31 @@ export default function LectureRoomSchedulePage() {
   // ─── Load quarters ──────────────────────────────────────────────────────────
 
   useEffect(() => {
-    Promise.all([getAllQuarters(), getCurrentQuarter().catch(() => null)]).then(
-      ([data, current]) => {
+    if (canManageAll) {
+      // ADMIN/MANAGER: 기존과 동일하게 전체 분기 로드 + 현재 분기를 기본 선택.
+      Promise.all([
+        getAllQuarters(),
+        getCurrentQuarter().catch(() => null),
+      ]).then(([data, current]) => {
         setQuarters(data);
+        setCurrentQuarter(current);
         const defaultId = current?.id ?? data[0]?.id;
         if (defaultId) setSelectedQuarterId(defaultId);
-      },
-    );
-  }, []);
+      });
+    } else {
+      // LECTURE_ROOM_MANAGER: 전체 분기 목록을 로드하지 않고 현재 분기만 조회·고정한다.
+      // 현재 분기를 확인할 수 없으면 다른 분기로 fallback하지 않고 비운다(시간표도 로드되지 않음).
+      getCurrentQuarter()
+        .then((current) => {
+          setCurrentQuarter(current);
+          setSelectedQuarterId(current.id);
+        })
+        .catch(() => {
+          setCurrentQuarter(null);
+          setSelectedQuarterId("");
+        });
+    }
+  }, [canManageAll]);
 
   // ─── Load schedules ─────────────────────────────────────────────────────────
 
@@ -307,18 +327,25 @@ export default function LectureRoomSchedulePage() {
           <h1 className="text-2xl font-bold tracking-tight">관리자 시간표</h1>
           <p className="text-sm text-muted-foreground">관리자용 시간표입니다</p>
         </div>
-        <Select value={selectedQuarterId} onValueChange={setSelectedQuarterId}>
-          <SelectTrigger className="w-auto h-7 border-0 shadow-none bg-transparent px-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-md gap-1 [&>svg]:opacity-50">
-            <SelectValue placeholder="분기 선택" />
-          </SelectTrigger>
-          <SelectContent>
-            {quarters.map((quarter) => (
-              <SelectItem key={quarter.id} value={quarter.id}>
-                {quarter.year} {quarter.season}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {canManageAll ? (
+          <Select value={selectedQuarterId} onValueChange={setSelectedQuarterId}>
+            <SelectTrigger className="w-auto h-7 border-0 shadow-none bg-transparent px-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-md gap-1 [&>svg]:opacity-50">
+              <SelectValue placeholder="분기 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {quarters.map((quarter) => (
+                <SelectItem key={quarter.id} value={quarter.id}>
+                  {quarter.year} {quarter.season}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          // LECTURE_ROOM_MANAGER: 현재 분기를 dropdown이 아닌 단순 텍스트로만 표시.
+          <span className="flex h-7 items-center px-2 text-sm font-medium text-muted-foreground">
+            {currentQuarter ? `${currentQuarter.year} ${currentQuarter.season}` : ""}
+          </span>
+        )}
       </div>
 
       {/* Filter chips */}
