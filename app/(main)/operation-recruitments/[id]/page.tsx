@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getOperationRecruitmentById } from "@/lib/api/recruitment";
 import { getMyOperationApplications } from "@/lib/api/application";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 
@@ -63,6 +64,7 @@ export default function OperationRecruitmentDetailPage() {
   const params = useParams<{ id: string }>();
   const recruitmentId = params.id;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { markItemViewed } = useMenuNotification();
   const [recruitment, setRecruitment] = useState<RecruitmentResponse | null>(
     null,
   );
@@ -105,6 +107,15 @@ export default function OperationRecruitmentDetailPage() {
     }
     void loadDetail();
   }, [authLoading, isAuthenticated, loadDetail, recruitmentId, router]);
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+    void markItemViewed("operation-recruitments", recruitmentId).catch(
+      (error) => {
+        console.error("Failed to mark recruitment card read:", error);
+      },
+    );
+  }, [authLoading, isAuthenticated, recruitmentId, markItemViewed]);
 
   if (authLoading || !isAuthenticated) return null;
 
