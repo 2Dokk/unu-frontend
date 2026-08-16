@@ -166,7 +166,7 @@ export default function HomePage() {
               <Card className="h-full cursor-pointer gap-0 py-4 transition-shadow hover:shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between px-4">
                   <CardTitle className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
-                    전체 참여 활동
+                    전체 활동
                     <ArrowRight className="h-3 w-3" />
                   </CardTitle>
                   <Calendar className="h-4 w-4 text-muted-foreground" />

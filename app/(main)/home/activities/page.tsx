@@ -46,8 +46,15 @@ export default function AllActivitiesPage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
+  // 통계용 원본 participations는 그대로 두고, 표시용 목록에서만 개설 활동과 겹치는 항목을 제거한다.
+  // (개설자 + participant인 활동은 "내가 개설한 활동"에만 나타나도록.)
+  const hostedActivityIds = new Set(
+    hostedActivities.map(({ activity }) => activity.id),
+  );
+
   const joined = participations
     .filter((p) => p.participant.status === "APPROVED")
+    .filter((p) => !hostedActivityIds.has(p.participant.activity.id))
     .sort((a, b) =>
       (b.participant.activity?.startDate ?? "").localeCompare(
         a.participant.activity?.startDate ?? "",
@@ -83,7 +90,7 @@ export default function AllActivitiesPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           내 활동으로
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">전체 참여 활동</h1>
+        <h1 className="text-2xl font-bold tracking-tight">전체 활동</h1>
         <p className="text-sm text-muted-foreground">
           직접 개설한 활동과 신청·참여한 활동 {visibleCount}개
         </p>
