@@ -236,13 +236,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 서버가 HttpOnly refresh 쿠키를 만료시켜 삭제한다.
       await requestLogout();
     } catch {
-      // 네트워크 문제 등으로 실패해도 클라이언트 상태는 반드시 정리한다.
+      // 네트워크 문제 등으로 실패해도 클라이언트 로그아웃은 계속 진행한다.
     } finally {
+      // React auth state는 clear하지 않는다. clearAuthState()로 현재 보호 페이지에
+      // 중간 GUEST 상태를 노출하면, replace("/") 완료 전에 페이지 인증 effect가
+      // /login으로 보내는 경쟁 상태가 생긴다. 어차피 아래 full navigation으로
+      // AuthProvider가 새로 초기화되며 토큰이 없어 자연스럽게 GUEST가 된다.
       clearAuthCookies({ notify: false });
-      clearAuthState();
       window.location.replace("/");
     }
-  }, [clearAuthState]);
+  }, []);
 
   const getAuthToken = (): string | undefined => {
     return Cookies.get("token");

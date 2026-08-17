@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -95,6 +95,7 @@ import {
 import {
   getAttendancesBySessionId,
   getAttendanceStatsByParticipantId,
+  getSessionAttendanceSummaryByActivity,
   bulkUpdateAttendances,
 } from "@/lib/api/attendance";
 import { ActivityResponse } from "@/lib/interfaces/activity";
@@ -365,6 +366,17 @@ export default function ActivityDetailManagePage() {
     >
   >(new Map());
   const [statsLoading, setStatsLoading] = useState(false);
+  // 각 데이터는 페이지 생명주기 동안 최초 1회만 로드하고, 탭 왕복 시 재요청하지 않는다.
+  // 데이터 변경(회차 mutation 등) 시에만 명시적으로 무효화/강제 재조회한다.
+  // in-flight ref는 동일 요청이 두 번 시작되지 않도록 막는다(중복 요청 방지).
+  const sessionsLoadedRef = useRef(false);
+  const summaryLoadedRef = useRef(false);
+  const statsLoadedRef = useRef(false);
+  const sessionsInflightRef = useRef<Promise<
+    ActivitySessionResponseDto[] | null
+  > | null>(null);
+  const summaryInflightRef = useRef<Promise<void> | null>(null);
+  const statsInflightRef = useRef<Promise<void> | null>(null);
   const [showSessionDialog, setShowSessionDialog] = useState(false);
   const [showBulkSessionDialog, setShowBulkSessionDialog] = useState(false);
   const [bulkSessionCreating, setBulkSessionCreating] = useState(false);
@@ -578,87 +590,121 @@ export default function ActivityDetailManagePage() {
     }
   }
 
-  async function refreshScheduleAndAttendance(showLoading = true) {
-    if (showLoading) setSessionsLoading(true);
-    try {
-      const sessionsData = await getActivitySessionsByActivityId(activityId);
-      const sortedSessions = [...sessionsData].sort(
-        (a, b) => a.sessionNumber - b.sessionNumber,
-      );
-      setSessions(sortedSessions);
-      setSelectedSessionIds((selected) => {
-        const validIds = new Set(sortedSessions.map((session) => session.id));
-        return new Set([...selected].filter((id) => validIds.has(id)));
-      });
-      await Promise.all([
-        loadAttendanceStats(),
-        loadSessionAttendanceStatus(sortedSessions),
-      ]);
-      return sortedSessions;
-    } catch (error: any) {
-      console.error("Failed to load sessions:", error);
-      toast.error("일정과 출석 현황을 불러오지 못했습니다.");
-      return null;
-    } finally {
-      if (showLoading) setSessionsLoading(false);
-    }
-  }
+  // 회차 목록만 로드. 최초 1회 캐시하고, 회차 mutation 시에만 force로 재조회한다.
+  async function loadSessions(
+    force = false,
+  ): Promise<ActivitySessionResponseDto[] | null> {
+    if (!force && sessionsLoadedRef.current) return sessions;
+    if (!force && sessionsInflightRef.current) return sessionsInflightRef.current;
 
-  // Load attendance status for each session
-  async function loadSessionAttendanceStatus(
-    sessionsData: ActivitySessionResponseDto[],
-  ) {
-    const statusMap = new Map<
-      string,
-      { present: number; absent: number; excused: number; total: number }
-    >();
-
-    try {
-      const attendancePromises = sessionsData.map((session) =>
-        getAttendancesBySessionId(session.id).catch(() => []),
-      );
-
-      const attendanceResults = await Promise.all(attendancePromises);
-
-      sessionsData.forEach((session, index) => {
-        const attendances = attendanceResults[index];
-        const present = attendances.filter(
-          (a) => a.status === "PRESENT",
-        ).length;
-        const absent = attendances.filter(
-          (a) => a.status === "ABSENT" || a.status === "LATE",
-        ).length;
-        const excused = attendances.filter(
-          (a) => a.status === "EXCUSED",
-        ).length;
-
-        statusMap.set(session.id, {
-          present,
-          absent,
-          excused,
-          total: attendances.length,
+    const request = (async () => {
+      setSessionsLoading(true);
+      try {
+        const sessionsData = await getActivitySessionsByActivityId(activityId);
+        const sortedSessions = [...sessionsData].sort(
+          (a, b) => a.sessionNumber - b.sessionNumber,
+        );
+        setSessions(sortedSessions);
+        setSelectedSessionIds((selected) => {
+          const validIds = new Set(sortedSessions.map((session) => session.id));
+          return new Set([...selected].filter((id) => validIds.has(id)));
         });
-      });
+        sessionsLoadedRef.current = true;
+        return sortedSessions;
+      } catch (error: any) {
+        console.error("Failed to load sessions:", error);
+        toast.error("일정을 불러오지 못했습니다.");
+        return null;
+      } finally {
+        setSessionsLoading(false);
+      }
+    })();
 
-      setSessionAttendanceStatus(statusMap);
-    } catch (error: any) {
-      console.error("Failed to load session attendance status:", error);
+    sessionsInflightRef.current = request;
+    try {
+      return await request;
+    } finally {
+      sessionsInflightRef.current = null;
     }
   }
 
-  // Load attendance statistics for all approved participants
-  async function loadAttendanceStats() {
-    const approvedParticipants = participants.filter(
-      (p) => p.status === "APPROVED",
-    );
+  // 세션별 출석 요약을 활동 단위 batch API로 한 번에 로드(일정 관리 탭의 "출석 현황" 컬럼용).
+  async function loadSessionSummary(force = false): Promise<void> {
+    if (!force && summaryLoadedRef.current) return;
+    if (!force && summaryInflightRef.current) return summaryInflightRef.current;
 
-    if (approvedParticipants.length === 0) {
-      setAttendanceStats(new Map());
-      return;
-    }
+    const request = (async () => {
+      try {
+        const summaries =
+          await getSessionAttendanceSummaryByActivity(activityId);
+        const statusMap = new Map<
+          string,
+          { present: number; absent: number; excused: number; total: number }
+        >();
+        summaries.forEach((s) => {
+          statusMap.set(s.sessionId, {
+            present: s.present,
+            absent: s.absent,
+            excused: s.excused,
+            total: s.total,
+          });
+        });
+        setSessionAttendanceStatus(statusMap);
+        summaryLoadedRef.current = true;
+      } catch (error: any) {
+        console.error("Failed to load session attendance summary:", error);
+      }
+    })();
 
-    setStatsLoading(true);
+    summaryInflightRef.current = request;
     try {
+      await request;
+    } finally {
+      summaryInflightRef.current = null;
+    }
+  }
+
+  // 일정 관리 탭 진입 시 필요한 데이터(회차 목록 + 세션별 출석 요약)만 로드한다.
+  async function loadScheduleData(): Promise<
+    ActivitySessionResponseDto[] | null
+  > {
+    const [loadedSessions] = await Promise.all([
+      loadSessions(),
+      loadSessionSummary(),
+    ]);
+    return loadedSessions;
+  }
+
+  // 회차 mutation(생성/삭제 등) 후: 회차 + 요약을 강제 재조회하고, 참여자 통계는 다음 진입 시 새로고침하도록 무효화만 한다.
+  async function refreshScheduleData(): Promise<
+    ActivitySessionResponseDto[] | null
+  > {
+    statsLoadedRef.current = false; // 회차 변경으로 참여자 누적 통계가 바뀔 수 있어 무효화
+    const [loadedSessions] = await Promise.all([
+      loadSessions(true),
+      loadSessionSummary(true),
+    ]);
+    return loadedSessions;
+  }
+
+  // Load attendance statistics for all approved participants (출석 관리 탭 전용, 최초 1회)
+  async function loadAttendanceStats(force = false): Promise<void> {
+    if (!force && statsLoadedRef.current) return;
+    if (!force && statsInflightRef.current) return statsInflightRef.current;
+
+    const request = (async () => {
+      const approvedParticipants = participants.filter(
+        (p) => p.status === "APPROVED",
+      );
+      statsLoadedRef.current = true;
+
+      if (approvedParticipants.length === 0) {
+        setAttendanceStats(new Map());
+        return;
+      }
+
+      setStatsLoading(true);
+      try {
       const statsPromises = approvedParticipants.map((p) =>
         getAttendanceStatsByParticipantId(p.id).catch(() => ({
           presentCount: 0,
@@ -678,11 +724,24 @@ export default function ActivityDetailManagePage() {
       });
 
       setAttendanceStats(statsMap);
-    } catch (error: any) {
-      console.error("Failed to load attendance stats:", error);
+      } catch (error: any) {
+        console.error("Failed to load attendance stats:", error);
+      } finally {
+        setStatsLoading(false);
+      }
+    })();
+
+    statsInflightRef.current = request;
+    try {
+      await request;
     } finally {
-      setStatsLoading(false);
+      statsInflightRef.current = null;
     }
+  }
+
+  // 출석 관리 탭 진입 시 필요한 데이터(회차 목록 + 참여자별 누적 통계)를 로드한다.
+  async function loadAttendanceData(): Promise<void> {
+    await Promise.all([loadSessions(), loadAttendanceStats()]);
   }
 
   // Apply filters whenever filter states or participants change
@@ -710,17 +769,13 @@ export default function ActivityDetailManagePage() {
     setFilteredParticipants(filtered);
   }, [participants, statusFilter, searchQuery]);
 
-  // Auto-load sessions once main data is ready
-  useEffect(() => {
-    if (!loading) {
-      refreshScheduleAndAttendance();
-    }
-  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
-
+  // 일정/출석 데이터는 최초 진입 시 미리 불러오지 않는다. 해당 탭에 실제 진입할 때만 lazy 로드한다.
   function handleTabChange(value: string) {
     setActiveTab(value);
-    if (value === "schedule" || value === "attendance") {
-      void refreshScheduleAndAttendance(false);
+    if (value === "schedule") {
+      void loadScheduleData();
+    } else if (value === "attendance") {
+      void loadAttendanceData();
     }
   }
 
@@ -1038,7 +1093,7 @@ export default function ActivityDetailManagePage() {
         ...bulkSessionForm,
         excludedDates: [],
       });
-      const refreshedSessions = await refreshScheduleAndAttendance(false);
+      const refreshedSessions = await refreshScheduleData();
       if (refreshedSessions) {
         setSessionPage(
           Math.max(1, Math.ceil(refreshedSessions.length / SESSIONS_PER_PAGE)),
@@ -1068,7 +1123,7 @@ export default function ActivityDetailManagePage() {
         description: sessionForm.description,
       });
 
-      const refreshedSessions = await refreshScheduleAndAttendance(false);
+      const refreshedSessions = await refreshScheduleData();
       if (refreshedSessions) {
         setSessionPage(
           Math.max(1, Math.ceil(refreshedSessions.length / SESSIONS_PER_PAGE)),
@@ -1125,7 +1180,7 @@ export default function ActivityDetailManagePage() {
     if (!deleteSessionId) return;
     try {
       await deleteActivitySession(deleteSessionId);
-      await refreshScheduleAndAttendance(false);
+      await refreshScheduleData();
       toast.success("회차가 삭제되었습니다.");
     } catch (error: any) {
       console.error("Failed to delete session:", error);
@@ -1146,7 +1201,7 @@ export default function ActivityDetailManagePage() {
     const failureCount = results.filter((r) => r.status === "rejected").length;
 
     setSelectedSessionIds(new Set());
-    await refreshScheduleAndAttendance(false);
+    await refreshScheduleData();
     setShowBulkSessionDeleteDialog(false);
     setBulkSessionDeleting(false);
 
@@ -1347,8 +1402,9 @@ export default function ActivityDetailManagePage() {
       setSessionDialogStep(1);
       toast.success("출석이 저장되었습니다.");
 
-      // Reload attendance stats after saving
-      await refreshScheduleAndAttendance(false);
+      // 저장한 세션의 출석 요약은 위에서 로컬로 갱신했으므로 재조회하지 않는다.
+      // 참여자 누적 통계만 무효화해 다음 출석 관리 탭 진입 시 새로 불러오게 한다.
+      statsLoadedRef.current = false;
     } catch (error: any) {
       console.error("Failed to save attendance:", error);
       toast.error(error.response?.data || "출석 저장에 실패했습니다.");
@@ -1358,7 +1414,7 @@ export default function ActivityDetailManagePage() {
   function handleSkipAttendanceInput() {
     setShowSessionDialog(false);
     setSessionDialogStep(1);
-    void refreshScheduleAndAttendance(false);
+    void refreshScheduleData();
     toast.success("진행 일정이 등록되었습니다.");
   }
 
