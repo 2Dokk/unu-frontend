@@ -42,12 +42,29 @@ function NewsSectionSkeleton() {
   );
 }
 
+const SERVICE_TIME_ZONE = "Asia/Seoul";
+
+function parseSeoulLocalDateTime(value: string): Date {
+  const hasOffset = /(?:Z|[+-]\d{2}:?\d{2})$/.test(value);
+  return new Date(hasOffset ? value : `${value}+09:00`);
+}
+function seoulCalendarDayUtcMs(instant: Date): number {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: SERVICE_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(instant);
+  const year = Number(parts.find((p) => p.type === "year")?.value);
+  const month = Number(parts.find((p) => p.type === "month")?.value);
+  const day = Number(parts.find((p) => p.type === "day")?.value);
+  return Date.UTC(year, month - 1, day);
+}
+
 function calculateDDay(endDate: string): number {
-  const end = new Date(endDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-  return Math.ceil((end.getTime() - today.getTime()) / 86_400_000);
+  const endMs = seoulCalendarDayUtcMs(parseSeoulLocalDateTime(endDate));
+  const todayMs = seoulCalendarDayUtcMs(new Date());
+  return Math.round((endMs - todayMs) / 86_400_000);
 }
 
 function formatDDayLabel(dDay: number): string {
@@ -59,12 +76,23 @@ type RecruitmentCTAStatus = "none" | "upcoming" | "open";
 async function RecruitmentCTA() {
   const recruitment = await getClosestRecruitment().catch(() => null);
 
+  // now는 실제 instant 그대로. 문제는 now가 아니라 offset 없는 백엔드 값의 해석이므로,
+  // startAt/endAt만 Asia/Seoul instant로 명시 변환해 instant끼리 비교한다.
   const now = new Date();
-  const startAt = recruitment ? new Date(recruitment.startAt) : null;
-  const endAt = recruitment ? new Date(recruitment.endAt) : null;
+  const startAt = recruitment
+    ? parseSeoulLocalDateTime(recruitment.startAt)
+    : null;
+  const endAt = recruitment
+    ? parseSeoulLocalDateTime(recruitment.endAt)
+    : null;
 
   const status: RecruitmentCTAStatus =
-    !recruitment || !startAt || !endAt || now > endAt
+    !recruitment ||
+    !startAt ||
+    !endAt ||
+    Number.isNaN(startAt.getTime()) ||
+    Number.isNaN(endAt.getTime()) ||
+    now > endAt
       ? "none"
       : now < startAt
         ? "upcoming"
