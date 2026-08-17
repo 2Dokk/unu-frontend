@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { getAllActivitySessions } from "@/lib/api/activity-session";
@@ -47,7 +47,6 @@ import { getAllActivityTypes } from "@/lib/api/activity-type";
 
 interface EnrichedSession {
   session: ActivitySessionResponseDto;
-  attendances: AttendanceResponseDto[];
 }
 
 const CATEGORY_MAP: Record<string, { label: string; color: string }> = {
@@ -105,6 +104,45 @@ export default function ManagePage() {
     [],
   );
   const [loading, setLoading] = useState(true);
+  // 선택한 세션의 출석 데이터만 lazy load. 페이지 생명주기 동안 세션별로 캐시한다.
+  const [selectedSessionAttendances, setSelectedSessionAttendances] = useState<
+    AttendanceResponseDto[]
+  >([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const attendanceCacheRef = useRef<Map<string, AttendanceResponseDto[]>>(
+    new Map(),
+  );
+
+  // 특정 세션을 열었을 때만 그 세션의 출석을 1회 조회한다(동일 세션 재오픈 시 캐시 사용).
+  useEffect(() => {
+    if (!selectedSession) {
+      setSelectedSessionAttendances([]);
+      return;
+    }
+    const sessionId = selectedSession.session.id;
+    const cached = attendanceCacheRef.current.get(sessionId);
+    if (cached) {
+      setSelectedSessionAttendances(cached);
+      return;
+    }
+    let cancelled = false;
+    setAttendanceLoading(true);
+    getAttendancesBySessionId(sessionId)
+      .then((data) => {
+        if (cancelled) return;
+        attendanceCacheRef.current.set(sessionId, data);
+        setSelectedSessionAttendances(data);
+      })
+      .catch(() => {
+        if (!cancelled) setSelectedSessionAttendances([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAttendanceLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSession]);
 
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !hasRole("MANAGER"))) {
@@ -132,27 +170,12 @@ export default function ManagePage() {
           activityMap.set(activity.id, activity);
         });
 
-        // Enrich sessions with activity data and attendances
-        const enrichedSessions = await Promise.all(
-          sessionsData.map(async (session) => {
-            const activity = activityMap.get(session.activity.id) || null;
-            let attendances: AttendanceResponseDto[] = [];
-
-            try {
-              attendances = await getAttendancesBySessionId(session.id);
-            } catch (error: any) {
-              console.error(
-                `Failed to fetch attendances for session ${session.id}`,
-              );
-            }
-
-            return {
-              session,
-              activity,
-              attendances,
-            };
-          }),
-        );
+        // 캘린더 표시에는 세션(+임베디드 활동 정보)만 필요하다.
+        // 세션별 출석 데이터는 최초 진입 시 불러오지 않고, 특정 세션 상세를 열 때만 lazy load 한다.
+        const enrichedSessions = sessionsData.map((session) => ({
+          session,
+          activity: activityMap.get(session.activity.id) || null,
+        }));
 
         setSessions(enrichedSessions);
         setActivityTypes(activityTypesData);
@@ -301,6 +324,8 @@ export default function ManagePage() {
           {selectedSession && (
             <SessionDetailPanel
               session={selectedSession}
+              attendances={selectedSessionAttendances}
+              loading={attendanceLoading}
               onClose={() => setSelectedSession(null)}
             />
           )}
@@ -505,13 +530,19 @@ function CalendarView({
 // Session Detail Panel Component
 interface SessionDetailPanelProps {
   session: EnrichedSession | null;
+  attendances: AttendanceResponseDto[];
+  loading: boolean;
   onClose: () => void;
 }
 
-function SessionDetailPanel({ session }: SessionDetailPanelProps) {
+function SessionDetailPanel({
+  session,
+  attendances,
+  loading,
+}: SessionDetailPanelProps) {
   if (!session) return null;
 
-  const { session: sessionData, attendances } = session;
+  const { session: sessionData } = session;
   const categoryCode = session.session.activity?.activityType?.code || "";
   const categoryColor =
     CATEGORY_MAP[categoryCode]?.color ??
@@ -603,7 +634,11 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
           <h4 className="font-semibold text-sm">참가자 목록</h4>
           <ScrollArea className="h-75">
             <div className="space-y-2">
-              {attendances.length === 0 ? (
+              {loading ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  출석 정보를 불러오는 중입니다
+                </p>
+              ) : attendances.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   참가자 정보가 없습니다
                 </p>
