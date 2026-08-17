@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -38,20 +39,33 @@ import {
 import { toast } from "sonner";
 import { CalendarPlus, Loader2 } from "lucide-react";
 
-const BULK_STATUS_OPTIONS = [
-  { value: "APPLIED", label: "신청" },
-  { value: "IN_PROGRESS", label: "검토중" },
-  { value: "WAITING", label: "대기" },
-  { value: "HOLD", label: "보류" },
-  { value: "PASSED", label: "합격" },
-  { value: "REJECTED", label: "불합격" },
-];
+// PASSED/REJECTED 표시 문구는 모집 유형에 따라 달라진다.
+// (INTERNAL_OPERATION: 승인/미승인, 그 외: 합격/불합격). enum 값 자체는 그대로.
+function passedLabel(useApprovalLabels: boolean) {
+  return useApprovalLabels ? "승인" : "합격";
+}
+function rejectedLabel(useApprovalLabels: boolean) {
+  return useApprovalLabels ? "미승인" : "불합격";
+}
+
+function getBulkStatusOptions(useApprovalLabels: boolean) {
+  return [
+    { value: "APPLIED", label: "신청" },
+    { value: "IN_PROGRESS", label: "검토중" },
+    { value: "WAITING", label: "대기" },
+    { value: "HOLD", label: "보류" },
+    { value: "PASSED", label: passedLabel(useApprovalLabels) },
+    { value: "REJECTED", label: rejectedLabel(useApprovalLabels) },
+  ];
+}
 
 type StatusFilter = "all" | "PASSED" | "REJECTED" | "WAITING";
 
 interface ApplicationsTableProps {
   applications: ApplicationResponse[];
   enableBulkScheduleImport?: boolean;
+  /** true면 PASSED/REJECTED를 "승인/미승인"으로 표시한다(학회 내부 신청/모집용). 기본 false=합격/불합격. */
+  useApprovalLabels?: boolean;
 }
 
 // Helper function to determine if status is in waiting group
@@ -69,28 +83,56 @@ function getStatusGroup(
   return "WAITING";
 }
 
-function getStatusBadge(status: string) {
+function getStatusBadge(status: string, useApprovalLabels: boolean) {
   switch (status) {
     case "PASSED":
-      return <Badge className="bg-green-600 hover:bg-green-700">합격</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.positive}>
+          {passedLabel(useApprovalLabels)}
+        </Badge>
+      );
     case "REJECTED":
-      return <Badge variant="destructive">불합격</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.negative}>
+          {rejectedLabel(useApprovalLabels)}
+        </Badge>
+      );
     case "APPLIED":
-      return <Badge variant="secondary">신청</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          신청
+        </Badge>
+      );
     case "IN_PROGRESS":
-      return <Badge variant="secondary">검토중</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.pending}>
+          검토중
+        </Badge>
+      );
     case "WAITING":
-      return <Badge variant="secondary">대기</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          대기
+        </Badge>
+      );
     case "HOLD":
       return (
-        <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
+        <Badge variant="outline" className={STATUS_TONES.pending}>
           보류
         </Badge>
       );
     case "CANCELED":
-      return <Badge variant="outline">취소</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          취소
+        </Badge>
+      );
     default:
-      return <Badge variant="outline">{status}</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          {status}
+        </Badge>
+      );
   }
 }
 
@@ -108,8 +150,10 @@ function formatDate(dateString: string): string {
 export default function ApplicationsTable({
   applications: initialApplications,
   enableBulkScheduleImport = false,
+  useApprovalLabels = false,
 }: ApplicationsTableProps) {
   const router = useRouter();
+  const bulkStatusOptions = getBulkStatusOptions(useApprovalLabels);
   const [applications, setApplications] = useState(initialApplications);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
@@ -291,7 +335,7 @@ export default function ApplicationsTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                {BULK_STATUS_OPTIONS.map((opt) => (
+                {bulkStatusOptions.map((opt) => (
                   <DropdownMenuItem
                     key={opt.value}
                     className="text-xs"
@@ -337,8 +381,16 @@ export default function ApplicationsTable({
         {[
           { value: "all", label: "전체", count: allCount },
           { value: "WAITING", label: "대기", count: waitingCount },
-          { value: "PASSED", label: "합격", count: acceptedCount },
-          { value: "REJECTED", label: "불합격", count: rejectedCount },
+          {
+            value: "PASSED",
+            label: passedLabel(useApprovalLabels),
+            count: acceptedCount,
+          },
+          {
+            value: "REJECTED",
+            label: rejectedLabel(useApprovalLabels),
+            count: rejectedCount,
+          },
         ].map(({ value, label, count }) => {
           const active = statusFilter === value;
           return (
@@ -427,7 +479,7 @@ export default function ApplicationsTable({
                     <span className="truncate block">{application.email}</span>
                   </TableCell>
                   <TableCell className="text-center py-4">
-                    {getStatusBadge(application.status)}
+                    {getStatusBadge(application.status, useApprovalLabels)}
                   </TableCell>
                   <TableCell className="text-sm py-4 text-muted-foreground text-center">
                     {formatDate(application.createdAt)}
@@ -451,7 +503,7 @@ export default function ApplicationsTable({
               선택한 지원자 <strong>{selectedIds.size}명</strong>의 상태를{" "}
               <strong>
                 {
-                  BULK_STATUS_OPTIONS.find((o) => o.value === bulkTargetStatus)
+                  bulkStatusOptions.find((o) => o.value === bulkTargetStatus)
                     ?.label
                 }
               </strong>

@@ -15,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { applicationStatusTone } from "@/lib/constants/status-badge-tones";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,10 +42,11 @@ import {
 import { toast } from "sonner";
 import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
 
+// 이 페이지는 학회 내부 신청/모집(INTERNAL_OPERATION) 전용이므로 승인/미승인 문구를 쓴다.
 const STATUS_LABELS: Record<string, string> = {
   APPLIED: "제출됨",
-  PASSED: "합격",
-  REJECTED: "불합격",
+  PASSED: "승인",
+  REJECTED: "미승인",
   CANCELED: "취소됨",
 };
 
@@ -315,7 +317,12 @@ export default function MyOperationApplicationDetailPage() {
             <h1 className="text-2xl font-bold tracking-tight">
               {application.recruitmentTitle}
             </h1>
-            <Badge>{STATUS_LABELS[application.status] || application.status}</Badge>
+            <Badge
+              variant="outline"
+              className={applicationStatusTone(application.status)}
+            >
+              {STATUS_LABELS[application.status] || application.status}
+            </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
             {new Date(application.submittedAt || application.createdAt).toLocaleString("ko-KR")}

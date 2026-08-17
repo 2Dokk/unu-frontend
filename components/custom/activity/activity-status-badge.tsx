@@ -1,13 +1,11 @@
 import { Badge } from "@/components/ui/badge";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
 
-const STATUS_META: Record<
-  string,
-  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
-> = {
-  CREATED:   { label: "준비 중", variant: "outline" },
-  OPEN:      { label: "모집 중", variant: "default" },
-  ONGOING:   { label: "진행 중", variant: "secondary" },
-  COMPLETED: { label: "종료",    variant: "destructive" },
+const STATUS_META: Record<string, { label: string; tone: string }> = {
+  CREATED: { label: "준비 중", tone: STATUS_TONES.neutral },
+  OPEN: { label: "모집 중", tone: STATUS_TONES.positive },
+  ONGOING: { label: "진행 중", tone: STATUS_TONES.neutral },
+  COMPLETED: { label: "종료", tone: STATUS_TONES.neutral },
 };
 
 interface ActivityStatusBadgeProps {
@@ -15,7 +13,14 @@ interface ActivityStatusBadgeProps {
 }
 
 export function ActivityStatusBadge({ status }: ActivityStatusBadgeProps) {
-  const meta = STATUS_META[status] ?? { label: status, variant: "outline" as const };
+  const meta = STATUS_META[status] ?? {
+    label: status,
+    tone: STATUS_TONES.neutral,
+  };
 
-  return <Badge variant={meta.variant}>{meta.label}</Badge>;
+  return (
+    <Badge variant="outline" className={meta.tone}>
+      {meta.label}
+    </Badge>
+  );
 }

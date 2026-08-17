@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
+import { getMyApplicationBadge } from "@/lib/utils/operation-application-status";
 
 type RecruitmentStatus = "신청 가능" | "예정" | "마감";
 
@@ -38,9 +39,10 @@ const STATUS_STYLES: Record<RecruitmentStatus, { badge: string; dot: string }> =
   },
 };
 
+// 모집 상태는 기간(startAt/endAt)만으로 결정한다. active는 상태 판정에 쓰지 않는다.
 function getStatus(recruitment: RecruitmentResponse): RecruitmentStatus {
   const now = Date.now();
-  if (!recruitment.active || now > new Date(recruitment.endAt).getTime()) {
+  if (now > new Date(recruitment.endAt).getTime()) {
     return "마감";
   }
   if (now < new Date(recruitment.startAt).getTime()) {
@@ -97,6 +99,20 @@ export default function OperationRecruitmentsPage() {
 
   if (authLoading || !isAuthenticated) return null;
 
+  // 사용자용 목록 노출 여부는 active로만 결정한다. (마감이어도 active=true면 계속 표시하고 상태만 "마감")
+  // 정렬: 마감되지 않은 공고를 위에(기존 상대 순서 유지), 마감 공고는 맨 아래에 endAt 내림차순(최근 마감 우선).
+  const visibleRecruitments = recruitments
+    .filter((recruitment) => recruitment.active)
+    .sort((a, b) => {
+      const aClosed = getStatus(a) === "마감";
+      const bClosed = getStatus(b) === "마감";
+      if (aClosed !== bClosed) return aClosed ? 1 : -1;
+      if (aClosed && bClosed) {
+        return new Date(b.endAt).getTime() - new Date(a.endAt).getTime();
+      }
+      return 0; // 둘 다 비마감이면 기존 순서 유지(Array.sort는 안정 정렬)
+    });
+
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 px-6 py-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -131,7 +147,7 @@ export default function OperationRecruitmentsPage() {
             다시 시도
           </Button>
         </div>
-      ) : recruitments.length === 0 ? (
+      ) : visibleRecruitments.length === 0 ? (
         <div className="flex min-h-64 items-center justify-center rounded-md border border-dashed">
           <p className="text-sm text-muted-foreground">
             등록된 학회 내부 신청/모집이 없습니다.
@@ -139,7 +155,7 @@ export default function OperationRecruitmentsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {recruitments.map((recruitment) => {
+          {visibleRecruitments.map((recruitment) => {
             const status = getStatus(recruitment);
             const submittedApplication = applications.find(
               (application) =>
@@ -168,6 +184,21 @@ export default function OperationRecruitmentsPage() {
                         />
                         {status}
                       </Badge>
+                      {/* 공고 상태와 별개로, 내 신청 상태를 함께 표시한다. */}
+                      {submittedApplication &&
+                        (() => {
+                          const myBadge = getMyApplicationBadge(
+                            submittedApplication.status,
+                          );
+                          return (
+                            <Badge
+                              variant={myBadge.variant}
+                              className={myBadge.className}
+                            >
+                              {myBadge.label}
+                            </Badge>
+                          );
+                        })()}
                     </div>
                     {recruitment.description && (
                       <p className="line-clamp-2 whitespace-pre-line text-sm text-muted-foreground">

@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
 import {
   ACTIVITY_OPENING_STATUS_LABEL,
   ActivityOpeningRequestStatus,
@@ -10,16 +11,36 @@ export function ActivityOpeningStatusBadge({
   status: ActivityOpeningRequestStatus;
 }) {
   if (status === "APPROVED") {
-    return <Badge className="bg-emerald-700 text-white">승인</Badge>;
+    return (
+      <Badge variant="outline" className={STATUS_TONES.positive}>
+        승인
+      </Badge>
+    );
   }
   if (status === "REJECTED") {
-    return <Badge variant="destructive">반려</Badge>;
+    return (
+      <Badge variant="outline" className={STATUS_TONES.negative}>
+        반려
+      </Badge>
+    );
   }
   if (status === "REVISION_REQUESTED") {
-    return <Badge className="bg-amber-500 text-white">보완 요청</Badge>;
+    return (
+      <Badge variant="outline" className={STATUS_TONES.pending}>
+        보완 요청
+      </Badge>
+    );
   }
   if (status === "CANCELED") {
-    return <Badge variant="outline">취소</Badge>;
+    return (
+      <Badge variant="outline" className={STATUS_TONES.neutral}>
+        취소
+      </Badge>
+    );
   }
-  return <Badge variant="secondary">{ACTIVITY_OPENING_STATUS_LABEL[status]}</Badge>;
+  return (
+    <Badge variant="outline" className={STATUS_TONES.neutral}>
+      {ACTIVITY_OPENING_STATUS_LABEL[status]}
+    </Badge>
+  );
 }

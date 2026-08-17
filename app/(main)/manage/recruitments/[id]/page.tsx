@@ -346,7 +346,9 @@ export default function RecruitmentDetailPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle className="h-4 w-4" />
-                  <span>합격</span>
+                  <span>
+                    {recruitment.type === "INTERNAL_OPERATION" ? "승인" : "합격"}
+                  </span>
                 </div>
                 <p className="text-3xl font-bold text-green-600">
                   {acceptedCount}
@@ -356,7 +358,11 @@ export default function RecruitmentDetailPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <XCircle className="h-4 w-4" />
-                  <span>불합격</span>
+                  <span>
+                    {recruitment.type === "INTERNAL_OPERATION"
+                      ? "미승인"
+                      : "불합격"}
+                  </span>
                 </div>
                 <p className="text-3xl font-bold text-red-600">
                   {rejectedCount}
@@ -396,6 +402,7 @@ export default function RecruitmentDetailPage() {
               enableBulkScheduleImport={isLectureRoomManagerRecruitment(
                 recruitment,
               )}
+              useApprovalLabels={recruitment.type === "INTERNAL_OPERATION"}
             />
           </CardContent>
         </Card>

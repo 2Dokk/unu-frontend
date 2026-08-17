@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -133,28 +134,56 @@ function getApiErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-function getStatusBadge(status: string) {
+function getStatusBadge(status: string, useApprovalLabels: boolean) {
   switch (status) {
     case "PASSED":
-      return <Badge className="bg-green-600 hover:bg-green-700">합격</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.positive}>
+          {useApprovalLabels ? "승인" : "합격"}
+        </Badge>
+      );
     case "REJECTED":
-      return <Badge variant="destructive">불합격</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.negative}>
+          {useApprovalLabels ? "미승인" : "불합격"}
+        </Badge>
+      );
     case "APPLIED":
-      return <Badge variant="secondary">신청</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          신청
+        </Badge>
+      );
     case "IN_PROGRESS":
-      return <Badge variant="secondary">검토중</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.pending}>
+          검토중
+        </Badge>
+      );
     case "WAITING":
-      return <Badge variant="secondary">대기</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          대기
+        </Badge>
+      );
     case "HOLD":
       return (
-        <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
+        <Badge variant="outline" className={STATUS_TONES.pending}>
           보류
         </Badge>
       );
     case "CANCELED":
-      return <Badge variant="outline">취소</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          취소
+        </Badge>
+      );
     default:
-      return <Badge variant="outline">{status}</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          {status}
+        </Badge>
+      );
   }
 }
 
@@ -386,6 +415,7 @@ export default function ApplicationDetailPage() {
                 currentStatus={application.status}
                 onStatusChange={handleStatusChange}
                 isUpdating={isUpdating}
+                useApprovalLabels={operationApplication}
               />
             </div>
           </CardHeader>
@@ -402,7 +432,7 @@ export default function ApplicationDetailPage() {
                   {application.name}의 {operationApplication ? "신청서" : "지원서"}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
-                  {getStatusBadge(application.status)}
+                  {getStatusBadge(application.status, operationApplication)}
                   <span className="text-xs text-muted-foreground">
                     {formatDateTime(application.createdAt)} 제출
                   </span>

@@ -20,6 +20,7 @@ import { Progress } from "@/components/ui/progress";
 import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
 import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { formatDate } from "@/lib/utils/date-utils";
 import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
@@ -228,6 +229,11 @@ export default function HomePage() {
               }) => {
                 const attendedCount =
                   attendanceStats.presentCount + attendanceStats.excusedCount;
+                // 실제 활동 표시 상태(개설 활동 영역과 동일 기준). 수료/미수료 판정도 이 값으로 한다.
+                const displayStatus = activityDisplayStatus(
+                  participant.activity,
+                );
+                const isCompleted = displayStatus === "COMPLETED";
 
                 return (
                   <Card
@@ -261,19 +267,27 @@ export default function HomePage() {
                         />
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">
+                        {/* 내 참여 상태와 실제 활동 상태를 별개로 표시한다. */}
                         <ParticipantStatusBadge status={participant.status} />
-                        {participant.status === "APPLIED" ? (
-                          <Badge variant="outline">시작 전</Badge>
-                        ) : participant.status === "REJECTED" ? null : participant.completed ? (
-                          <Badge
-                            variant="outline"
-                            className="border-green-200 bg-green-50 text-green-700"
-                          >
-                            수료
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">진행 중</Badge>
-                        )}
+                        <ActivityStatusBadge status={displayStatus} />
+                        {/* 종료된 활동에서 참여 확정자에게만 개인 결과(수료/미수료) 표시 */}
+                        {isCompleted &&
+                          participant.status === "APPROVED" &&
+                          (participant.completed ? (
+                            <Badge
+                              variant="outline"
+                              className={STATUS_TONES.positive}
+                            >
+                              수료
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className={STATUS_TONES.neutral}
+                            >
+                              미수료
+                            </Badge>
+                          ))}
                       </div>
                     </CardHeader>
                     <CardContent className="px-4">

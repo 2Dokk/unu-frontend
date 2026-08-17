@@ -4,16 +4,18 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CalendarDays, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { applicationStatusTone } from "@/lib/constants/status-badge-tones";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getMyOperationApplications } from "@/lib/api/application";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 
+// 학회 내부 신청/모집(INTERNAL_OPERATION) 전용 목록이므로 승인/미승인 문구를 쓴다.
 const STATUS_LABELS: Record<string, string> = {
   APPLIED: "제출됨",
-  PASSED: "합격",
-  REJECTED: "불합격",
+  PASSED: "승인",
+  REJECTED: "미승인",
   CANCELED: "취소됨",
 };
 
@@ -109,13 +111,8 @@ export default function MyOperationApplicationsPage() {
                       {application.recruitmentTitle}
                     </h2>
                     <Badge
-                      variant={
-                        application.status === "REJECTED"
-                          ? "destructive"
-                          : application.status === "CANCELED"
-                            ? "secondary"
-                            : "default"
-                      }
+                      variant="outline"
+                      className={applicationStatusTone(application.status)}
                     >
                       {STATUS_LABELS[application.status] || application.status}
                     </Badge>

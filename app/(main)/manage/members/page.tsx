@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
 import {
   Table,
   TableBody,
@@ -389,12 +390,18 @@ export default function MembersManagementPage() {
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         {member.isCurrentQuarterActive ? (
-                          <Badge variant="default" className="gap-1">
+                          <Badge
+                            variant="outline"
+                            className={`gap-1 ${STATUS_TONES.positive}`}
+                          >
                             <UserCheck className="h-3 w-3" />
                             활동 중
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="gap-1">
+                          <Badge
+                            variant="outline"
+                            className={`gap-1 ${STATUS_TONES.neutral}`}
+                          >
                             <UserX className="h-3 w-3" />
                             활동 안 함
                           </Badge>

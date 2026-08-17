@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
@@ -2307,7 +2308,10 @@ export default function ActivityDetailManagePage() {
                           <TableCell>
                             {isFutureSession ? (
                               <div className="flex items-center gap-2">
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs ${STATUS_TONES.pending}`}
+                                >
                                   예정
                                 </Badge>
                                 <span className="text-xs text-muted-foreground">
@@ -2316,7 +2320,10 @@ export default function ActivityDetailManagePage() {
                               </div>
                             ) : hasAttendance ? (
                               <div className="flex items-center gap-2">
-                                <Badge variant="default" className="text-xs">
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs ${STATUS_TONES.neutral}`}
+                                >
                                   입력됨
                                 </Badge>
                                 <span className="text-xs text-muted-foreground">

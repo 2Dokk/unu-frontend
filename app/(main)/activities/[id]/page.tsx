@@ -100,6 +100,7 @@ import { ActivityStatusBadge } from "@/components/custom/activity/activity-statu
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { activityMaterialLabel } from "@/lib/constants/activity-material";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
 import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
 import { formatUnreadCount } from "@/lib/utils/unread-count";
 import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
@@ -147,7 +148,7 @@ function getActivityStatusMeta(status: string): ActivityStatusMeta {
 
 interface ParticipantStatusMeta {
   label: string;
-  variant: "default" | "secondary" | "outline" | "destructive";
+  tone: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
@@ -157,7 +158,7 @@ function getMyParticipantMeta(
   if (!participant) {
     return {
       label: "미신청",
-      variant: "outline",
+      tone: STATUS_TONES.neutral,
       icon: ClipboardList,
     };
   }
@@ -165,17 +166,17 @@ function getMyParticipantMeta(
   const statusMap: Record<string, ParticipantStatusMeta> = {
     APPLIED: {
       label: "신청 완료",
-      variant: "secondary",
+      tone: STATUS_TONES.neutral,
       icon: ClipboardList,
     },
     APPROVED: {
       label: "참여 확정",
-      variant: "default",
+      tone: STATUS_TONES.positive,
       icon: BadgeCheck,
     },
     REJECTED: {
       label: "반려됨",
-      variant: "destructive",
+      tone: STATUS_TONES.negative,
       icon: BadgeX,
     },
   };
@@ -183,7 +184,7 @@ function getMyParticipantMeta(
   return (
     statusMap[participant.status] || {
       label: participant.status,
-      variant: "outline",
+      tone: STATUS_TONES.neutral,
       icon: ClipboardList,
     }
   );
@@ -1124,7 +1125,7 @@ export default function ActivityDetails() {
                     내 참여 상태
                   </p>
                   <div className="flex items-center gap-2">
-                    <Badge variant={participantMeta.variant}>
+                    <Badge variant="outline" className={participantMeta.tone}>
                       {participantMeta.label}
                     </Badge>
                     {myParticipant?.status === "APPROVED" && (

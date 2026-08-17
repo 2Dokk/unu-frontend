@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
+import { getMyApplicationBadge } from "@/lib/utils/operation-application-status";
 
 type RecruitmentStatus = "신청 가능" | "예정" | "마감";
 
@@ -38,9 +39,10 @@ const STATUS_STYLES: Record<RecruitmentStatus, { badge: string; dot: string }> =
   },
 };
 
+// 모집 상태는 기간(startAt/endAt)만으로 결정한다. active는 상태 판정에 쓰지 않는다.
 function getStatus(recruitment: RecruitmentResponse): RecruitmentStatus {
   const now = Date.now();
-  if (!recruitment.active || now > new Date(recruitment.endAt).getTime()) {
+  if (now > new Date(recruitment.endAt).getTime()) {
     return "마감";
   }
   if (now < new Date(recruitment.startAt).getTime()) {
@@ -120,6 +122,8 @@ export default function OperationRecruitmentDetailPage() {
   if (authLoading || !isAuthenticated) return null;
 
   const status = recruitment ? getStatus(recruitment) : null;
+  // 실제 신청 가능 여부는 상태 표시와 별개로 active + 기간(신청 가능 상태)을 모두 만족해야 한다.
+  const canApply = Boolean(recruitment?.active) && status === "신청 가능";
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 px-6 py-8">
@@ -162,6 +166,21 @@ export default function OperationRecruitmentDetailPage() {
                   {status}
                 </Badge>
               )}
+              {/* 목록 카드와 동일하게, 공고 상태와 별개로 내 신청 상태를 표시한다. */}
+              {submittedApplication &&
+                (() => {
+                  const myBadge = getMyApplicationBadge(
+                    submittedApplication.status,
+                  );
+                  return (
+                    <Badge
+                      variant={myBadge.variant}
+                      className={myBadge.className}
+                    >
+                      {myBadge.label}
+                    </Badge>
+                  );
+                })()}
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
@@ -207,7 +226,7 @@ export default function OperationRecruitmentDetailPage() {
                 <FileText />
                 내 신청서 보기
               </Button>
-            ) : status === "신청 가능" ? (
+            ) : canApply ? (
               <Button
                 className="group rounded-full shadow-sm"
                 onClick={() =>
@@ -223,9 +242,14 @@ export default function OperationRecruitmentDetailPage() {
               <Button variant="secondary" className="rounded-full" disabled>
                 신청 시작 전입니다
               </Button>
-            ) : (
+            ) : status === "마감" ? (
               <Button variant="secondary" className="rounded-full" disabled>
                 모집이 마감되었습니다
+              </Button>
+            ) : (
+              // 기간상 신청 가능 상태이지만 active=false라 신청을 받지 않는 경우
+              <Button variant="secondary" className="rounded-full" disabled>
+                현재 신청을 받지 않습니다
               </Button>
             )}
           </div>
