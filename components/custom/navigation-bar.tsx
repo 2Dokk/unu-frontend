@@ -20,6 +20,17 @@ import { useSidebar } from "@/lib/contexts/SidebarContext";
 import { useSidebarBadges } from "@/lib/hooks/useSidebarBadges";
 import { PublicNavLinks } from "@/components/custom/public-nav-links";
 import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
+import { menuConfig } from "@/lib/constants/menu-config";
+
+const INTERNAL_ROUTE_PREFIXES = Array.from(
+  new Set([
+    ...Object.values(menuConfig)
+      .flat()
+      .flatMap((item) => ("href" in item ? [item.href] : [])),
+    "/forms",
+    "/activity-opening",
+  ]),
+);
 
 export function NavigationBar() {
   const router = useRouter();
@@ -34,14 +45,9 @@ export function NavigationBar() {
     getCurrentQuarter().then(setCurrentQuarter).catch(() => undefined);
   }, []);
 
-  const isMainRoute = [
-    "/activities",
-    "/admin",
-    "/forms",
-    "/home",
-    "/manage",
-    "/profile",
-  ].some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  const isMainRoute = INTERNAL_ROUTE_PREFIXES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
 
   const rightContent = () => {
     if (isLoading) return <div className="h-16 w-20 sm:w-[133px]" />;

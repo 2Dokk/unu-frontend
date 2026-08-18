@@ -328,73 +328,80 @@ function LectureMaterialsContent() {
               }
               onDragEnd={canManage ? handleDragEnd : undefined}
             >
-            <div className="flex items-center gap-3">
-              {canManage && (
-                <span
-                  className="flex h-8 w-5 shrink-0 cursor-grab items-center justify-center text-muted-foreground active:cursor-grabbing"
-                  aria-label="드래그하여 순서 변경"
-                >
-                  <GripVertical className="h-4 w-4" />
-                </span>
-              )}
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#edf5f1] text-[#174b3a]">
-                <FileText className="h-4 w-4" />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+                {canManage && (
+                  <span
+                    className="flex h-8 w-5 shrink-0 cursor-grab items-center justify-center text-muted-foreground active:cursor-grabbing"
+                    aria-label="드래그하여 순서 변경"
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </span>
+                )}
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#edf5f1] text-[#174b3a]">
+                  <FileText className="h-4 w-4" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <p className="min-w-0 truncate text-sm font-medium">
+                      {material.title}
+                    </p>
+                    <span className="shrink-0 text-xs font-medium text-[#174b3a]">
+                      {material.activityTitle ?? "공용 자료"}
+                    </span>
+                  </div>
+
+                  <p className="mt-0.5 whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">
+                    {material.description || "별도의 자료 설명이 없습니다."}
+                  </p>
+                </div>
               </div>
 
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate text-sm font-medium">
-                    {material.title}
-                  </p>
-                  <span className="shrink-0 text-xs font-medium text-[#174b3a]">
-                    {material.activityTitle ?? "공용 자료"}
-                  </span>
+              {/* 메타/액션: 모바일은 아래 줄(양끝 정렬), 데스크톱은 인라인 */}
+              <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end sm:gap-3">
+                <span className="text-xs text-muted-foreground">
+                  {formatDate(material.createdAt)}
+                </span>
+
+                <div className="flex items-center gap-1">
+                  {canManage && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openEditDialog(material)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setDeleteTarget(material)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </>
+                  )}
+
+                  <Button variant="outline" size="sm" asChild>
+                    <a
+                      href={material.driveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      draggable={false}
+                    >
+                      열기
+                      <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                    </a>
+                  </Button>
                 </div>
-          
-                <p className="mt-0.5 whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">
-                  {material.description || "별도의 자료 설명이 없습니다."}
-                </p>
               </div>
-          
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {formatDate(material.createdAt)}
-              </span>
-          
-              {canManage && (
-                <div className="flex shrink-0">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => openEditDialog(material)}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-          
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setDeleteTarget(material)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
-                </div>
-              )}
-          
-              <Button variant="outline" size="sm" className="shrink-0" asChild>
-                <a
-                  href={material.driveUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  draggable={false}
-                >
-                  열기
-                  <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-                </a>
-              </Button>
             </div>
           </Card>
           ))}
