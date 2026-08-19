@@ -288,7 +288,7 @@ export default function InterviewManagementPage() {
       } else {
         await navigator.clipboard.writeText(plainText);
       }
-      toast.success("면접 시트를 복사했습니다. Google Sheets에 붙여넣으세요.");
+      toast.success("면접 시트를 복사했습니다. Google docs에 붙여넣으세요.");
     } catch (error) {
       console.error("Failed to copy interview sheet:", error);
       toast.error("면접 시트를 복사하지 못했습니다.");
@@ -300,7 +300,7 @@ export default function InterviewManagementPage() {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold">면접 관리</h1>
         <p className="text-sm text-muted-foreground">
-          신규 학회원 지원서를 확인하고 Google Sheets용 면접 시트를 만듭니다.
+          신규 학회원 지원서를 확인하고 Google docs용 면접 시트를 만듭니다.
         </p>
       </div>
 
@@ -375,7 +375,7 @@ export default function InterviewManagementPage() {
             </div>
             <Button type="button" onClick={() => void copyInterviewSheet()}>
               <ClipboardCopy className="h-4 w-4" />
-              Google Sheets용 면접 시트 복사
+              Google docs용 면접 시트 복사
             </Button>
           </div>
 
