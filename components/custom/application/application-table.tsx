@@ -33,11 +33,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import {
+  deleteApplication,
   importApplicationLectureRoomSchedule,
   reviewApplication,
 } from "@/lib/api/application";
 import { toast } from "sonner";
-import { CalendarPlus, Loader2 } from "lucide-react";
+import { CalendarPlus, Loader2, Trash2 } from "lucide-react";
 
 // PASSED/REJECTED 표시 문구는 모집 유형에 따라 달라진다.
 // (INTERNAL_OPERATION: 승인/미승인, 그 외: 합격/불합격). enum 값 자체는 그대로.
@@ -66,6 +67,8 @@ interface ApplicationsTableProps {
   enableBulkScheduleImport?: boolean;
   /** true면 PASSED/REJECTED를 "승인/미승인"으로 표시한다(학회 내부 신청/모집용). 기본 false=합격/불합격. */
   useApprovalLabels?: boolean;
+  /** 관리자 삭제 성공 시 실제 삭제된 지원서 id들을 부모에 알린다(상단 통계 동기화용). */
+  onApplicationsDeleted?: (ids: string[]) => void;
 }
 
 // Helper function to determine if status is in waiting group
@@ -151,6 +154,7 @@ export default function ApplicationsTable({
   applications: initialApplications,
   enableBulkScheduleImport = false,
   useApprovalLabels = false,
+  onApplicationsDeleted,
 }: ApplicationsTableProps) {
   const router = useRouter();
   const bulkStatusOptions = getBulkStatusOptions(useApprovalLabels);
@@ -163,6 +167,8 @@ export default function ApplicationsTable({
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [bulkScheduleDialogOpen, setBulkScheduleDialogOpen] = useState(false);
   const [bulkScheduleImporting, setBulkScheduleImporting] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Filter applications
   const filteredApplications = useMemo(() => {
@@ -187,7 +193,10 @@ export default function ApplicationsTable({
       }
 
       return true;
-    });
+    }).sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
   }, [applications, statusFilter, search]);
 
   // Bulk selection helpers
@@ -259,6 +268,44 @@ export default function ApplicationsTable({
     } finally {
       setBulkUpdating(false);
       setBulkStatusDialogOpen(false);
+    }
+  }
+
+  async function handleBulkDelete() {
+    setBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const results = await Promise.allSettled(
+        ids.map((id) => deleteApplication(id)),
+      );
+      const deletedIds = ids.filter(
+        (_, index) => results[index].status === "fulfilled",
+      );
+      const failedIds = ids.filter(
+        (_, index) => results[index].status === "rejected",
+      );
+
+      if (deletedIds.length > 0) {
+        const deletedSet = new Set(deletedIds);
+        setApplications((prev) =>
+          prev.filter((app) => !deletedSet.has(app.id)),
+        );
+        onApplicationsDeleted?.(deletedIds);
+      }
+      setSelectedIds(new Set(failedIds));
+
+      if (failedIds.length === 0) {
+        toast.success(`${deletedIds.length}명의 지원서를 삭제했습니다.`);
+      } else if (deletedIds.length === 0) {
+        toast.error("선택한 지원서를 삭제하지 못했습니다.");
+      } else {
+        toast.warning(
+          `${deletedIds.length}명은 삭제했고, ${failedIds.length}명은 삭제하지 못했습니다.`,
+        );
+      }
+    } finally {
+      setBulkDeleting(false);
+      setBulkDeleteDialogOpen(false);
     }
   }
 
@@ -357,6 +404,15 @@ export default function ApplicationsTable({
                 시간표 일괄 반영
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 border-destructive/30 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setBulkDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              삭제
+            </Button>
             <Button
               size="sm"
               variant="ghost"
@@ -517,6 +573,35 @@ export default function ApplicationsTable({
               disabled={bulkUpdating}
             >
               {bulkUpdating ? "변경 중..." : "변경"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Dialog */}
+      <AlertDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>선택한 지원자를 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              선택한 지원자 <strong>{selectedIds.size}명</strong>의 지원서가
+              영구적으로 삭제됩니다. 삭제한 지원서는 복구할 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={(event) => {
+                event.preventDefault();
+                void handleBulkDelete();
+              }}
+              disabled={bulkDeleting}
+            >
+              {bulkDeleting ? "삭제 중..." : "삭제"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

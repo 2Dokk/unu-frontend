@@ -403,6 +403,12 @@ export default function RecruitmentDetailPage() {
                 recruitment,
               )}
               useApprovalLabels={recruitment.type === "INTERNAL_OPERATION"}
+              onApplicationsDeleted={(deletedIds) => {
+                const deletedSet = new Set(deletedIds);
+                setApplications((prev) =>
+                  prev.filter((application) => !deletedSet.has(application.id)),
+                );
+              }}
             />
           </CardContent>
         </Card>
