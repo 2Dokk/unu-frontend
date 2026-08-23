@@ -96,8 +96,8 @@ export default function ActivityNewPage() {
     selectedActivityType?.code === "STUDY" ||
     selectedActivityType?.code === "SPECIAL_LECTURE";
   const isProject = selectedActivityType?.code === "PROJECT";
-  // 스터디는 담당자도 참여자로 자동 등록되므로 정원에 포함된다.
-  const countsAssignee = selectedActivityType?.code === "STUDY";
+  const registersAssigneeAsParticipant =
+    selectedActivityType?.code === "STUDY";
   const allowsDiscordLink = supportsDiscordLink(selectedActivityType?.code);
   const planLabel = operationPlanLabel(selectedActivityType?.code);
   const isSpecialLecture = selectedActivityType?.code === "SPECIAL_LECTURE";
@@ -166,18 +166,15 @@ export default function ActivityNewPage() {
         participantLimit < 1 ||
         participantLimit > 1000)
     ) {
-      return "참여 정원은 1명 이상 1,000명 이하로 입력해주세요.";
+      return "추가 참여 정원은 1명 이상 1,000명 이하로 입력해주세요.";
     }
     if (
       formData.participantLimit &&
       participantLimit <
         newParticipantIds.filter((userId) => userId !== formData.assigneeId)
-          .length +
-          (countsAssignee ? 1 : 0)
+          .length
     ) {
-      return countsAssignee
-        ? "참여 정원은 담당자를 포함한 참여자 수보다 적을 수 없습니다."
-        : "참여 정원은 미리 추가한 참여자 수보다 적을 수 없습니다.";
+      return "추가 참여 정원은 미리 추가한 학회원 수보다 적을 수 없습니다.";
     }
     if (
       Boolean(formData.recruitmentStartDate) !==
@@ -264,7 +261,7 @@ export default function ActivityNewPage() {
       };
 
       const created = await createActivity(data);
-      const participantIdsToAdd = countsAssignee
+      const participantIdsToAdd = registersAssigneeAsParticipant
         ? newParticipantIds.filter((userId) => userId !== formData.assigneeId)
         : newParticipantIds;
       if (participantIdsToAdd.length > 0) {
@@ -587,17 +584,17 @@ export default function ActivityNewPage() {
 
               {isProject && !showsParticipantLimit && (
                 <div className="space-y-2">
-                  <Label>참여 정원</Label>
+                  <Label>추가 참여 정원</Label>
                   <p className="text-sm">
                     {projectMode === "PERSONAL"
-                      ? "담당자 혼자 진행하므로 정원을 설정하지 않습니다."
+                      ? "담당자 혼자 진행하므로 추가 참여 정원을 설정하지 않습니다."
                       : `함께 시작할 팀원 ${newParticipantIds.length}명으로 확정되며, 추가 신청은 받지 않습니다.`}
                   </p>
                 </div>
               )}
 
               <div className={showsParticipantLimit ? "space-y-2" : "hidden"}>
-                <Label htmlFor="participantLimit">참여 정원</Label>
+                <Label htmlFor="participantLimit">추가 참여 정원</Label>
                 <div className="relative w-48">
                   <Input
                     id="participantLimit"
@@ -621,10 +618,9 @@ export default function ActivityNewPage() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {selectedActivityType?.code === "LECTURE"
-                    ? "인강 활동은 기본 정원이 5명이며 담당자는 제외됩니다."
-                    : countsAssignee
-                      ? "비워두면 제한이 없으며 담당자도 참여자로 등록되어 정원에 포함됩니다."
-                      : "비워두면 제한이 없으며 담당자는 정원에서 제외됩니다."}
+                    ? "인강 활동은 기본 추가 참여 정원이 5명입니다. "
+                    : "비워두면 제한이 없습니다. "}
+                  담당자를 제외하고 추가로 신청받을 수 있는 인원입니다.
                   {isProject &&
                     newParticipantIds.length > 0 &&
                     ` 현재 ${newParticipantIds.length}명을 미리 추가했습니다.`}

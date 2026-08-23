@@ -452,7 +452,7 @@ function ApplicationFormContent() {
             </Badge>
           </div>
           <p className="text-muted-foreground">
-            질문에 답변을 입력한 뒤 제출하세요.
+            질문에 답변을 작성하고 제출을 부탁드립니다. 작성해 주신 지원서는 감사한 마음으로 신중히 검토하겠습니다.
           </p>
         </div>
 

@@ -390,14 +390,32 @@ export default function ActivityOpeningRequestManagementDetailPage() {
             <Separator />
 
             {isProject ? (
-              <section>
-                <p className="mb-2 text-sm font-medium">
-                  운영 계획
-                </p>
-
-                <p className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
-                  {request.operationPlan}
-                </p>
+              <section className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                <div>
+                  <p className="text-sm font-medium">운영 계획서</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {request.operationPlan
+                      ? "신청자가 제출한 운영 계획서"
+                      : "첨부된 운영 계획서가 없습니다."}
+                  </p>
+                </div>
+                {request.operationPlan && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    className="shrink-0"
+                  >
+                    <a
+                      href={request.operationPlan}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      계획서 확인
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
               </section>
             ) : (
               <section className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -542,7 +560,7 @@ export default function ActivityOpeningRequestManagementDetailPage() {
                   {request.acceptsNewMembers && (
                     <>
                       <span className="text-muted-foreground">
-                        참여 정원
+                        추가 참여 정원
                       </span>
 
                       <span>

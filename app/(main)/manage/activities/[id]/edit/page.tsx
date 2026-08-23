@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { CalendarIcon, ChevronsUpDown, Check, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
@@ -64,6 +64,7 @@ import {
 import { isDiscordUrl, supportsDiscordLink } from "@/lib/constants/discord-link";
 import { operationPlanLabel } from "@/lib/constants/operation-plan";
 import { activityMaterialLabel } from "@/lib/constants/activity-material";
+import { resolveActivityReturnSource } from "@/lib/constants/activity-navigation";
 import { isMaterialUrl } from "@/lib/utils/material-url";
 import { useAuth } from "@/lib/contexts/AuthContext";
 
@@ -108,15 +109,36 @@ const STATUS_OPTIONS = [
 // MAIN COMPONENT
 // ========================
 
-export default function ActivityEditPage() {
+interface ActivityEditScreenProps {
+  viewMode: "admin" | "assignee";
+}
+
+export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const activityId = params.id as string;
-  const { roles } = useAuth();
-  const canEditOperations = roles.some(
+  const from = searchParams.get("from");
+  const returnSource = resolveActivityReturnSource(from);
+  const detailReturnSource = resolveActivityReturnSource(
+    searchParams.get("detailFrom"),
+  );
+  const returnQuery =
+    from === "activity-detail"
+      ? `?from=activity-detail&detailFrom=${detailReturnSource ?? "activities"}`
+      : returnSource
+        ? `?from=${returnSource}`
+        : "";
+  const { userId, roles, isLoading: authLoading } = useAuth();
+  const hasAdminRole = roles.some(
     (role) => role === "ADMIN" || role === "MANAGER",
   );
+  const canEditOperations = viewMode === "admin" && hasAdminRole;
   const canEditDeposit = canEditOperations;
+  const managementPath =
+    viewMode === "assignee"
+      ? `/home/activities/${activityId}/manage${returnQuery}`
+      : `/manage/activities/${activityId}${returnQuery}`;
 
   // Data state
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
@@ -166,8 +188,6 @@ export default function ActivityEditPage() {
     selectedActivityType?.code === "STUDY" ||
     selectedActivityType?.code === "SPECIAL_LECTURE";
   const isProject = selectedActivityType?.code === "PROJECT";
-  // 스터디는 담당자도 참여자로 등록되어 정원에 포함된다.
-  const countsAssignee = selectedActivityType?.code === "STUDY";
   const allowsDiscordLink = supportsDiscordLink(selectedActivityType?.code);
   const planLabel = operationPlanLabel(selectedActivityType?.code);
   const isSpecialLecture = selectedActivityType?.code === "SPECIAL_LECTURE";
@@ -203,22 +223,35 @@ export default function ActivityEditPage() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     loadData();
-  }, [activityId, canEditOperations]);
+  }, [activityId, authLoading, canEditOperations]);
 
   async function loadData() {
     try {
       setLoading(true);
 
+      const activityData = await getActivityById(activityId);
+      const isAssignee = activityData.assignee.id === userId;
+      const hasPageAccess =
+        viewMode === "assignee" ? isAssignee : hasAdminRole;
+      if (!hasPageAccess) {
+        toast.error("해당 활동을 수정할 권한이 없습니다.");
+        router.replace(
+          isAssignee
+            ? `/home/activities/${activityId}/edit${returnQuery}`
+            : `/activities/${activityId}`,
+        );
+        return;
+      }
+
       const [
-        activityData,
         typesData,
         quartersData,
         usersData,
         participantsData,
         materialsData,
       ] = await Promise.all([
-        getActivityById(activityId),
         getAllActivityTypes(),
         getAllQuarters(),
         canEditOperations ? getAllUsers() : Promise.resolve([]),
@@ -308,7 +341,7 @@ export default function ActivityEditPage() {
         participantLimit < 1 ||
         participantLimit > 1000)
     ) {
-      return "참여 정원은 1명 이상 1,000명 이하로 입력해주세요.";
+      return "추가 참여 정원은 1명 이상 1,000명 이하로 입력해주세요.";
     }
     const currentParticipantCount = existingParticipants.filter(
       (participant) =>
@@ -321,14 +354,9 @@ export default function ActivityEditPage() {
     if (
       canEditOperations &&
       formData.participantLimit &&
-      participantLimit <
-        currentParticipantCount +
-          newParticipantCount +
-          (countsAssignee ? 1 : 0)
+      participantLimit < currentParticipantCount + newParticipantCount
     ) {
-      return countsAssignee
-        ? "참여 정원은 담당자를 포함한 현재 신청·참여 인원보다 적을 수 없습니다."
-        : "참여 정원은 현재 신청·참여 인원보다 적을 수 없습니다.";
+      return "추가 참여 정원은 현재 신청·참여 인원보다 적을 수 없습니다.";
     }
     if (
       canEditOperations &&
@@ -435,7 +463,7 @@ export default function ActivityEditPage() {
 
       toast.success("활동이 수정되었습니다.");
       setIsDirty(false);
-      router.push(`/manage/activities/${activityId}`);
+      router.push(managementPath);
     } catch (err) {
       console.error("Failed to update activity:", err);
       toast.error("활동 수정에 실패했습니다. 다시 시도해주세요.");
@@ -448,13 +476,13 @@ export default function ActivityEditPage() {
     if (isDirty) {
       setShowCancelDialog(true);
     } else {
-      router.push("/manage/activities");
+      router.push(managementPath);
     }
   }
 
   function confirmCancel() {
     setShowCancelDialog(false);
-    router.push("/manage/activities");
+    router.push(managementPath);
   }
 
   return (
@@ -777,17 +805,17 @@ export default function ActivityEditPage() {
 
                 {isProject && !showsParticipantLimit && (
                   <div className="space-y-2">
-                    <Label>참여 정원</Label>
+                    <Label>추가 참여 정원</Label>
                     <p className="text-sm">
                       {projectMode === "PERSONAL"
-                        ? "담당자 혼자 진행하므로 정원을 설정하지 않습니다."
+                        ? "담당자 혼자 진행하므로 추가 참여 정원을 설정하지 않습니다."
                         : "현재 참여자로 확정되며, 추가 신청은 받지 않습니다."}
                     </p>
                   </div>
                 )}
 
                 <div className={showsParticipantLimit ? "space-y-2" : "hidden"}>
-                  <Label htmlFor="participantLimit">참여 정원</Label>
+                  <Label htmlFor="participantLimit">추가 참여 정원</Label>
                   <div className="relative w-48">
                     <Input
                       id="participantLimit"
@@ -812,10 +840,9 @@ export default function ActivityEditPage() {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {selectedActivityType?.code === "LECTURE"
-                      ? "인강 활동은 기본 정원이 5명이며 담당자는 제외됩니다."
-                      : countsAssignee
-                        ? "비워두면 제한이 없으며 담당자도 정원에 포함됩니다."
-                        : "비워두면 제한이 없으며 담당자는 정원에서 제외됩니다."}
+                      ? "인강 활동은 기본 추가 참여 정원이 5명입니다. "
+                      : "비워두면 제한이 없습니다. "}
+                    담당자를 제외하고 추가로 신청받을 수 있는 인원입니다.
                   </p>
                 </div>
 
@@ -1136,4 +1163,8 @@ export default function ActivityEditPage() {
       </AlertDialog>
     </div>
   );
+}
+
+export default function ActivityEditPage() {
+  return <ActivityEditScreen viewMode="admin" />;
 }

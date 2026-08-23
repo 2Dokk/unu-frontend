@@ -25,6 +25,7 @@ import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-ba
 import { formatDate } from "@/lib/utils/date-utils";
 import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
 import { ActivityNoticeUnreadBadge } from "@/components/custom/activity/activity-notice-unread-badge";
+import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
 
 export default function HomePage() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function HomePage() {
   const { loading, currentQuarter, participations, hostedActivities } =
     useMyActivities();
   const { byActivity: unreadNoticesByActivity } = useActivityNoticeUnread();
+  const { unreadActivityResultIds } = useMenuNotification();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -260,6 +262,13 @@ export default function HomePage() {
                         <CardTitle className="min-w-0 flex-1 truncate text-base leading-snug">
                           {participant.activity?.title || "활동명 없음"}
                         </CardTitle>
+                        {unreadActivityResultIds.includes(
+                          participant.activity.id,
+                        ) && (
+                          <Badge className="shrink-0 border-red-200 bg-red-50 text-[10px] font-semibold text-red-600 hover:bg-red-50">
+                            신청 결과
+                          </Badge>
+                        )}
                         <ActivityNoticeUnreadBadge
                           count={
                             unreadNoticesByActivity[participant.activity.id] ?? 0
@@ -354,7 +363,7 @@ export default function HomePage() {
                         className="text-left"
                         onClick={() =>
                           router.push(
-                            `/manage/activities/${activity.id}?from=home`,
+                            `/home/activities/${activity.id}/manage?from=home`,
                           )
                         }
                       >

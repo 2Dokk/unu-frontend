@@ -1,5 +1,6 @@
 /** 계획서를 쓰는 활동 유형과 유형별 표시 이름 */
 const OPERATION_PLAN_LABELS: Record<string, string> = {
+  PROJECT: "운영 계획서",
   SPECIAL_LECTURE: "강의계획서",
   STUDY: "스터디계획서",
 };

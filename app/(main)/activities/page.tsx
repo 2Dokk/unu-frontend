@@ -79,7 +79,7 @@ function ActivityRow({
 
   return (
     <div
-      className="flex cursor-pointer items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-all hover:border-slate-300 hover:shadow-sm"
+      className="flex cursor-pointer flex-col items-stretch gap-2 rounded-lg border bg-card px-4 py-3 transition-all hover:border-slate-300 hover:shadow-sm lg:flex-row lg:items-center lg:gap-3"
       onClick={() => onClick(activity.id)}
       role="button"
       tabIndex={0}
@@ -105,43 +105,40 @@ function ActivityRow({
           </span>
         </div>
 
-        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <span className="flex shrink-0 items-center gap-1">
             <User className="h-3 w-3" />
             <span className="max-w-24 truncate">
               {activity.assignee.name || activity.assignee.username}
             </span>
           </span>
-          <span className="hidden shrink-0 items-center gap-1 sm:flex">
+          <span className="flex shrink-0 items-center gap-1">
             <Calendar className="h-3 w-3" />
             {formatDate(activity.startDate)} ~ {formatDate(activity.endDate)}
           </span>
-          {activity.description && (
-            <span className="hidden min-w-0 flex-1 truncate xl:block">
-              {activity.description}
-            </span>
-          )}
         </div>
       </div>
 
-      <ActivityStatusBadge status={activityDisplayStatus(activity)} />
+      <div className="flex items-center justify-between gap-2 lg:justify-end">
+        <ActivityStatusBadge status={activityDisplayStatus(activity)} />
 
-      <Button
-        size="sm"
-        variant={canApply ? "default" : "outline"}
-        disabled={isClosed}
-        className="hidden h-8 shrink-0 sm:inline-flex"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick(activity.id);
-        }}
-      >
-        <span className="text-xs">
-          {getActionLabel(activity, participantStatus)}
-        </span>
-      </Button>
+        <Button
+          size="sm"
+          variant={canApply ? "default" : "outline"}
+          disabled={isClosed}
+          className="hidden h-8 shrink-0 lg:inline-flex"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick(activity.id);
+          }}
+        >
+          <span className="text-xs">
+            {getActionLabel(activity, participantStatus)}
+          </span>
+        </Button>
 
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground sm:hidden" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground lg:hidden" />
+      </div>
     </div>
   );
 }

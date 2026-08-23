@@ -18,6 +18,7 @@ export function useSidebarBadges() {
   const {
     activityCount: newActivityCount,
     operationRecruitmentCount: newOperationRecruitmentCount,
+    activityResultCount,
   } = useMenuNotification();
   const { loading: lectureLoading, participant: lectureParticipant } =
     useLectureParticipation();
@@ -41,7 +42,7 @@ export function useSidebarBadges() {
       case "/operation-recruitments":
         return newOperationRecruitmentCount;
       case "/home":
-        return unreadActivityNoticeCount;
+        return unreadActivityNoticeCount + activityResultCount;
       case "/activities":
         return newActivityCount;
       default:

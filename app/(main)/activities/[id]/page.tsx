@@ -104,18 +104,14 @@ import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
 import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
 import { formatUnreadCount } from "@/lib/utils/unread-count";
 import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
+import {
+  ACTIVITY_RETURN_TARGETS,
+  resolveActivityReturnSource,
+} from "@/lib/constants/activity-navigation";
 
 // ========================
 // TYPES & HELPERS
 // ========================
-
-// 상세 진입 출처(from) → 돌아가기 목적지/라벨. 정의되지 않은 출처는 학회 활동 목록으로.
-const RETURN_TARGETS: Record<string, { path: string; label: string }> = {
-  home: { path: "/home", label: "내 활동으로" },
-  "home-activities": { path: "/home/activities", label: "전체 활동으로" },
-  "home-completed": { path: "/home/completed", label: "수료 활동으로" },
-};
-const DEFAULT_RETURN_TARGET = { path: "/activities", label: "학회 활동으로" };
 
 interface ActivityStatusMeta {
   label: string;
@@ -223,7 +219,7 @@ function deriveCtaConfig(
       variant: "default",
       disabled: !isRecruiting || capacityFull,
       disabledReason: capacityFull
-        ? "참여 정원이 모두 찼습니다."
+        ? "추가 참여 정원이 모두 찼습니다."
         : isRecruiting
           ? undefined
           : "모집 중이 아닙니다",
@@ -255,7 +251,7 @@ function deriveCtaConfig(
       variant: "outline",
       disabled: !isRecruiting || capacityFull,
       disabledReason: capacityFull
-        ? "참여 정원이 모두 찼습니다."
+        ? "추가 참여 정원이 모두 찼습니다."
         : isRecruiting
           ? undefined
           : "모집 중이 아닙니다",
@@ -312,7 +308,8 @@ export default function ActivityDetails() {
   const activityId = params.id as string;
   // 상세로 진입한 출처(from)에 따라 돌아갈 목적지를 결정한다.
   const from = searchParams.get("from");
-  const returnTarget = RETURN_TARGETS[from ?? ""] ?? DEFAULT_RETURN_TARGET;
+  const returnSource = resolveActivityReturnSource(from) ?? "activities";
+  const returnTarget = ACTIVITY_RETURN_TARGETS[returnSource];
   const returnPath = returnTarget.path;
   const returnLabel = returnTarget.label;
   // "내 활동" 계열(홈/전체 활동/수료 활동)에서 진입했는지. 기존 returnToMyActivities 참조를 대체한다.
@@ -350,7 +347,8 @@ export default function ActivityDetails() {
   const [applicationMessage, setApplicationMessage] = useState("");
 
   const { userRole, hasRole, userId } = useAuth();
-  const { markItemViewed } = useMenuNotification();
+  const canAdministerActivity = hasRole("MANAGER") || hasRole("ADMIN");
+  const { markItemViewed, unreadActivityResultIds } = useMenuNotification();
   const { byActivity: unreadNoticesByActivity } = useActivityNoticeUnread();
   const unreadNoticeCount = unreadNoticesByActivity[activityId] ?? 0;
 
@@ -359,6 +357,13 @@ export default function ActivityDetails() {
       console.error("Failed to mark activity card read:", error);
     });
   }, [activityId, markItemViewed]);
+
+  useEffect(() => {
+    if (!unreadActivityResultIds.includes(activityId)) return;
+    void markItemViewed("activity-results", activityId).catch((error) => {
+      console.error("Failed to mark activity result read:", error);
+    });
+  }, [activityId, markItemViewed, unreadActivityResultIds]);
 
   useEffect(() => {
     const fetchActivityDetails = async () => {
@@ -581,7 +586,11 @@ export default function ActivityDetails() {
   };
 
   const handleEdit = () => {
-    router.push(`/manage/activities/${activityId}/edit`);
+    router.push(
+      `${canAdministerActivity
+        ? `/manage/activities/${activityId}/edit`
+        : `/home/activities/${activityId}/edit`}?from=activity-detail&detailFrom=${returnSource}`,
+    );
   };
 
   const handleStatusChange = async (newStatus: string) => {
@@ -698,7 +707,12 @@ export default function ActivityDetails() {
   const participantMeta = getMyParticipantMeta(myParticipant);
   const activityHasStarted = activity.startDate <= localDateValue();
   const canManage =
-    hasRole("MANAGER") || hasRole("ADMIN") || activity.assignee.id === userId;
+    canAdministerActivity || activity.assignee.id === userId;
+  const activityManagementPath = canAdministerActivity
+    ? `/manage/activities/${activityId}`
+    : `/home/activities/${activityId}/manage`;
+  const activityManagementPathWithReturn =
+    `${activityManagementPath}?from=activity-detail&detailFrom=${returnSource}`;
   const canManageMaterials = canManage;
   const unassignedMaterials = lectureMaterials.filter(
     (material) => material.weekNumber == null,
@@ -982,15 +996,17 @@ export default function ActivityDetails() {
                 value={`${formatDate(activity.startDate)} ~ ${formatDate(activity.endDate)}`}
               />
 
-              <InfoRow
-                icon={<Users className="h-4 w-4" />}
-                label="참여 인원"
-                value={
-                  capacity?.participantLimit == null
-                    ? "제한 없음"
-                    : `${capacity.participantCount} / ${capacity.participantLimit}명`
-                }
-              />
+              {!isActivityRecruiting(activity) && (
+                <InfoRow
+                  icon={<Users className="h-4 w-4" />}
+                  label="추가 참여 현황"
+                  value={
+                    capacity?.participantLimit == null
+                      ? `${capacity?.participantCount ?? 0}명 / 제한 없음`
+                      : `${capacity.participantCount} / ${capacity.participantLimit}명`
+                  }
+                />
+              )}
 
               {activity.instructorCareer &&
                 activity.activityType.code === "SPECIAL_LECTURE" && (
@@ -1192,9 +1208,7 @@ export default function ActivityDetails() {
                   <Button
                     className="w-full"
                     variant="outline"
-                    onClick={() =>
-                      router.push(`/manage/activities/${activityId}`)
-                    }
+                    onClick={() => router.push(activityManagementPathWithReturn)}
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
                     활동 관리하러 가기
@@ -1277,8 +1291,7 @@ export default function ActivityDetails() {
             <AlertDialogDescription>
               {activity.activityType.code === "PROJECT" ? (
                 <>
-                  신청은 개설자 검토 후 참여가 확정됩니다. 모집 인원보다 많은
-                  신청을 받을 수 있으며, 신청 결과는 내 활동에서 확인할 수
+                  신청은 개설자 검토 후 참여가 확정됩니다. 신청 결과는 내 활동 탭에서 확인할 수
                   있습니다.
                 </>
               ) : activityHasStarted ? (

@@ -26,8 +26,10 @@ interface MenuNotificationContextValue extends MenuNotificationSummary {
 const EMPTY_STATE: MenuNotificationSummary = {
   activityCount: 0,
   operationRecruitmentCount: 0,
+  activityResultCount: 0,
   newActivityIds: [],
   newOperationRecruitmentIds: [],
+  unreadActivityResultIds: [],
 };
 
 const MenuNotificationContext =
@@ -53,6 +55,8 @@ export function MenuNotificationProvider({
         newActivityIds: summary.newActivityIds ?? [],
         newOperationRecruitmentIds:
           summary.newOperationRecruitmentIds ?? [],
+        activityResultCount: summary.activityResultCount ?? 0,
+        unreadActivityResultIds: summary.unreadActivityResultIds ?? [],
       });
     } catch (error) {
       console.error("Failed to fetch menu notifications:", error);
@@ -66,10 +70,16 @@ export function MenuNotificationProvider({
       return () => window.clearTimeout(initialRefreshId);
     }
 
-    const intervalId = window.setInterval(() => void refresh(), 60_000);
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh();
+    }, 60_000);
     const handleFocus = () => void refresh();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
     const handleRefreshRequest = () => void refresh();
     window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener(
       MENU_NOTIFICATION_REFRESH_EVENT,
       handleRefreshRequest,
@@ -78,6 +88,7 @@ export function MenuNotificationProvider({
       window.clearTimeout(initialRefreshId);
       window.clearInterval(intervalId);
       window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener(
         MENU_NOTIFICATION_REFRESH_EVENT,
         handleRefreshRequest,
@@ -97,6 +108,15 @@ export function MenuNotificationProvider({
             ...current,
             activityCount: newActivityIds.length,
             newActivityIds,
+          };
+        }
+        if (feed === "activity-results") {
+          const unreadActivityResultIds =
+            current.unreadActivityResultIds.filter((id) => id !== itemId);
+          return {
+            ...current,
+            activityResultCount: unreadActivityResultIds.length,
+            unreadActivityResultIds,
           };
         }
         const newOperationRecruitmentIds =

@@ -22,6 +22,7 @@ import { ActivityStatusBadge } from "@/components/custom/activity/activity-statu
 import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
 import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
 import { ActivityNoticeUnreadBadge } from "@/components/custom/activity/activity-notice-unread-badge";
+import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
 
 type Filter = "all" | "hosted" | "joined";
 
@@ -36,6 +37,7 @@ export default function AllActivitiesPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { loading, participations, hostedActivities } = useMyActivities();
   const { byActivity: unreadNoticesByActivity } = useActivityNoticeUnread();
+  const { unreadActivityResultIds } = useMenuNotification();
   const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
@@ -136,13 +138,15 @@ export default function AllActivitiesPage() {
                         tabIndex={0}
                         className="flex cursor-pointer items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/50"
                         onClick={() =>
-                          router.push(`/manage/activities/${activity.id}?from=home-activities`)
+                          router.push(
+                            `/home/activities/${activity.id}/manage?from=home-activities`,
+                          )
                         }
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
                             router.push(
-                              `/manage/activities/${activity.id}?from=home-activities`,
+                              `/home/activities/${activity.id}/manage?from=home-activities`,
                             );
                           }
                         }}
@@ -221,6 +225,13 @@ export default function AllActivitiesPage() {
                                 <p className="font-medium">
                                   {participant.activity?.title || "활동명 없음"}
                                 </p>
+                                {unreadActivityResultIds.includes(
+                                  participant.activity.id,
+                                ) && (
+                                  <Badge className="shrink-0 border-red-200 bg-red-50 text-[10px] font-semibold text-red-600 hover:bg-red-50">
+                                    신청 결과
+                                  </Badge>
+                                )}
                                 <ActivityNoticeUnreadBadge
                                   count={
                                     unreadNoticesByActivity[

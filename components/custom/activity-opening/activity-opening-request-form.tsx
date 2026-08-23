@@ -281,7 +281,10 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
       missingFields.push("활동 소개");
     }
   
-    if (!form.operationPlan.trim()) {
+    if (
+      selectedActivityType?.code !== "PROJECT" &&
+      !form.operationPlan.trim()
+    ) {
       if (selectedActivityType?.code === "STUDY") {
         missingFields.push("스터디 계획서 링크");
       } else if (
@@ -289,8 +292,6 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
         selectedActivityType?.code === "SPECIAL_LECTURE"
       ) {
         missingFields.push("강의 계획서 링크");
-      } else {
-        missingFields.push("운영 계획");
       }
     }
 
@@ -323,8 +324,6 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
           return "스터디 계획서 링크를 첨부해주세요.";
         case "강의 계획서 링크":
           return "강의 계획서 링크를 첨부해주세요.";
-        case "운영 계획":
-          return "운영 계획을 입력해주세요.";
         case "활동 기간":
           return "활동 기간을 입력해주세요.";
       }
@@ -341,19 +340,17 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
       form.participantLimit &&
       (!Number.isInteger(participantLimit) ||
         participantLimit < 1 ||
-        participantLimit > 100)
+        participantLimit > 1000)
     ) {
-      return "참여 정원은 1명 이상 100명 이하로 입력해주세요.";
+      return "추가 참여 정원은 1명 이상 1,000명 이하로 입력해주세요.";
     }
   
     if (
       form.acceptsNewMembers &&
       form.participantLimit &&
-      participantLimit <
-        initialMembers.length +
-          (selectedActivityType?.code === "STUDY" ? 1 : 0)
+      participantLimit < initialMembers.length
     ) {
-      return "참여 정원은 함께 시작할 인원보다 적을 수 없습니다.";
+      return "추가 참여 정원은 함께 시작할 학회원 수보다 적을 수 없습니다.";
     }
 
     if (
@@ -362,6 +359,13 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
       !isMaterialUrl(form.materialUrl.trim())
     ) {
       return `${materialLabel} Google Drive 또는 Notion 공유 링크를 확인해주세요.`;
+    }
+
+    if (
+      form.operationPlan.trim() &&
+      !isMaterialUrl(form.operationPlan.trim())
+    ) {
+      return "계획서 Google Drive 또는 Notion 공유 링크를 확인해주세요.";
     }
   
     return null;
@@ -527,17 +531,22 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
           {selectedActivityType?.code === "PROJECT" && (
             <div className="space-y-2">
               <Label htmlFor="opening-plan">
-                운영 계획
-                <span className="text-red-500">*</span>
+                운영 계획서 링크
+                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                  선택
+                </span>
               </Label>
-              <Textarea
+              <Input
                 id="opening-plan"
-                rows={8}
-                maxLength={10000}
+                type="url"
+                maxLength={2048}
                 value={form.operationPlan}
                 onChange={(event) => change("operationPlan", event.target.value)}
-                placeholder="진행 방식, 일정, 예상 결과물을 중심으로 작성해주세요."
-              /> 
+                placeholder="운영 계획서를 첨부하지 않는 경우 활동 소개 및 목적을 보다 상세하게 작성해주세요."
+              />
+              <p className="text-xs text-muted-foreground">
+                첨부하는 경우 열람 가능한 Google Drive 또는 Notion 링크를 입력해주세요.
+              </p>
             </div>
           )}
           {selectedActivityType?.code === "STUDY" && (
@@ -762,7 +771,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
           )}
           {form.acceptsNewMembers && (
             <div className="space-y-2">
-              <Label htmlFor="opening-participant-limit">참여 정원</Label>
+              <Label htmlFor="opening-participant-limit">추가 참여 정원</Label>
               <div className="relative max-w-48">
                 <Input
                   id="opening-participant-limit"
@@ -785,9 +794,8 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                {selectedActivityType?.code === "STUDY"
-                  ? "비워두면 제한 없이 신청받습니다. 담당자도 참여자로 등록되어 정원에 포함됩니다."
-                  : "비워두면 제한 없이 신청받습니다. 담당자는 제외하고 함께 시작할 학회원을 포함한 전체 참여 정원입니다."}
+                비워두면 제한 없이 신청받습니다. 담당자를 제외하고 추가로
+                신청받을 수 있는 인원입니다.
               </p>
             </div>
           )}

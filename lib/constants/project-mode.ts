@@ -29,7 +29,7 @@ interface ProjectModeFields {
   status: "CREATED" | "OPEN";
   /** 함께 시작할 학회원을 고를 수 있는지 */
   allowsInitialMembers: boolean;
-  /** 참여 정원을 직접 입력받는지 */
+  /** 추가 참여 정원을 직접 입력받는지 */
   allowsParticipantLimit: boolean;
 }
 

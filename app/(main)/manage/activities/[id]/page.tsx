@@ -122,6 +122,10 @@ import {
   operationPlanLabel,
 } from "@/lib/constants/operation-plan";
 import { activityMaterialLabel } from "@/lib/constants/activity-material";
+import {
+  ACTIVITY_RETURN_TARGETS,
+  resolveActivityReturnSource,
+} from "@/lib/constants/activity-navigation";
 
 const PARTICIPANT_STATUS_OPTIONS = [
   { value: "APPLIED", label: "신청 완료" },
@@ -306,23 +310,45 @@ function LoadingSkeleton() {
 // MAIN COMPONENT
 // ========================
 
-export default function ActivityDetailManagePage() {
+interface ActivityManagementScreenProps {
+  viewMode: "admin" | "assignee";
+}
+
+export function ActivityManagementScreen({
+  viewMode,
+}: ActivityManagementScreenProps) {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
   const activityId = params.id as string;
   const from = searchParams.get("from");
-  const returnToMyActivities = from === "home";
-  const backLabel =
-    from === "home-activities"
-      ? "전체 활동으로"
-      : returnToMyActivities
-        ? "내 활동으로"
-        : "목록으로";
+  const returnSource = resolveActivityReturnSource(from);
+  const detailReturnSource =
+    resolveActivityReturnSource(searchParams.get("detailFrom")) ?? "activities";
+  const enteredFromActivityDetail = from === "activity-detail";
+  const fallbackReturnTarget =
+    viewMode === "assignee"
+      ? { path: "/home/activities", label: "내 활동 목록으로" }
+      : { path: "/manage/activities", label: "활동 관리 목록으로" };
+  const returnTarget = enteredFromActivityDetail
+    ? {
+        path: `/activities/${activityId}?from=${detailReturnSource}`,
+        label: "활동 상세로",
+      }
+    : returnSource
+      ? ACTIVITY_RETURN_TARGETS[returnSource]
+      : fallbackReturnTarget;
+  const returnQuery = enteredFromActivityDetail
+    ? `?from=activity-detail&detailFrom=${detailReturnSource}`
+    : returnSource
+      ? `?from=${returnSource}`
+      : "";
+  const backLabel = returnTarget.label;
   const { userId, roles, isLoading: authLoading } = useAuth();
-  const canAdministerActivity = roles.some(
+  const hasAdminRole = roles.some(
     (role) => role === "ADMIN" || role === "MANAGER",
   );
+  const canAdministerActivity = viewMode === "admin" && hasAdminRole;
 
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const isActivityAssignee = activity?.assignee?.id === userId;
@@ -525,9 +551,15 @@ export default function ActivityDetailManagePage() {
       try {
         const activityData = await getActivityById(activityId);
         const isAssignee = activityData.assignee?.id === userId;
-        if (!canAdministerActivity && !isAssignee) {
+        const hasPageAccess =
+          viewMode === "assignee" ? isAssignee : hasAdminRole;
+        if (!hasPageAccess) {
           toast.error("해당 활동을 관리할 권한이 없습니다.");
-          router.replace(`/activities/${activityId}`);
+          router.replace(
+            isAssignee
+              ? `/home/activities/${activityId}/manage${returnQuery}`
+              : `/activities/${activityId}`,
+          );
           return;
         }
 
@@ -570,7 +602,16 @@ export default function ActivityDetailManagePage() {
     }
 
     fetchData();
-  }, [activityId, authLoading, canAdministerActivity, router, userId]);
+  }, [
+    activityId,
+    authLoading,
+    canAdministerActivity,
+    hasAdminRole,
+    router,
+    returnQuery,
+    userId,
+    viewMode,
+  ]);
 
   async function handleAddMember(userId: string) {
     setAddingUserId(userId);
@@ -796,7 +837,11 @@ export default function ActivityDetailManagePage() {
   }
 
   function handleEdit() {
-    router.push(`/manage/activities/${activityId}/edit`);
+    router.push(
+      viewMode === "assignee"
+        ? `/home/activities/${activityId}/edit${returnQuery}`
+        : `/manage/activities/${activityId}/edit${returnQuery}`,
+    );
   }
 
   async function handleDelete() {
@@ -815,17 +860,7 @@ export default function ActivityDetailManagePage() {
   }
 
   function handleBackToList() {
-    if (from === "home-activities") {
-      router.push("/home/activities");
-      return;
-    }
-    if (returnToMyActivities) {
-      router.push("/home");
-      return;
-    }
-    router.push(
-      canAdministerActivity ? "/manage/activities" : `/activities/${activityId}`,
-    );
+    router.push(returnTarget.path);
   }
 
   function handleMemberClick(userId: string, e: React.MouseEvent) {
@@ -1785,10 +1820,17 @@ export default function ActivityDetailManagePage() {
                 )}
                 <InfoRow
                   icon={<UserIcon className="h-4 w-4" />}
-                  label="참여 정원"
+                  label="추가 참여 현황"
                   value={
                     activity.participantLimit == null
-                      ? "제한 없음"
+                      ? `${
+                          participants.filter(
+                            (participant) =>
+                              (participant.status === "APPLIED" ||
+                                participant.status === "APPROVED") &&
+                              participant.user.id !== activity.assignee.id,
+                          ).length
+                        }명 / 제한 없음`
                       : `${
                           participants.filter(
                             (participant) =>
@@ -3283,4 +3325,8 @@ export default function ActivityDetailManagePage() {
       />
     </div>
   );
+}
+
+export default function ActivityDetailManagePage() {
+  return <ActivityManagementScreen viewMode="admin" />;
 }
