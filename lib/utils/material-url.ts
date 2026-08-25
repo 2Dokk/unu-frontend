@@ -5,7 +5,7 @@ export function isMaterialUrl(value: string): boolean {
     const isGoogleDrive = ["drive.google.com", "docs.google.com"].includes(
       host,
     );
-    const isNotion = ["notion.so", "notion.site"].some(
+    const isNotion = ["notion.com", "notion.so", "notion.site"].some(
       (allowed) => host === allowed || host.endsWith(`.${allowed}`),
     );
 

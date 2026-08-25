@@ -172,6 +172,9 @@ export default function InterviewManagementPage() {
         colspan?: number;
         kind?: "title" | "label" | "question" | "answer" | "interview";
       };
+      const sheetColumnCount = 24;
+      const sheetColumnWidth = 30;
+      const sheetWidth = sheetColumnCount * sheetColumnWidth;
       const sheetQuestions = parseSchema(
         orderedApplications[0].formSnapshot,
       ).questions.filter(
@@ -179,65 +182,55 @@ export default function InterviewManagementPage() {
           question.type === "SHORT_TEXT" || question.type === "LONG_TEXT",
       );
       const rows: SheetCell[][] = orderedApplications.flatMap(
-        (application, applicationIndex) => {
-        const applicationAnswers = parseAnswers(application.answers);
-        return [
-          [
-            {
-              value: `지원자 ${String(applicationIndex + 1).padStart(2, "0")} · ${application.name}`,
-              colspan: 8,
-              kind: "title" as const,
-            },
-          ],
-          [
-            { value: "학번", kind: "label" as const },
-            { value: application.studentId },
-            { value: "이름", kind: "label" as const },
-            { value: application.name },
-            { value: "전공", kind: "label" as const },
-            { value: application.major },
-            { value: "복수·부전공", kind: "label" as const },
-            { value: application.subMajor ?? "" },
-          ],
-          [
-            { value: "GitHub ID", kind: "label" as const },
-            { value: application.githubId ?? "" },
-            { value: "이메일", kind: "label" as const },
-            { value: application.email },
-            { value: "연락처", kind: "label" as const },
-            { value: application.phoneNumber },
-            { value: "지원 상태", kind: "label" as const },
-            {
-              value: STATUS_LABELS[application.status] ?? application.status,
-            },
-          ],
-          ...sheetQuestions.map((question, questionIndex) => [
-            {
-              value: `Q${questionIndex + 1}`,
-              kind: "question" as const,
-            },
-            {
-              value: question.title,
-              colspan: 2,
-              kind: "question" as const,
-            },
-            {
-              value: displayAnswer(applicationAnswers[question.id]),
-              colspan: 5,
-              kind: "answer" as const,
-            },
-          ]),
-          [
-            { value: "면접 내용", kind: "interview" as const },
-            { value: "", colspan: 7, kind: "interview" as const },
-          ],
-          [
-            { value: "면접관 소견", kind: "interview" as const },
-            { value: "", colspan: 7, kind: "interview" as const },
-          ],
-          [{ value: "", colspan: 8 }],
-        ];
-      },
+        (application) => {
+          const applicationAnswers = parseAnswers(application.answers);
+          return [
+            [
+              {
+                value: `${application.name}`,
+                colspan: sheetColumnCount,
+                kind: "title" as const,
+              },
+            ],
+            [
+              { value: "학번", colspan: 5, kind: "label" as const },
+              { value: application.studentId, colspan: 7 },
+              { value: "전공", colspan: 5, kind: "label" as const },
+              { value: application.major, colspan: 7 },
+            ],
+            [
+              { value: "GitHub ID", colspan: 5, kind: "label" as const },
+              { value: application.githubId ?? "", colspan: 7 },
+              { value: "복수·부전공", colspan: 5, kind: "label" as const },
+              { value: application.subMajor ?? "", colspan: 7 },
+            ],
+            ...sheetQuestions.map((question) => [
+              {
+                value: question.title,
+                colspan: 6,
+                kind: "question" as const,
+              },
+              {
+                value: displayAnswer(applicationAnswers[question.id]),
+                colspan: 18,
+                kind: "answer" as const,
+              },
+            ]),
+            [
+              { value: "면접 내용", colspan: 6, kind: "interview" as const },
+              { value: "", colspan: 18, kind: "interview" as const },
+            ],
+            [
+              {
+                value: "면접관 소견",
+                colspan: 6,
+                kind: "interview" as const,
+              },
+              { value: "", colspan: 18, kind: "interview" as const },
+            ],
+            [{ value: "", colspan: sheetColumnCount }],
+          ];
+        },
       );
       const plainText = rows
         .map((row) => {
@@ -249,8 +242,21 @@ export default function InterviewManagementPage() {
         })
         .join("\n");
       const html = `
-        <table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:11pt">
-          <tbody>${rows
+        <table width="${sheetWidth}" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:11pt;table-layout:fixed;width:${sheetWidth}px">
+          <colgroup>${Array.from(
+            { length: sheetColumnCount },
+            () =>
+              `<col width="${sheetColumnWidth}" style="width:${sheetColumnWidth}px">`,
+          ).join("")}</colgroup>
+          <tbody>
+            <tr aria-hidden="true" style="height:1px;line-height:1px">
+              ${Array.from(
+                { length: sheetColumnCount },
+                () =>
+                  `<td width="${sheetColumnWidth}" height="1" style="width:${sheetColumnWidth}px;height:1px;padding:0;border:0;font-size:1px;line-height:1px;color:transparent">&nbsp;</td>`,
+              ).join("")}
+            </tr>
+            ${rows
             .map(
               (row) =>
                 `<tr>${row
@@ -259,19 +265,30 @@ export default function InterviewManagementPage() {
                       title:
                         "font-weight:700;font-size:12pt;padding:10px 12px",
                       label:
-                        "font-weight:700;padding:8px 10px;white-space:nowrap",
+                        "font-weight:700;padding:8px 10px;white-space:nowrap;word-break:keep-all;overflow-wrap:normal",
                       question:
-                        "font-weight:700;padding:9px 10px",
+                        "font-weight:700;padding:9px 10px;white-space:nowrap;word-break:keep-all;overflow-wrap:normal",
                       answer:
-                        "padding:9px 10px;line-height:1.55",
+                        "padding:9px 10px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word",
                       interview:
-                        "font-weight:700;padding:10px;min-height:72px",
+                        "padding:9px 10px;min-height:72px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word",
                     };
-                    const cellStyle = cell.kind
-                      ? styles[cell.kind]
-                      : "padding:8px 10px";
+                    const isInterviewLabel =
+                      cell.kind === "interview" && Boolean(cell.value);
+                    const cellStyle = isInterviewLabel
+                      ? "font-weight:700;padding:9px 10px;white-space:nowrap;word-break:keep-all;overflow-wrap:normal"
+                      : cell.kind
+                        ? styles[cell.kind]
+                        : "padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word";
                     const isSpacer = row.length === 1 && !cell.value;
-                    return `<td colspan="${cell.colspan ?? 1}" style="${isSpacer ? "border:0;height:18px" : `border:1px solid;vertical-align:top;white-space:pre-wrap;${cellStyle}`}">${cell.value ? escapeHtml(cell.value) : "&nbsp;"}</td>`;
+                    const colspan = cell.colspan ?? 1;
+                    const width = colspan * sheetColumnWidth;
+                    const content = cell.value
+                      ? cell.kind === "title"
+                        ? `<h3 style="font-size:13pt;font-weight:700;margin:0">${escapeHtml(cell.value)}</h3>`
+                        : escapeHtml(cell.value)
+                      : "&nbsp;";
+                    return `<td colspan="${colspan}" width="${width}" style="width:${width}px;${isSpacer ? "border:0;height:18px" : `border:1px solid;vertical-align:top;${cellStyle}`}">${content}</td>`;
                   })
                   .join("")}</tr>`,
             )
