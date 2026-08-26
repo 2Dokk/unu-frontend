@@ -218,7 +218,7 @@ export default function AboutSectionDetailPage() {
             {examples.map((example, index) => (
               <ScrollReveal
                 key={example.id}
-                delay={Math.min(index, 3) * 70}
+                eager
                 className="border-b border-[#14231b]/15 py-7 first:pt-0"
               >
                 <article
