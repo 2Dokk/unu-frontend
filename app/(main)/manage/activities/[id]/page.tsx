@@ -102,6 +102,7 @@ import { ActivityResponse } from "@/lib/interfaces/activity";
 import {
   ActivityParticipantRefundAccount,
   ActivityParticipantResponse,
+  LectureParticipationMode,
 } from "@/lib/interfaces/activity-participant";
 import{
   supportsDiscordLink
@@ -132,6 +133,14 @@ const PARTICIPANT_STATUS_OPTIONS = [
   { value: "APPROVED", label: "참여 확정" },
   { value: "REJECTED", label: "신청 반려" },
 ];
+
+const LECTURE_PARTICIPATION_MODE_LABELS: Record<
+  LectureParticipationMode,
+  string
+> = {
+  INDIVIDUAL: "개인 수강 희망",
+  GROUP: "그룹 수강 희망",
+};
 import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -344,11 +353,9 @@ export function ActivityManagementScreen({
       ? `?from=${returnSource}`
       : "";
   const backLabel = returnTarget.label;
-  const { userId, roles, isLoading: authLoading } = useAuth();
-  const hasAdminRole = roles.some(
-    (role) => role === "ADMIN" || role === "MANAGER",
-  );
-  const canAdministerActivity = viewMode === "admin" && hasAdminRole;
+  const { userId, hasRole, isLoading: authLoading } = useAuth();
+  const hasAdminRole = hasRole("MANAGER");
+  const canAdministerActivity = hasAdminRole;
 
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const isActivityAssignee = activity?.assignee?.id === userId;
@@ -551,8 +558,7 @@ export function ActivityManagementScreen({
       try {
         const activityData = await getActivityById(activityId);
         const isAssignee = activityData.assignee?.id === userId;
-        const hasPageAccess =
-          viewMode === "assignee" ? isAssignee : hasAdminRole;
+        const hasPageAccess = isAssignee || hasAdminRole;
         if (!hasPageAccess) {
           toast.error("해당 활동을 관리할 권한이 없습니다.");
           router.replace(
@@ -565,7 +571,8 @@ export function ActivityManagementScreen({
 
         const requiresDeposit =
           activityData.activityType.code === "STUDY" ||
-          activityData.activityType.code === "SPECIAL_LECTURE";
+          activityData.activityType.code === "SPECIAL_LECTURE" ||
+          activityData.activityType.code === "LECTURE";
         const [
           participantsData,
           usersData,
@@ -838,9 +845,9 @@ export function ActivityManagementScreen({
 
   function handleEdit() {
     router.push(
-      viewMode === "assignee"
-        ? `/home/activities/${activityId}/edit${returnQuery}`
-        : `/manage/activities/${activityId}/edit${returnQuery}`,
+      canAdministerActivity
+        ? `/manage/activities/${activityId}/edit${returnQuery}`
+        : `/home/activities/${activityId}/edit${returnQuery}`,
     );
   }
 
@@ -1807,7 +1814,8 @@ export function ActivityManagementScreen({
                       />
                     )}
                 {(activity.activityType.code === "STUDY" ||
-                  activity.activityType.code === "SPECIAL_LECTURE") && (
+                  activity.activityType.code === "SPECIAL_LECTURE" ||
+                  activity.activityType.code === "LECTURE") && (
                   <InfoRow
                     icon={<Info className="h-4 w-4" />}
                     label="참여 보증금"
@@ -2024,6 +2032,9 @@ export function ActivityManagementScreen({
                           <TableHead className="w-28 text-center">지원 내용</TableHead>
                         </>
                       )}
+                      {activity.activityType.code === "LECTURE" && (
+                        <TableHead className="w-36">수강 방식</TableHead>
+                      )}
                       <TableHead className="w-25 text-center">상태</TableHead>
                       <TableHead className="w-30 text-center">신청일</TableHead>
                     </TableRow>
@@ -2090,6 +2101,15 @@ export function ActivityManagementScreen({
                               </TableCell>
                             </>
                           )}
+                          {activity.activityType.code === "LECTURE" && (
+                            <TableCell className="text-sm">
+                              {participant.lectureParticipationMode
+                                ? LECTURE_PARTICIPATION_MODE_LABELS[
+                                    participant.lectureParticipationMode
+                                  ]
+                                : "미선택"}
+                            </TableCell>
+                          )}
                           <TableCell className="text-center">
                             {activity.activityType.code === "PROJECT" &&
                             (canAdministerActivity || participant.appliedPosition) ? (
@@ -2121,7 +2141,8 @@ export function ActivityManagementScreen({
 
           {canAdministerActivity &&
             (activity.activityType.code === "STUDY" ||
-              activity.activityType.code === "SPECIAL_LECTURE") && (
+              activity.activityType.code === "SPECIAL_LECTURE" ||
+              activity.activityType.code === "LECTURE") && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3">
@@ -2170,9 +2191,6 @@ export function ActivityManagementScreen({
                       </Table>
                     </div>
                   )}
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    환급 계좌 정보는 보증금 반환 업무에만 사용해주세요.
-                  </p>
                 </CardContent>
               </Card>
             )}

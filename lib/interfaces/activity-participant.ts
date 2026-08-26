@@ -1,6 +1,8 @@
 import { ActivityResponse } from "./activity";
 import { UserResponseDto } from "./auth";
 
+export type LectureParticipationMode = "INDIVIDUAL" | "GROUP";
+
 export interface ActivityParticipantResponse {
   id: string; // UUID
   userId: string; // UUID
@@ -8,6 +10,7 @@ export interface ActivityParticipantResponse {
   completed: boolean;
   appliedPosition?: string | null;
   applicationMessage?: string | null;
+  lectureParticipationMode?: LectureParticipationMode | null;
   reviewMessage?: string | null;
   createdAt: string;
   modifiedAt: string;
@@ -31,6 +34,7 @@ export interface ActivityJoinRequest {
   agreedToPromotion?: boolean;
   appliedPosition?: string;
   applicationMessage?: string;
+  lectureParticipationMode?: LectureParticipationMode;
 }
 
 export interface ActivityParticipantRefundAccount {

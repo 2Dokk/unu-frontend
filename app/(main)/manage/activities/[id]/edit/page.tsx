@@ -63,7 +63,11 @@ import {
 } from "@/lib/constants/project-mode";
 import { isDiscordUrl, supportsDiscordLink } from "@/lib/constants/discord-link";
 import { operationPlanLabel } from "@/lib/constants/operation-plan";
-import { activityMaterialLabel } from "@/lib/constants/activity-material";
+import {
+  activityMaterialHelpText,
+  activityMaterialLabel,
+  activityMaterialPlaceholder,
+} from "@/lib/constants/activity-material";
 import { resolveActivityReturnSource } from "@/lib/constants/activity-navigation";
 import { isMaterialUrl } from "@/lib/utils/material-url";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -129,11 +133,9 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
       : returnSource
         ? `?from=${returnSource}`
         : "";
-  const { userId, roles, isLoading: authLoading } = useAuth();
-  const hasAdminRole = roles.some(
-    (role) => role === "ADMIN" || role === "MANAGER",
-  );
-  const canEditOperations = viewMode === "admin" && hasAdminRole;
+  const { userId, hasRole, isLoading: authLoading } = useAuth();
+  const hasAdminRole = hasRole("MANAGER");
+  const canEditOperations = hasAdminRole;
   const canEditDeposit = canEditOperations;
   const managementPath =
     viewMode === "assignee"
@@ -186,7 +188,8 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
   );
   const requiresDeposit =
     selectedActivityType?.code === "STUDY" ||
-    selectedActivityType?.code === "SPECIAL_LECTURE";
+    selectedActivityType?.code === "SPECIAL_LECTURE" ||
+    selectedActivityType?.code === "LECTURE";
   const isProject = selectedActivityType?.code === "PROJECT";
   const allowsDiscordLink = supportsDiscordLink(selectedActivityType?.code);
   const planLabel = operationPlanLabel(selectedActivityType?.code);
@@ -233,8 +236,7 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
 
       const activityData = await getActivityById(activityId);
       const isAssignee = activityData.assignee.id === userId;
-      const hasPageAccess =
-        viewMode === "assignee" ? isAssignee : hasAdminRole;
+      const hasPageAccess = isAssignee || hasAdminRole;
       if (!hasPageAccess) {
         toast.error("해당 활동을 수정할 권한이 없습니다.");
         router.replace(
@@ -393,7 +395,7 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
       formData.materialUrl.trim() &&
       !isMaterialUrl(formData.materialUrl.trim())
     ) {
-      return `${materialLabel} Google Drive 또는 Notion 공유 링크를 확인해주세요.`;
+      return `${materialLabel} 링크를 확인해주세요.`;
     }
 
     return null;
@@ -540,7 +542,8 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
                     );
                     if (
                       (type?.code === "STUDY" ||
-                        type?.code === "SPECIAL_LECTURE") &&
+                        type?.code === "SPECIAL_LECTURE" ||
+                        type?.code === "LECTURE") &&
                       !formData.depositAmount
                     ) {
                       handleInputChange("depositAmount", "30000");
@@ -714,12 +717,14 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
                       onChange={(event) =>
                         handleInputChange("materialUrl", event.target.value)
                       }
-                      placeholder="Google Drive·Docs 또는 Notion 공유 링크"
+                      placeholder={activityMaterialPlaceholder(
+                        selectedActivityType?.code,
+                      )}
                       autoComplete="off"
                     />
                     <p className="text-xs text-muted-foreground">
-                      학회원이 열람할 수 있도록 공유 권한을 확인해주세요. 비워
-                      두고 저장하면 기존 자료가 제거됩니다.
+                      {activityMaterialHelpText()} 비워
+                      두고 저장하면 기존 링크가 제거됩니다.
                     </p>
                   </div>
                 )}

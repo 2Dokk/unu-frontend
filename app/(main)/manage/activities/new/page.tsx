@@ -44,7 +44,11 @@ import {
 } from "@/lib/constants/project-mode";
 import { isDiscordUrl, supportsDiscordLink } from "@/lib/constants/discord-link";
 import { operationPlanLabel } from "@/lib/constants/operation-plan";
-import { activityMaterialLabel } from "@/lib/constants/activity-material";
+import {
+  activityMaterialHelpText,
+  activityMaterialLabel,
+  activityMaterialPlaceholder,
+} from "@/lib/constants/activity-material";
 import { isMaterialUrl } from "@/lib/utils/material-url";
 
 const STATUS_OPTIONS = [
@@ -94,7 +98,8 @@ export default function ActivityNewPage() {
   );
   const requiresDeposit =
     selectedActivityType?.code === "STUDY" ||
-    selectedActivityType?.code === "SPECIAL_LECTURE";
+    selectedActivityType?.code === "SPECIAL_LECTURE" ||
+    selectedActivityType?.code === "LECTURE";
   const isProject = selectedActivityType?.code === "PROJECT";
   const registersAssigneeAsParticipant =
     selectedActivityType?.code === "STUDY";
@@ -208,7 +213,7 @@ export default function ActivityNewPage() {
       formData.materialUrl.trim() &&
       !isMaterialUrl(formData.materialUrl.trim())
     ) {
-      return `${materialLabel} Google Drive 또는 Notion 공유 링크를 확인해주세요.`;
+      return `${materialLabel} 링크를 확인해주세요.`;
     }
     return null;
   }
@@ -320,7 +325,8 @@ export default function ActivityNewPage() {
                   const type = activityTypes.find((item) => item.id === value);
                   if (
                     (type?.code === "STUDY" ||
-                      type?.code === "SPECIAL_LECTURE") &&
+                      type?.code === "SPECIAL_LECTURE" ||
+                      type?.code === "LECTURE") &&
                     !formData.depositAmount
                   ) {
                     handleInputChange("depositAmount", "30000");
@@ -498,7 +504,9 @@ export default function ActivityNewPage() {
                     type="url"
                     value={formData.operationPlan}
                     onChange={(event) => handleInputChange("operationPlan", event.target.value)}
-                    placeholder="Google Drive·Docs 또는 Notion 공유 링크"
+                    placeholder={activityMaterialPlaceholder(
+                      selectedActivityType?.code,
+                    )}
                   />
                 </div>
               )}
@@ -514,11 +522,13 @@ export default function ActivityNewPage() {
                     onChange={(event) =>
                       handleInputChange("materialUrl", event.target.value)
                     }
-                    placeholder="Google Drive·Docs 또는 Notion 공유 링크"
+                    placeholder={activityMaterialPlaceholder(
+                      selectedActivityType?.code,
+                    )}
                     autoComplete="off"
                   />
                   <p className="text-xs text-muted-foreground">
-                    학회원이 열람할 수 있도록 공유 권한을 확인해주세요. 등록
+                    {activityMaterialHelpText()} 등록
                     후 활동 상세와 강의자료 탭에 표시됩니다.
                   </p>
                 </div>

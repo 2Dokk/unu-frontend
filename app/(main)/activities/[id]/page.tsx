@@ -56,6 +56,7 @@ import { ActivityResponse } from "@/lib/interfaces/activity";
 import { LectureMaterial } from "@/lib/interfaces/lecture-material";
 import {
   ActivityJoinRequest,
+  LectureParticipationMode,
   ActivityParticipantResponse,
   ActivityParticipantSummary,
   ActivityCapacityResponse,
@@ -183,6 +184,71 @@ function getMyParticipantMeta(
       tone: STATUS_TONES.neutral,
       icon: ClipboardList,
     }
+  );
+}
+
+const LECTURE_PARTICIPATION_MODE_LABELS: Record<
+  LectureParticipationMode,
+  string
+> = {
+  INDIVIDUAL: "개인 수강 희망",
+  GROUP: "그룹 수강 희망",
+};
+
+function LectureParticipationModeSelector({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: LectureParticipationMode | null;
+  onChange: (value: LectureParticipationMode) => void;
+  disabled?: boolean;
+}) {
+  const options: Array<{
+    value: LectureParticipationMode;
+    label: string;
+    description: string;
+  }> = [
+    {
+      value: "INDIVIDUAL",
+      label: "개인 수강 희망",
+      description: "개별 진도로 수강하는 방식을 희망합니다.",
+    },
+    {
+      value: "GROUP",
+      label: "그룹 수강 희망",
+      description: "다른 학회원과 함께 수강하는 방식을 희망합니다.",
+    },
+  ];
+
+  return (
+    <section className="space-y-2.5">
+      <h3 className="font-semibold">
+        수강 방식 <span className="text-destructive">*</span>
+      </h3>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            disabled={disabled}
+            aria-pressed={value === option.value}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "rounded-md border px-3.5 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+              value === option.value
+                ? "border-[#174b3a] bg-[#174b3a]/5"
+                : "hover:bg-muted/50",
+            )}
+          >
+            <span className="block text-sm font-semibold">{option.label}</span>
+            <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+              {option.description}
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -345,6 +411,8 @@ export default function ActivityDetails() {
   const [refundAccountHolder, setRefundAccountHolder] = useState("");
   const [appliedPosition, setAppliedPosition] = useState("");
   const [applicationMessage, setApplicationMessage] = useState("");
+  const [lectureParticipationMode, setLectureParticipationMode] =
+    useState<LectureParticipationMode | null>(null);
 
   const { userRole, hasRole, userId } = useAuth();
   const canAdministerActivity = hasRole("MANAGER") || hasRole("ADMIN");
@@ -535,9 +603,11 @@ export default function ActivityDetails() {
 
   const handleApplyClick = () => {
     if (!activity) return;
+    setLectureParticipationMode(null);
     if (
       (activity.activityType.code === "STUDY" ||
-        activity.activityType.code === "SPECIAL_LECTURE") &&
+        activity.activityType.code === "SPECIAL_LECTURE" ||
+        activity.activityType.code === "LECTURE") &&
       activity.depositAmount > 0
     ) {
       setAgreedToPolicy(false);
@@ -562,18 +632,34 @@ export default function ActivityDetails() {
       toast.error("지원 포지션을 입력해주세요.");
       return;
     }
+    if (
+      activity?.activityType.code === "LECTURE" &&
+      !lectureParticipationMode
+    ) {
+      toast.error("수강 방식을 선택해주세요.");
+      return;
+    }
     const applied = await handleApply(
       activity?.activityType.code === "PROJECT"
         ? {
             appliedPosition: appliedPosition.trim(),
             applicationMessage: applicationMessage.trim() || undefined,
           }
-        : undefined,
+        : activity?.activityType.code === "LECTURE"
+          ? { lectureParticipationMode: lectureParticipationMode! }
+          : undefined,
     );
     if (applied) setApplyDialogOpen(false);
   };
 
   const handleStudyDepositConfirm = async () => {
+    if (
+      activity?.activityType.code === "LECTURE" &&
+      !lectureParticipationMode
+    ) {
+      toast.error("수강 방식을 선택해주세요.");
+      return;
+    }
     const applied = await handleApply({
       refundBankName: refundBankName.trim(),
       refundAccountNumber,
@@ -581,6 +667,7 @@ export default function ActivityDetails() {
       agreedToDepositPolicy: agreedToPolicy,
       confirmedDepositPayment: confirmedPayment,
       agreedToPromotion: agreedToPromo,
+      lectureParticipationMode: lectureParticipationMode ?? undefined,
     });
     if (applied) setStudyDepositOpen(false);
   };
@@ -861,6 +948,14 @@ export default function ActivityDetails() {
                     {myParticipant.completed ? "수료" : "미수료"}
                   </Badge>
                 )}
+                {activity.activityType.code === "LECTURE" &&
+                  myParticipant?.lectureParticipationMode && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {LECTURE_PARTICIPATION_MODE_LABELS[
+                        myParticipant.lectureParticipationMode
+                      ]}
+                    </p>
+                  )}
               </div>
             </div>
           </div>
@@ -996,10 +1091,24 @@ export default function ActivityDetails() {
                 value={`${formatDate(activity.startDate)} ~ ${formatDate(activity.endDate)}`}
               />
 
-              {!isActivityRecruiting(activity) && (
+              {(activity.activityType.code === "STUDY" ||
+                activity.activityType.code === "SPECIAL_LECTURE" ||
+                activity.activityType.code === "LECTURE") && (
+                <InfoRow
+                  icon={<Landmark className="h-4 w-4" />}
+                  label="참여 보증금"
+                  value={
+                    activity.depositAmount > 0
+                      ? `${activity.depositAmount.toLocaleString("ko-KR")}원`
+                      : "없음"
+                  }
+                />
+              )}
+
+              {activity.activityType.code === "LECTURE" && (
                 <InfoRow
                   icon={<Users className="h-4 w-4" />}
-                  label="추가 참여 현황"
+                  label="현재 신청 인원"
                   value={
                     capacity?.participantLimit == null
                       ? `${capacity?.participantCount ?? 0}명 / 제한 없음`
@@ -1173,6 +1282,14 @@ export default function ActivityDetails() {
                       </span>
                     </div>
                   )}
+                  {activity.activityType.code === "LECTURE" &&
+                    myParticipant?.lectureParticipationMode && (
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {LECTURE_PARTICIPATION_MODE_LABELS[
+                          myParticipant.lectureParticipationMode
+                        ]}
+                      </p>
+                    )}
                 </div>
               </div>
 
@@ -1344,12 +1461,25 @@ export default function ActivityDetails() {
               </div>
             </div>
           )}
+          {activity.activityType.code === "LECTURE" && (
+            <div className="py-1">
+              <LectureParticipationModeSelector
+                value={lectureParticipationMode}
+                onChange={setLectureParticipationMode}
+                disabled={actionLoading}
+              />
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={actionLoading}>
               돌아가기
             </AlertDialogCancel>
             <AlertDialogAction
-              disabled={actionLoading}
+              disabled={
+                actionLoading ||
+                (activity.activityType.code === "LECTURE" &&
+                  !lectureParticipationMode)
+              }
               onClick={(event) => {
                 event.preventDefault();
                 void handleApplyConfirm();
@@ -1391,6 +1521,14 @@ export default function ActivityDetails() {
         }}
       >
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          {activity.activityType.code === "LECTURE" && (
+            <LectureParticipationModeSelector
+              value={lectureParticipationMode}
+              onChange={setLectureParticipationMode}
+              disabled={actionLoading}
+            />
+          )}
+
           <DialogHeader>
             <DialogTitle>보증금 납부 및 환급 안내</DialogTitle>
             <DialogDescription>
@@ -1444,7 +1582,6 @@ export default function ActivityDetails() {
 
             <section className="space-y-3">
               <h3 className="flex items-center gap-2 font-semibold">
-                <Landmark className="h-4 w-4 text-emerald-700" />
                 환급 계좌 정보
               </h3>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -1544,6 +1681,8 @@ export default function ActivityDetails() {
                 !refundAccountHolder.trim() ||
                 !agreedToPolicy ||
                 !confirmedPayment ||
+                (activity.activityType.code === "LECTURE" &&
+                  !lectureParticipationMode) ||
                 actionLoading
               }
               onClick={handleStudyDepositConfirm}

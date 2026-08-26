@@ -39,7 +39,11 @@ import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { ActivityOpeningRequestPayload } from "@/lib/interfaces/activity-opening-request";
 import { ActivityOpeningPeriodResponse } from "@/lib/interfaces/activity-opening-period";
 import { useAuth } from "@/lib/contexts/AuthContext";
-import { activityMaterialLabel } from "@/lib/constants/activity-material";
+import {
+  activityMaterialHelpText,
+  activityMaterialLabel,
+  activityMaterialPlaceholder,
+} from "@/lib/constants/activity-material";
 import { isMaterialUrl } from "@/lib/utils/material-url";
 import {
   ExternalLink,
@@ -358,7 +362,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
       form.materialUrl.trim() &&
       !isMaterialUrl(form.materialUrl.trim())
     ) {
-      return `${materialLabel} Google Drive 또는 Notion 공유 링크를 확인해주세요.`;
+      return `${materialLabel} 링크를 확인해주세요.`;
     }
 
     if (
@@ -516,7 +520,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                 - 강의 주제는 컴퓨터공학 관련 분야 전반을 대상으로 하며, 웹 개발 및 컴퓨터 시스템 관련 강의를 우선적으로 선정합니다. <br></br>
                 - 강의자에게는 강의 시간 기준 시간당 20,000원의 강의비가 지급됩니다.<br></br>
                 - 승인된 강의는 제출한 강의 계획을 바탕으로 성실하게 운영해야 하며, 
-                정당한 사유 없이 강의 진행이 지속적으로 이루어지지 않는 경우 강의료 지급 또는 이후 강의 개설 승인에 제한이 있을 수 있습니다.
+                정당한 사유 없이 강의 진행이 지속적으로 이루어지지 않는 경우 강의료 지급 및 이후 강의 개설 승인에 제한이 있을 수 있습니다.
               </p>
             </div>
           )}
@@ -592,7 +596,7 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
 
                   <div className="space-y-2">
                     <a
-                      href="..."
+                      href="https://drive.google.com/drive/folders/1FPdT5Enpbw4Mo2tL3suzg8QEGdaGOuE-?usp=drive_link"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 whitespace-nowrap text-sm underline underline-offset-4"
@@ -648,12 +652,13 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                 maxLength={2048}
                 value={form.materialUrl}
                 onChange={(event) => change("materialUrl", event.target.value)}
-                placeholder="Google Drive·Docs 또는 Notion 공유 링크"
+                placeholder={activityMaterialPlaceholder(
+                  selectedActivityType?.code,
+                )}
                 autoComplete="off"
               />
               <p className="text-xs text-muted-foreground">
-                학회원이 열람할 수 있도록 공유 권한을 확인해주세요. 승인 후
-                활동 상세와 강의자료 탭에 표시됩니다.
+                {activityMaterialHelpText()}
               </p>
             </div>
           )}
