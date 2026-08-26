@@ -78,25 +78,27 @@ export default function AboutPage() {
                   </h2>
                 </div>
 
-                {group.items.map((section) => (
-                  <Link
-                    key={section.id}
-                    id={section.id}
-                    href={`/about/${section.slug}`}
-                    className="group relative grid scroll-mt-24 gap-y-1.5 -mx-2 rounded-md border-b border-[#14231b]/15 px-2 py-5 pr-9 transition-colors hover:bg-[#14231b]/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#40795b]/35 focus-visible:ring-inset sm:-mx-3 sm:grid-cols-[184px_minmax(0,1fr)] sm:gap-x-5 sm:gap-y-0 sm:px-3 sm:py-6 sm:pr-11 lg:grid-cols-[200px_minmax(0,1fr)]"
-                  >
-                    <h3 className="text-[21px] leading-7 font-bold tracking-[0] text-[#40795b] transition-transform duration-300 group-hover:translate-x-1 sm:text-[23px]">
-                      {section.title}
-                    </h3>
-                    <p className="whitespace-pre-line break-keep text-base leading-7 font-medium text-pretty text-[#14231b]/72 sm:col-start-2 sm:text-[17px] sm:leading-7 lg:text-[18px] lg:leading-8">
-                      {section.description}
-                    </p>
-                    <ArrowRight
-                      aria-hidden="true"
-                      className="absolute top-1/2 right-2 size-[18px] -translate-y-1/2 text-[#40795b]/55 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#40795b] sm:right-3"
-                    />
-                  </Link>
-                ))}
+                <div className="grid auto-rows-fr">
+                  {group.items.map((section) => (
+                    <Link
+                      key={section.id}
+                      id={section.id}
+                      href={`/about/${section.slug}`}
+                      className="group relative grid scroll-mt-24 content-center gap-y-1.5 -mx-2 rounded-md border-b border-[#14231b]/15 px-2 py-5 pr-9 transition-colors hover:bg-[#14231b]/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#40795b]/35 focus-visible:ring-inset sm:-mx-3 sm:grid-cols-[184px_minmax(0,1fr)] sm:gap-x-5 sm:gap-y-0 sm:px-3 sm:py-6 sm:pr-11 lg:grid-cols-[200px_minmax(0,1fr)]"
+                    >
+                      <h3 className="text-[21px] leading-7 font-bold tracking-[0] text-[#40795b] transition-transform duration-300 group-hover:translate-x-1 sm:text-[23px]">
+                        {section.title}
+                      </h3>
+                      <p className="whitespace-pre-line break-keep text-base leading-7 font-medium text-pretty text-[#14231b]/72 sm:col-start-2 sm:text-[17px] sm:leading-7 lg:text-[18px] lg:leading-8">
+                        {section.description}
+                      </p>
+                      <ArrowRight
+                        aria-hidden="true"
+                        className="absolute top-1/2 right-2 size-[18px] -translate-y-1/2 text-[#40795b]/55 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#40795b] sm:right-3"
+                      />
+                    </Link>
+                  ))}
+                </div>
               </section>
             ))}
 
