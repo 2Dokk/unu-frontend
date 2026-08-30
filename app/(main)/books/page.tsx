@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -35,6 +35,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { createBook, deleteBook, getBooks, updateBook } from "@/lib/api/book";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { Book, BookRequest } from "@/lib/interfaces/book";
@@ -58,6 +63,56 @@ function compareBooks(a: Book, b: Book): number {
   return (
     KOREAN_COLLATOR.compare(a.title, b.title) ||
     KOREAN_COLLATOR.compare(a.author, b.author)
+  );
+}
+
+function TruncatedAuthor({ author }: { author: string }) {
+  const textRef = useRef<HTMLDivElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+
+  const checkTruncation = () => {
+    const element = textRef.current;
+    const truncated = Boolean(
+      element && element.scrollWidth > element.clientWidth + 1,
+    );
+    setIsTruncated(truncated);
+    return truncated;
+  };
+
+  useEffect(() => {
+    const element = textRef.current;
+    if (!element) return;
+
+    const update = () => checkTruncation();
+    update();
+
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [author]);
+
+  return (
+    <Tooltip
+      open={isTruncated && tooltipOpen}
+      onOpenChange={(open) => {
+        setTooltipOpen(open && checkTruncation());
+      }}
+    >
+      <TooltipTrigger asChild>
+        <div
+          ref={textRef}
+          className="w-full min-w-0 truncate"
+          onPointerEnter={checkTruncation}
+          onFocus={checkTruncation}
+        >
+          {author}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs whitespace-normal break-words">
+        {author}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -219,7 +274,7 @@ export default function BooksPage() {
         <div className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight">보유 도서</h1>
           <p className="text-sm text-muted-foreground">
-            학회에서 보유하고 있는 도서를 확인할 수 있습니다.<br></br>대출 희망 시 운영진에게 반드시 먼저 말씀해 주신 후 대출해 주시기 바랍니다.
+            학회에서 보유하고 있는 도서를 확인할 수 있습니다.<br></br>대출 희망 시 운영진에게 반드시 먼저 말씀해 주새요.
           </p>
         </div>
         {canManage && (
@@ -298,47 +353,53 @@ export default function BooksPage() {
               </TableHeader>
                 <TableBody>
                   {paginatedBooks.map((book) => (
-                  <TableRow key={book.id}>
-                    <TableCell className="whitespace-normal break-words font-medium">
-                      {book.title}
-                    </TableCell>
-                    <TableCell className="whitespace-normal break-words">
-                      {book.author}
-                    </TableCell>
-                    <TableCell className="whitespace-normal break-words">
-                      {book.publisher || "—"}
-                    </TableCell>
-                    <TableCell className="whitespace-pre-wrap break-words text-muted-foreground">
-                      {book.note || "—"}
-                    </TableCell>
-                    {canManage && (
-                      <TableCell className="pl-2! pr-4">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            title="도서 수정"
-                            aria-label={`${book.title} 수정`}
-                            onClick={() => openEditDialog(book)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            className="text-destructive hover:text-destructive"
-                            title="도서 삭제"
-                            aria-label={`${book.title} 삭제`}
-                            onClick={() => setDeleteTarget(book)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                    <TableRow key={book.id} className="h-14">
+                      <TableCell className="h-14 max-w-0 py-0 font-medium">
+                        <div className="truncate" title={book.title}>
+                          {book.title}
                         </div>
                       </TableCell>
-                    )}
-                  </TableRow>
+                      <TableCell className="h-14 max-w-0 py-0">
+                        <TruncatedAuthor author={book.author} />
+                      </TableCell>
+                      <TableCell className="h-14 max-w-0 py-0">
+                        <div className="truncate" title={book.publisher || undefined}>
+                          {book.publisher || "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="h-14 max-w-0 py-0 text-muted-foreground">
+                        <div className="truncate" title={book.note || undefined}>
+                          {book.note || "—"}
+                        </div>
+                      </TableCell>
+                      {canManage && (
+                        <TableCell className="h-14 py-0 pl-2! pr-4">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              title="도서 수정"
+                              aria-label={`${book.title} 수정`}
+                              onClick={() => openEditDialog(book)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              className="text-destructive hover:text-destructive"
+                              title="도서 삭제"
+                              aria-label={`${book.title} 삭제`}
+                              onClick={() => setDeleteTarget(book)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
                   ))}
                 </TableBody>
               </Table>
