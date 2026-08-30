@@ -47,6 +47,15 @@ function todayValue(): string {
   ].join("-");
 }
 
+function isSpecialLectureAssignee(
+  participant: ActivityParticipantResponse,
+): boolean {
+  return (
+    participant.activity.activityType?.code === "SPECIAL_LECTURE" &&
+    participant.activity.assignee?.id === participant.user.id
+  );
+}
+
 async function enrichParticipation(
   participant: ActivityParticipantResponse,
 ): Promise<ParticipationWithStats> {
@@ -130,10 +139,12 @@ export function useMyActivities(): MyActivitiesState {
           getMyHostedActivities(),
         ]);
 
-        // 개설 활동이라는 이유로 participant를 제거하지 않는다.
-        // (개설자라도 APPROVED participant면 출석·수료 집계에 포함돼야 하므로 전량 유지한다.)
+        // 강의 담당자는 출석 대상이 아니며 담당 활동 목록에서 별도로 표시한다.
+        const attendanceParticipants = participantData.filter(
+          (participant) => !isSpecialLectureAssignee(participant),
+        );
         const [enrichedParticipations, enrichedHosted] = await Promise.all([
-          Promise.all(participantData.map(enrichParticipation)),
+          Promise.all(attendanceParticipants.map(enrichParticipation)),
           Promise.all(hostedData.map(enrichHostedActivity)),
         ]);
 

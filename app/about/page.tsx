@@ -11,6 +11,7 @@ const EXECUTIVES = [
   { year: "2024", president: "정준하", vicePresident: "이하윤", treasurer: "김태경" },
   { year: "2023", president: "정한결", vicePresident: "이소영", treasurer: "한석기" },
   { year: "2022", president: "남정연", vicePresident: "박준서", treasurer: "강승묵" },
+  { year: "2021", president: "이동주", vicePresident: "", treasurer: "" },
 ];
 
 const EXECUTIVE_ROLES = [

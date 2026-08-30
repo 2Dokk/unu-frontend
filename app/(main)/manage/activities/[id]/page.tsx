@@ -363,6 +363,32 @@ export function ActivityManagementScreen({
   const [participants, setParticipants] = useState<
     ActivityParticipantResponse[]
   >([]);
+  const attendanceParticipants = useMemo(() => {
+    if (
+      activity?.activityType.code !== "SPECIAL_LECTURE" ||
+      !activity.assignee?.id
+    ) {
+      return participants;
+    }
+
+    return participants.filter(
+      (participant) => participant.userId !== activity.assignee?.id,
+    );
+  }, [activity, participants]);
+  const approvedAttendanceParticipants = useMemo(
+    () =>
+      attendanceParticipants.filter(
+        (participant) => participant.status === "APPROVED",
+      ),
+    [attendanceParticipants],
+  );
+  const completableAttendanceParticipants = useMemo(
+    () =>
+      approvedAttendanceParticipants.filter(
+        (participant) => !participant.completed,
+      ),
+    [approvedAttendanceParticipants],
+  );
   const [filteredParticipants, setFilteredParticipants] = useState<
     ActivityParticipantResponse[]
   >([]);
@@ -741,9 +767,7 @@ export function ActivityManagementScreen({
     if (!force && statsInflightRef.current) return statsInflightRef.current;
 
     const request = (async () => {
-      const approvedParticipants = participants.filter(
-        (p) => p.status === "APPROVED",
-      );
+      const approvedParticipants = approvedAttendanceParticipants;
       statsLoadedRef.current = true;
 
       if (approvedParticipants.length === 0) {
@@ -1378,9 +1402,7 @@ export function ActivityManagementScreen({
   }
 
   function handleSelectAllPresent() {
-    const approvedParticipants = participants.filter(
-      (p) => p.status === "APPROVED",
-    );
+    const approvedParticipants = approvedAttendanceParticipants;
 
     if (approvedParticipants.length === 0) return;
 
@@ -1411,9 +1433,7 @@ export function ActivityManagementScreen({
       attendanceData.absent.size +
       attendanceData.excused.size;
 
-    const approvedCount = participants.filter(
-      (participant) => participant.status === "APPROVED",
-    ).length;
+    const approvedCount = approvedAttendanceParticipants.length;
     if (totalAssigned !== approvedCount) {
       toast.error("모든 참여자의 출석 상태를 지정해주세요.");
       return;
@@ -1529,9 +1549,7 @@ export function ActivityManagementScreen({
   // ========================
 
   function handleSelectAllCompletion(checked: boolean) {
-    const completableParticipants = participants.filter(
-      (p) => p.status === "APPROVED" && !p.completed,
-    );
+    const completableParticipants = completableAttendanceParticipants;
     if (checked) {
       setSelectedCompletionIds(
         new Set(completableParticipants.map((p) => p.id)),
@@ -1581,9 +1599,7 @@ export function ActivityManagementScreen({
   // ========================
 
   function getAttendanceStats() {
-    let approvedParticipants = participants.filter(
-      (p) => p.status === "APPROVED",
-    );
+    let approvedParticipants = [...approvedAttendanceParticipants];
 
     // Apply search filter
     if (attendanceSearchQuery.trim()) {
@@ -2593,8 +2609,7 @@ export function ActivityManagementScreen({
                 </div>
               )}
 
-              {participants.filter((p) => p.status === "APPROVED").length ===
-              0 ? (
+              {approvedAttendanceParticipants.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <UserIcon className="h-12 w-12 text-muted-foreground mb-3" />
                   <p className="text-muted-foreground">
@@ -2609,14 +2624,9 @@ export function ActivityManagementScreen({
                         {canAdministerActivity && <TableHead className="w-12">
                           <Checkbox
                             checked={
-                              participants.filter(
-                                (p) => p.status === "APPROVED" && !p.completed,
-                              ).length > 0 &&
+                              completableAttendanceParticipants.length > 0 &&
                               selectedCompletionIds.size ===
-                                participants.filter(
-                                  (p) =>
-                                    p.status === "APPROVED" && !p.completed,
-                                ).length
+                                completableAttendanceParticipants.length
                             }
                             onCheckedChange={handleSelectAllCompletion}
                           />
@@ -2633,9 +2643,7 @@ export function ActivityManagementScreen({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {participants
-                        .filter((p) => p.status === "APPROVED")
-                        .map((participant) => {
+                      {approvedAttendanceParticipants.map((participant) => {
                           const stats = getAttendanceStats().find(
                             (s) => s.participant.id === participant.id,
                           );
@@ -2973,7 +2981,7 @@ export function ActivityManagementScreen({
               </DialogHeader>
               <div className="flex-1 min-h-0 overflow-hidden">
                 <AttendanceInputContent
-                  participants={participants}
+                  participants={attendanceParticipants}
                   attendanceData={attendanceData}
                   selectedParticipants={selectedParticipants}
                   attendanceSearchQuery={attendanceSearchQuery}
@@ -2992,7 +3000,7 @@ export function ActivityManagementScreen({
                 <div className="flex items-center justify-between w-full">
                   <div className="text-sm text-muted-foreground">
                     총{" "}
-                    {participants.filter((p) => p.status === "APPROVED").length}
+                    {approvedAttendanceParticipants.length}
                     명 · 출석 {attendanceData.present.size} / 결석{" "}
                     {attendanceData.absent.size} / 공결{" "}
                     {attendanceData.excused.size}
@@ -3030,7 +3038,7 @@ export function ActivityManagementScreen({
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-hidden">
             <AttendanceInputContent
-              participants={participants}
+              participants={attendanceParticipants}
               attendanceData={attendanceData}
               selectedParticipants={selectedParticipants}
               attendanceSearchQuery={attendanceSearchQuery}
@@ -3048,7 +3056,7 @@ export function ActivityManagementScreen({
           <DialogFooter className="pt-4 mt-4">
             <div className="flex items-center justify-between w-full">
               <div className="text-sm text-muted-foreground">
-                총 {participants.filter((p) => p.status === "APPROVED").length}
+                총 {approvedAttendanceParticipants.length}
                 명 · 출석 {attendanceData.present.size} / 결석{" "}
                 {attendanceData.absent.size} / 공결{" "}
                 {attendanceData.excused.size}

@@ -405,7 +405,7 @@ const ActivityPage = () => {
           >
             <Plus className="h-3 w-3" />
             <span className="text-xs">
-              {openingPeriod?.status === "CLOSED" ? "신청 마감" : openingPeriod?.status === "UPCOMING" ? "신청 예정" : "활동 개설 신청"}
+              {openingPeriod?.status === "CLOSED" ? "신청 마감" : openingPeriod?.status === "UPCOMING" ? "신청 기간이 아닙니다" : "활동 개설 신청"}
             </span>
           </Button>
         </div>

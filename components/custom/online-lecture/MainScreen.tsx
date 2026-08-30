@@ -92,7 +92,7 @@ export default function MainScreen({ lectures, upcoming, onOpenLecture, onGoMy }
                       locked ? "text-[#8b93a3]" : "text-brand"
                     }`}
                   >
-                    {locked ? "미신청" : "시간대 보기 →"}
+                    {locked ? "미신청" : "예약하러 가기 →"}
                   </span>
                 </div>
               </div>

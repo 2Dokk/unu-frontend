@@ -43,11 +43,8 @@ export default function ConfirmScreen({ booking, onGoMain, onGoMy }: Props) {
     );
   };
 
-  const rowsFor = (item: typeof items[number]): { k: string; v: ReactNode }[] => {
-    const showFullDetails = item.addTimes.length > 0;
-    const accountRows: { k: string; v: ReactNode }[] = !showFullDetails
-      ? []
-      : item.account
+  const accountRowsFor = (item: typeof items[number]): { k: string; v: ReactNode }[] =>
+    item.account
         ? [
             ...(item.account.course_url
               ? [
@@ -73,6 +70,22 @@ export default function ConfirmScreen({ booking, onGoMain, onGoMy }: Props) {
           ? [{ k: "계정 정보", v: item.accountError }]
           : [{ k: "계정 정보", v: "등록된 계정 정보가 없습니다." }];
 
+  const accountItems = Array.from(
+    items
+      .filter((item) => item.addTimes.length > 0)
+      .reduce((byLecture, item) => {
+        const current = byLecture.get(item.lecture);
+        if (!current || (!current.account && item.account)) {
+          byLecture.set(item.lecture, item);
+        }
+        return byLecture;
+      }, new Map<string, (typeof items)[number]>())
+      .values(),
+  );
+
+  const rowsFor = (item: typeof items[number]): { k: string; v: ReactNode }[] => {
+    const showFullDetails = item.addTimes.length > 0;
+
     return [
       { k: "강의", v: item.lecture },
       { k: "날짜", v: dateLabel(item.date) },
@@ -83,7 +96,6 @@ export default function ConfirmScreen({ booking, onGoMain, onGoMy }: Props) {
       ...(showFullDetails
         ? [{ k: "총 예약 시간", v: durationLabel(item.finalTimes.length) }]
         : []),
-      ...accountRows,
     ];
   };
 
@@ -126,6 +138,33 @@ export default function ConfirmScreen({ booking, onGoMain, onGoMy }: Props) {
             ))}
           </div>
         ))}
+        {accountItems.length > 0 && (
+          <div className="mt-4 border-t border-line-divider pt-5">
+            <div className="mb-3 text-[13px] font-extrabold text-brand-dark">
+              수강 정보
+            </div>
+            {accountItems.map((item, index) => (
+              <div
+                key={item.lecture}
+                className={index > 0 ? "mt-4 border-t border-line-divider pt-4" : ""}
+              >
+                {accountItems.length > 1 && (
+                  <div className="mb-1 text-[13px] font-bold text-ink">
+                    {item.lecture}
+                  </div>
+                )}
+                {accountRowsFor(item).map((row) => (
+                  <div key={row.k} className="flex items-start justify-between gap-5 py-[9px]">
+                    <span className="text-[13.5px] font-medium text-hint">{row.k}</span>
+                    <span className="max-w-[270px] break-all text-right text-sm font-bold whitespace-pre-line text-ink">
+                      {row.v}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex gap-[11px]">

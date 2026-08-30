@@ -25,7 +25,10 @@ export default function PortfolioPage() {
   }, []);
 
   const pinned = portfolios.filter((p) => p.pinned);
-  const sliderPortfolios = pinned.length > 0 ? pinned : portfolios;
+  const sliderPortfolios = [
+    ...pinned,
+    ...portfolios.filter((portfolio) => !portfolio.pinned),
+  ];
 
   return (
     <main className="w-full bg-white">

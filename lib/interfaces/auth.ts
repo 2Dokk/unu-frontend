@@ -71,10 +71,11 @@ export interface SignUpRequestDto {
   username: string;
   password: string;
   studentId: string;
+  major: string;
+  subMajor: string;
   githubId: string;
   phoneNumber: string;
   email: string;
-  joinedQuarterId: string;
 }
 
 export interface SignUpResponseDto {
@@ -84,7 +85,44 @@ export interface SignUpResponseDto {
   name: string;
 }
 
-export interface SignupTokenResponseDto {
-  token: string;
+export interface SignupInvitationMember {
+  id: string;
+  studentId: string;
+  userId: string | null;
+  userName: string | null;
+  usedAt: string | null;
+}
+
+export interface SignupInvitation {
+  id: string;
+  name: string;
+  joinedQuarterId: string;
+  joinedQuarterName: string;
   expiresAt: string;
+  revokedAt: string | null;
+  createdAt: string;
+  totalCount: number;
+  usedCount: number;
+  token: string;
+  members: SignupInvitationMember[];
+}
+
+export interface SignupInvitationCreateRequest {
+  name: string;
+  joinedQuarterId: string;
+  expiresAt: string;
+  studentIds: string[];
+}
+
+export interface SignupEligibility {
+  invitationName: string;
+  studentId: string;
+  joinedQuarterId: string;
+  joinedQuarterName: string;
+  name: string | null;
+  major: string | null;
+  subMajor: string | null;
+  email: string | null;
+  githubId: string | null;
+  phoneNumber: string | null;
 }

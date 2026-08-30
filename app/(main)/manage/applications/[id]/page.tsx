@@ -256,6 +256,13 @@ export default function ApplicationDetailPage() {
     try {
       const updated = await reviewApplication(id, newStatus);
       setApplication(updated);
+      if (newStatus === "PASSED" && application.recruitmentType === "NEW_MEMBER") {
+        toast.success("합격 처리하고 회원가입 초대에 추가했습니다.");
+      } else if (application.status === "PASSED" && application.recruitmentType === "NEW_MEMBER") {
+        toast.success("상태를 변경하고 미가입 대상을 초대에서 제외했습니다.");
+      } else {
+        toast.success("상태를 변경했습니다.");
+      }
     } catch (error: unknown) {
       console.error("Failed to update status:", error);
       toast.error(getApiErrorMessage(error, "상태 업데이트에 실패했습니다."));

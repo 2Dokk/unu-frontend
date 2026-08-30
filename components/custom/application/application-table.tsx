@@ -257,7 +257,11 @@ export default function ApplicationsTable({
       setSelectedIds(new Set(failedIds));
 
       if (failedIds.length === 0) {
-        toast.success(`${updatedApplications.length}명의 상태를 변경했습니다.`);
+        toast.success(
+          bulkTargetStatus === "PASSED" && !useApprovalLabels
+            ? `${updatedApplications.length}명을 합격 처리하고 회원가입 초대에 추가했습니다.`
+            : `${updatedApplications.length}명의 상태를 변경했습니다.`,
+        );
       } else if (updatedApplications.length === 0) {
         toast.error("선택한 지원자의 상태를 변경하지 못했습니다.");
       } else {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -48,6 +48,19 @@ const EMPTY_FORM: BookRequest = {
   note: "",
 };
 
+const BOOKS_PER_PAGE = 10;
+const KOREAN_COLLATOR = new Intl.Collator("ko-KR", {
+  sensitivity: "base",
+  numeric: true,
+});
+
+function compareBooks(a: Book, b: Book): number {
+  return (
+    KOREAN_COLLATOR.compare(a.title, b.title) ||
+    KOREAN_COLLATOR.compare(a.author, b.author)
+  );
+}
+
 function messageFor(error: unknown, fallback: string): string {
   const data = (error as { response?: { data?: unknown } })?.response?.data;
   if (typeof data === "string" && data.trim()) return data;
@@ -63,6 +76,7 @@ export default function BooksPage() {
   const canManage = hasRole("ADMIN");
   const [books, setBooks] = useState<Book[]>([]);
   const [query, setQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -83,19 +97,34 @@ export default function BooksPage() {
 
   const filteredBooks = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("ko-KR");
-    if (!normalizedQuery) return books;
-    return books.filter((book) =>
-      [
-        book.title,
-        book.author,
-        book.publisher ?? "",
-        book.description ?? "",
-        book.note ?? "",
-      ].some((value) =>
-        value.toLocaleLowerCase("ko-KR").includes(normalizedQuery),
-      ),
-    );
+    const matches = normalizedQuery
+      ? books.filter((book) =>
+          [
+            book.title,
+            book.author,
+            book.publisher ?? "",
+            book.description ?? "",
+            book.note ?? "",
+          ].some((value) =>
+            value.toLocaleLowerCase("ko-KR").includes(normalizedQuery),
+          ),
+        )
+      : books;
+    return [...matches].sort(compareBooks);
   }, [books, query]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredBooks.length / BOOKS_PER_PAGE),
+  );
+  const paginatedBooks = useMemo(() => {
+    const start = (currentPage - 1) * BOOKS_PER_PAGE;
+    return filteredBooks.slice(start, start + BOOKS_PER_PAGE);
+  }, [currentPage, filteredBooks]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
 
   function openRegisterDialog() {
     setEditingBook(null);
@@ -152,7 +181,7 @@ export default function BooksPage() {
         const next = editingBook
           ? current.map((book) => (book.id === saved.id ? saved : book))
           : [...current, saved];
-        return next.sort((a, b) => a.title.localeCompare(b.title, "ko-KR"));
+        return next.sort(compareBooks);
       });
       setDialogOpen(false);
       setEditingBook(null);
@@ -190,7 +219,7 @@ export default function BooksPage() {
         <div className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight">보유 도서</h1>
           <p className="text-sm text-muted-foreground">
-            학회에서 보유하고 있는 도서를 확인할 수 있습니다.<br></br>대출을 희망할 시 운영진에게 반드시 먼저 말씀해 주신 후 대출하시기 바랍니다.
+            학회에서 보유하고 있는 도서를 확인할 수 있습니다.<br></br>대출 희망 시 운영진에게 반드시 먼저 말씀해 주신 후 대출해 주시기 바랍니다.
           </p>
         </div>
         {canManage && (
@@ -206,7 +235,10 @@ export default function BooksPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="도서명 또는 저자 검색"
             className="pl-9"
           />
@@ -240,24 +272,32 @@ export default function BooksPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="overflow-hidden py-0">
-          <CardContent className="p-0">
-            <Table className="min-w-[720px] table-fixed [&_td]:pl-6 [&_th]:pl-6">
+        <div className="space-y-4">
+          <Card className="overflow-hidden py-0">
+            <CardContent className="p-0">
+              <Table className="min-w-[720px] table-fixed [&_td]:pl-6 [&_th]:pl-6">
+              <colgroup>
+                <col style={{ width: canManage ? "40%" : "60%" }} />
+                <col style={{ width: "18%" }} />
+                <col style={{ width: "18%" }} />
+                <col style={{ width: "16%" }} />
+                {canManage && <col style={{ width: "8%" }} />}
+              </colgroup>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[30%]">도서명</TableHead>
-                  <TableHead className="w-[18%]">저자</TableHead>
-                  <TableHead className="w-[18%]">출판사</TableHead>
-                  <TableHead className="w-[34%]">비고</TableHead>
+                  <TableHead>도서명</TableHead>
+                  <TableHead>저자</TableHead>
+                  <TableHead>출판사</TableHead>
+                  <TableHead>비고</TableHead>
                   {canManage && (
-                    <TableHead className="w-20 pl-2! pr-4 text-right">
+                    <TableHead className="pl-2! pr-4 text-right">
                       <span className="sr-only">관리</span>
                     </TableHead>
                   )}
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {filteredBooks.map((book) => (
+                <TableBody>
+                  {paginatedBooks.map((book) => (
                   <TableRow key={book.id}>
                     <TableCell className="whitespace-normal break-words font-medium">
                       {book.title}
@@ -299,16 +339,48 @@ export default function BooksPage() {
                       </TableCell>
                     )}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          <p className="text-xs text-muted-foreground">
+            실제 이용 가능 여부는 학회실에서 확인해주세요.
+          </p>
+          {totalPages > 1 && (
+            <nav
+              className="flex items-center justify-center gap-3"
+              aria-label="도서 목록 페이지"
+            >
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={currentPage === 1}
+                aria-label="이전 페이지"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="min-w-16 text-center text-sm tabular-nums text-muted-foreground">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                }
+                disabled={currentPage === totalPages}
+                aria-label="다음 페이지"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </nav>
+          )}
+        </div>
       )}
-
-      <p className="text-xs text-muted-foreground">
-        실제 이용 가능 여부는 학회실에서 확인해주세요.
-      </p>
 
       <Dialog
         open={dialogOpen}

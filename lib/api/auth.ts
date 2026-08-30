@@ -4,11 +4,14 @@ import {
   LoginResponse,
   SignUpRequestDto,
   SignUpResponseDto,
-  SignupTokenResponseDto,
+  SignupEligibility,
+  SignupInvitation,
+  SignupInvitationCreateRequest,
   UpdateProfileRequest,
   UserInfoResponseDto,
   UserResponseDto,
 } from "../interfaces/auth";
+import axios from "axios";
 import axiosInstance from "./axiosInstance";
 
 export async function login(data: LoginRequest): Promise<LoginResponse> {
@@ -43,17 +46,110 @@ export async function signup(
   data: SignUpRequestDto,
   token: string,
 ): Promise<SignUpResponseDto> {
-  const response = await axiosInstance.post<SignUpResponseDto>(
-    "/auth/signup",
-    data,
-    { params: { token } },
+  try {
+    const response = await axiosInstance.post<SignUpResponseDto>(
+      "/auth/signup",
+      data,
+      { params: { token } },
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && typeof error.response?.data === "string") {
+      throw new Error(error.response.data);
+    }
+    throw error;
+  }
+}
+
+export async function verifySignupEligibility(
+  token: string,
+  studentId: string,
+): Promise<SignupEligibility> {
+  try {
+    const response = await axiosInstance.post<SignupEligibility>(
+      "/auth/signup/verify",
+      { studentId },
+      { params: { token } },
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && typeof error.response?.data === "string") {
+      throw new Error(error.response.data);
+    }
+    throw error;
+  }
+}
+
+export async function getSignupInvitations(): Promise<SignupInvitation[]> {
+  const response = await axiosInstance.get<SignupInvitation[]>(
+    "/admin/auth/invitations",
   );
   return response.data;
 }
 
-export async function generateSignupToken(): Promise<SignupTokenResponseDto> {
-  const response = await axiosInstance.post<SignupTokenResponseDto>(
-    "/admin/auth/token",
+export async function getSignupInvitation(
+  invitationId: string,
+): Promise<SignupInvitation> {
+  const response = await axiosInstance.get<SignupInvitation>(
+    `/admin/auth/invitations/${invitationId}`,
   );
   return response.data;
+}
+
+export async function createSignupInvitation(
+  data: SignupInvitationCreateRequest,
+): Promise<SignupInvitation> {
+  const response = await axiosInstance.post<SignupInvitation>(
+    "/admin/auth/invitations",
+    data,
+  );
+  return response.data;
+}
+
+export async function addSignupInvitationMembers(
+  invitationId: string,
+  studentIds: string[],
+): Promise<SignupInvitation> {
+  const response = await axiosInstance.post<SignupInvitation>(
+    `/admin/auth/invitations/${invitationId}/members`,
+    { studentIds },
+  );
+  return response.data;
+}
+
+export async function removeSignupInvitationMember(
+  invitationId: string,
+  memberId: string,
+): Promise<void> {
+  await axiosInstance.delete(
+    `/admin/auth/invitations/${invitationId}/members/${memberId}`,
+  );
+}
+
+export async function updateSignupInvitationExpiration(
+  invitationId: string,
+  expiresAt: string,
+): Promise<SignupInvitation> {
+  const response = await axiosInstance.patch<SignupInvitation>(
+    `/admin/auth/invitations/${invitationId}/expiration`,
+    { expiresAt },
+  );
+  return response.data;
+}
+
+export async function revokeSignupInvitation(
+  invitationId: string,
+): Promise<SignupInvitation> {
+  const response = await axiosInstance.post<SignupInvitation>(
+    `/admin/auth/invitations/${invitationId}/revoke`,
+  );
+  return response.data;
+}
+
+export function getAuthApiErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && !axios.isAxiosError(error)) return error.message;
+  if (axios.isAxiosError(error) && typeof error.response?.data === "string") {
+    return error.response.data;
+  }
+  return fallback;
 }
