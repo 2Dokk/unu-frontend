@@ -20,12 +20,33 @@ export async function createActivityOpeningRequest(
   return response.data;
 }
 
+export async function createAndSubmitActivityOpeningRequest(
+  data: ActivityOpeningRequestPayload,
+): Promise<ActivityOpeningRequestResponse> {
+  const response = await axiosInstance.post<ActivityOpeningRequestResponse>(
+    `${BASE_PATH}/submit`,
+    data,
+  );
+  return response.data;
+}
+
 export async function updateActivityOpeningRequest(
   id: string,
   data: ActivityOpeningRequestPayload,
 ): Promise<ActivityOpeningRequestResponse> {
   const response = await axiosInstance.put<ActivityOpeningRequestResponse>(
     `${BASE_PATH}/${id}`,
+    data,
+  );
+  return response.data;
+}
+
+export async function updateAndSubmitActivityOpeningRequest(
+  id: string,
+  data: ActivityOpeningRequestPayload,
+): Promise<ActivityOpeningRequestResponse> {
+  const response = await axiosInstance.put<ActivityOpeningRequestResponse>(
+    `${BASE_PATH}/${id}/submit`,
     data,
   );
   return response.data;

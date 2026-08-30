@@ -13,6 +13,7 @@ import {
   FilePen,
   ClipboardCheck,
   LibraryBig,
+  BookOpen,
   BriefcaseBusiness,
   MessagesSquare,
 } from "lucide-react";
@@ -72,6 +73,11 @@ export const menuConfig: MenuConfig = {
       label: "강의자료",
       href: "/lecture-materials",
       icon: LibraryBig,
+    },
+    {
+      label: "보유 도서",
+      href: "/books",
+      icon: BookOpen,
     },
     {
       label: "인강 예약",

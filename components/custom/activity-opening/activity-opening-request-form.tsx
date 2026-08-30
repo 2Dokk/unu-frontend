@@ -24,10 +24,11 @@ import { getCurrentQuarter } from "@/lib/api/quarter";
 import { getCurrentActivityOpeningPeriod } from "@/lib/api/activity-opening-period";
 import { searchActivities } from "@/lib/api/activity";
 import {
+  createAndSubmitActivityOpeningRequest,
   createActivityOpeningRequest,
   getActivityOpeningRequest,
   searchActivityOpeningMembers,
-  submitActivityOpeningRequest,
+  updateAndSubmitActivityOpeningRequest,
   updateActivityOpeningRequest,
 } from "@/lib/api/activity-opening-request";
 import {
@@ -414,13 +415,19 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
 
     try {
       setSaving(true);
-      const saved = requestId
-        ? await updateActivityOpeningRequest(requestId, payload)
-        : await createActivityOpeningRequest(payload);
       if (shouldSubmit) {
-        await submitActivityOpeningRequest(saved.id);
+        if (requestId) {
+          await updateAndSubmitActivityOpeningRequest(requestId, payload);
+        } else {
+          await createAndSubmitActivityOpeningRequest(payload);
+        }
         toast.success("활동 개설 신청을 제출했습니다.");
       } else {
+        if (requestId) {
+          await updateActivityOpeningRequest(requestId, payload);
+        } else {
+          await createActivityOpeningRequest(payload);
+        }
         toast.success("신청서를 임시 저장했습니다.");
       }
       router.push("/activity-opening/my");
@@ -495,7 +502,12 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
             <Label>활동 유형<span className="text-red-500">*</span></Label>
             <Select
               value={form.activityTypeId}
-              onValueChange={(value) =>
+              onValueChange={(value) => {
+                if (value !== form.activityTypeId) {
+                  setInitialMembers([]);
+                  setMemberResults([]);
+                  setMemberQuery("");
+                }
                 setForm((prev) => {
                   const nextType = activityTypes.find((type) => type.id === value);
                   return {
@@ -505,8 +517,8 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
                     acceptsNewMembers: false,
                     personalProject: nextType?.code === "PROJECT" ? null : false,
                   };
-                })
-              }
+                });
+              }}
             >
               <SelectTrigger><SelectValue placeholder="활동 유형을 선택하세요" /></SelectTrigger>
               <SelectContent>{activityTypes.map((type) => <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>)}</SelectContent>

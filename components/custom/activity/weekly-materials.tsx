@@ -140,7 +140,7 @@ export function WeeklyMaterials({
       title: material.title,
       description: material.description ?? "",
       materialName: material.materialName ?? "",
-      driveUrl: material.driveUrl,
+      driveUrl: material.driveUrl ?? "",
       weekNumber: material.weekNumber,
     });
     setDialogOpen(true);
@@ -289,17 +289,19 @@ export function WeeklyMaterials({
                                   {material.description}
                                 </p>
                               )}
-                              <a
-                                href={material.driveUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="mt-2 flex min-w-0 items-center gap-1.5 text-sm font-medium text-[#174b3a] hover:underline"
-                              >
-                                <span className="truncate">
-                                  {material.materialName || material.title}
-                                </span>
-                                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                              </a>
+                              {material.driveUrl && (
+                                <a
+                                  href={material.driveUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-2 flex min-w-0 items-center gap-1.5 text-sm font-medium text-[#174b3a] hover:underline"
+                                >
+                                  <span className="truncate">
+                                    {material.materialName || material.title}
+                                  </span>
+                                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                                </a>
+                              )}
                             </div>
                             {canModify && (
                               <div className="flex shrink-0 gap-1">
@@ -421,7 +423,7 @@ export function WeeklyMaterials({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="weekly-material-drive-url">링크</Label>
+              <Label htmlFor="weekly-material-drive-url">링크 (선택)</Label>
               <Input
                 id="weekly-material-drive-url"
                 type="url"
@@ -437,7 +439,7 @@ export function WeeklyMaterials({
                 placeholder="Google Drive·Docs 또는 Notion 공유 링크"
               />
               <p className="text-xs text-muted-foreground">
-                학회원이 열람할 수 있도록 공유 권한을 확인해주세요.
+                링크를 등록하는 경우 학회원이 열람할 수 있도록 공유 권한을 확인해주세요.
               </p>
             </div>
           </div>
