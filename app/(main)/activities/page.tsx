@@ -23,6 +23,7 @@ import {
   ActivityResponse,
   ActivityTypeResponse,
 } from "@/lib/interfaces/activity";
+import { QuarterResponse } from "@/lib/interfaces/quarter";
 import {
   Calendar,
   ChevronLeft,
@@ -161,6 +162,12 @@ function acceptsParticipantApplications(activity: ActivityResponse): boolean {
   );
 }
 
+function formatQuarterLabel(quarter: QuarterResponse): string {
+  const season = quarter.season.toLowerCase();
+  const formattedSeason = season.charAt(0).toUpperCase() + season.slice(1);
+  return `${String(quarter.year).slice(-2)} ${formattedSeason}`;
+}
+
 const ActivityPage = () => {
   const router = useRouter();
   const { newActivityIds } = useMenuNotification();
@@ -169,6 +176,7 @@ const ActivityPage = () => {
     [],
   );
   const [currentQuarterId, setCurrentQuarterId] = useState<string>("");
+  const [currentQuarterLabel, setCurrentQuarterLabel] = useState<string>("");
   const [openingPeriod, setOpeningPeriod] =
     useState<ActivityOpeningPeriodResponse | null>(null);
   const [openingPeriodLoaded, setOpeningPeriodLoaded] = useState(false);
@@ -192,6 +200,7 @@ const ActivityPage = () => {
         ]);
         setActivityTypes(typesData);
         setCurrentQuarterId(currentQuarter.id);
+        setCurrentQuarterLabel(formatQuarterLabel(currentQuarter));
       } catch (error: unknown) {
         console.error("Failed to fetch initial data:", error);
         toast.error(
@@ -318,7 +327,9 @@ const ActivityPage = () => {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">학회 활동</h1>
         <p className="text-sm text-muted-foreground">
-          이번 분기에 개설된 활동을 확인하고 참여하세요
+          {currentQuarterLabel
+            ? `${currentQuarterLabel} 분기에 개설된 활동을 확인하고 참여하세요`
+            : "현재 분기에 개설된 활동을 확인하고 참여하세요"}
         </p>
       </div>
 

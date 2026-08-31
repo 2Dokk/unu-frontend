@@ -101,9 +101,13 @@ function LectureMaterialsContent() {
   const loadMaterials = useCallback(async () => {
     setLoading(true);
     try {
-      // 주차가 지정된 자료는 해당 활동 상세 페이지의 "활동 내용" 탭에서만 보여준다.
+      // 주차별 자료와 활동 폼의 대표 자료는 해당 활동 상세에서만 보여준다.
       const all = await getLectureMaterials();
-      setMaterials(all.filter((material) => material.weekNumber == null));
+      setMaterials(
+        all.filter(
+          (material) => material.weekNumber == null && !material.primary,
+        ),
+      );
     } catch (error) {
       toast.error(getErrorMessage(error, "강의자료를 불러오지 못했습니다."));
     } finally {

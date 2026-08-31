@@ -52,6 +52,10 @@ export async function resetUserPassword(
   return response.data;
 }
 
+export async function removeUsers(userIds: string[]): Promise<void> {
+  await axiosInstance.post("/admin/users/remove", { userIds });
+}
+
 export async function calculateActiveMembers(): Promise<void> {
   await axiosInstance.post("/admin/users/calculate-active");
 }

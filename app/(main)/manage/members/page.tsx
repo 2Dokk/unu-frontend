@@ -9,9 +9,22 @@ import {
   UserCheck,
   UserX,
   Users,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
@@ -31,7 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { searchUsers } from "@/lib/api/user";
+import { removeUsers, searchUsers } from "@/lib/api/user";
 import { getAllQuarters } from "@/lib/api/quarter";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
@@ -52,7 +65,8 @@ const SEASON_ORDER: Record<string, number> = {
 
 export default function MembersManagementPage() {
   const router = useRouter();
-  const { hasRole } = useAuth();
+  const { hasRole, userId } = useAuth();
+  const isAdmin = hasRole("ADMIN");
 
   const [members, setMembers] = useState<UserResponseDto[]>([]);
   const [totalMemberCount, setTotalMemberCount] = useState<number | null>(null);
@@ -60,6 +74,9 @@ export default function MembersManagementPage() {
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("ALL");
@@ -152,6 +169,7 @@ export default function MembersManagementPage() {
         });
 
         setMembers(results);
+        setSelectedMemberIds([]);
         setCurrentPage(1);
       } catch (err) {
         console.error("Search failed:", err);
@@ -184,6 +202,61 @@ export default function MembersManagementPage() {
     (currentPage - 1) * MEMBERS_PER_PAGE,
     currentPage * MEMBERS_PER_PAGE,
   );
+  const selectablePageMembers = paginatedMembers.filter(
+    (member) => member.id !== userId,
+  );
+  const selectedMemberIdSet = new Set(selectedMemberIds);
+  const selectedMembers = members.filter((member) =>
+    selectedMemberIdSet.has(member.id),
+  );
+  const allPageMembersSelected =
+    selectablePageMembers.length > 0 &&
+    selectablePageMembers.every((member) =>
+      selectedMemberIdSet.has(member.id),
+    );
+  const somePageMembersSelected = selectablePageMembers.some((member) =>
+    selectedMemberIdSet.has(member.id),
+  );
+
+  function togglePageSelection(checked: boolean) {
+    const pageIds = selectablePageMembers.map((member) => member.id);
+    setSelectedMemberIds((current) => {
+      const next = new Set(current);
+      pageIds.forEach((id) => (checked ? next.add(id) : next.delete(id)));
+      return [...next];
+    });
+  }
+
+  function toggleMemberSelection(memberId: string, checked: boolean) {
+    setSelectedMemberIds((current) =>
+      checked
+        ? [...new Set([...current, memberId])]
+        : current.filter((id) => id !== memberId),
+    );
+  }
+
+  async function handleRemoveMembers() {
+    if (selectedMemberIds.length === 0) return;
+    try {
+      setRemoving(true);
+      const removedCount = selectedMemberIds.length;
+      await removeUsers(selectedMemberIds);
+      setSelectedMemberIds([]);
+      setRemoveDialogOpen(false);
+      setRefreshToken((value) => value + 1);
+      toast.success(`${removedCount}명의 학회원을 삭제했습니다.`);
+    } catch (error) {
+      const message = (error as { response?: { data?: unknown } })?.response
+        ?.data;
+      toast.error(
+        typeof message === "string" && message.trim()
+          ? message
+          : "학회원을 삭제하지 못했습니다.",
+      );
+    } finally {
+      setRemoving(false);
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-8 px-6 py-8">
@@ -195,7 +268,7 @@ export default function MembersManagementPage() {
             학회원 정보를 조회하고 관리합니다
           </p>
         </div>
-        {hasRole("ADMIN") && (
+        {isAdmin && (
           <MemberCreateDialog
             onCreated={() => setRefreshToken((v) => v + 1)}
           />
@@ -206,12 +279,28 @@ export default function MembersManagementPage() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <CardTitle>학회원 목록</CardTitle>
-            <div
-              className="flex items-center gap-1.5 text-sm text-muted-foreground"
-              aria-live="polite"
-            >
-              <Users className="size-4" aria-hidden="true" />
-              <span>총 {totalMemberCount ?? "-"}명</span>
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              {isAdmin && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  disabled={selectedMemberIds.length === 0}
+                  onClick={() => setRemoveDialogOpen(true)}
+                >
+                  <Trash2 className="size-4" />
+                  선택 삭제
+                  {selectedMemberIds.length > 0 &&
+                    ` (${selectedMemberIds.length})`}
+                </Button>
+              )}
+              <div
+                className="flex items-center gap-1.5 text-sm text-muted-foreground"
+                aria-live="polite"
+              >
+                <Users className="size-4" aria-hidden="true" />
+                <span>총 {totalMemberCount ?? "-"}명</span>
+              </div>
             </div>
           </div>
 
@@ -333,6 +422,23 @@ export default function MembersManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {isAdmin && (
+                      <TableHead className="w-10 pr-0">
+                        <Checkbox
+                          checked={
+                            allPageMembersSelected
+                              ? true
+                              : somePageMembersSelected
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={(checked) =>
+                            togglePageSelection(checked === true)
+                          }
+                          aria-label="현재 페이지 학회원 전체 선택"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>이름</TableHead>
                     <TableHead className="hidden text-center lg:table-cell">
                       학번
@@ -363,6 +469,21 @@ export default function MembersManagementPage() {
                         router.push(`/manage/members/${member.id}`)
                       }
                     >
+                      {isAdmin && (
+                        <TableCell
+                          className="w-10 pr-0"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <Checkbox
+                            checked={selectedMemberIdSet.has(member.id)}
+                            disabled={member.id === userId}
+                            onCheckedChange={(checked) =>
+                              toggleMemberSelection(member.id, checked === true)
+                            }
+                            aria-label={`${member.name || member.username} 선택`}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="font-medium">
                         {member.name || "—"}
                       </TableCell>
@@ -455,6 +576,51 @@ export default function MembersManagementPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {selectedMemberIds.length}명의 학회원을 삭제하시겠습니까?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 leading-6">
+              <span className="block">삭제할 학회원을 확인해주세요.</span>
+              <span className="block max-h-40 overflow-y-auto rounded-md border bg-muted/40 px-4 py-2.5 text-foreground">
+                {selectedMembers.map((member) => (
+                  <span
+                    key={member.id}
+                    className="flex items-center justify-between gap-4 border-b py-1.5 last:border-b-0"
+                  >
+                    <span className="font-medium">
+                      {member.name || member.username}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {member.studentId}
+                    </span>
+                  </span>
+                ))}
+              </span>
+              <span className="block">
+                삭제된 계정은 학회원 목록에서 제외되고 더 이상 로그인할 수
+                없습니다. 기존 활동과 신청 기록은 유지됩니다.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={removing}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleRemoveMembers();
+              }}
+            >
+              {removing ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

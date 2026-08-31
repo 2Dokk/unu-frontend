@@ -528,8 +528,8 @@ export default function ActivityNewPage() {
                     autoComplete="off"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {activityMaterialHelpText()} 등록
-                    후 활동 상세와 강의자료 탭에 표시됩니다.
+                    {activityMaterialHelpText()} 등록 후 해당 활동 상세에서
+                    확인할 수 있습니다.
                   </p>
                 </div>
               )}
