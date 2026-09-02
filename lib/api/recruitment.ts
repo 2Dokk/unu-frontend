@@ -52,8 +52,11 @@ export async function getActiveRecruitment(): Promise<RecruitmentResponse> {
   return publicClient.get<RecruitmentResponse>(`/public/recruitments/active`);
 }
 
-export async function getClosestRecruitment(): Promise<RecruitmentResponse> {
-  return publicClient.get<RecruitmentResponse>(`/public/recruitments/closest`);
+export async function getClosestRecruitment(): Promise<RecruitmentResponse | null> {
+  const recruitment = await publicClient.get<RecruitmentResponse | null>(
+    `/public/recruitments/closest`,
+  );
+  return recruitment ?? null;
 }
 
 export async function getOperationRecruitments(): Promise<
