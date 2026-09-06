@@ -252,10 +252,27 @@ export default function ManagePage() {
           <Button variant="outline" size="icon" onClick={handlePrevMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="min-w-45 text-center">
-            <h2 className="text-lg font-semibold">
-              {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
-            </h2>
+          <div className="flex shrink-0 items-center gap-1">
+            <select
+              aria-label="연도 선택"
+              className="h-9 w-20 rounded-md border border-input bg-background px-2 text-sm"
+              value={currentDate.getFullYear()}
+              onChange={(event) => setCurrentDate(new Date(Number(event.target.value), currentDate.getMonth(), 1))}
+            >
+              {Array.from({ length: 201 }, (_, index) => 1900 + index).map((year) => (
+                <option key={year} value={year}>{year}년</option>
+              ))}
+            </select>
+            <select
+              aria-label="월 선택"
+              className="h-9 w-18 rounded-md border border-input bg-background px-2 text-sm"
+              value={currentDate.getMonth()}
+              onChange={(event) => setCurrentDate(new Date(currentDate.getFullYear(), Number(event.target.value), 1))}
+            >
+              {Array.from({ length: 12 }, (_, month) => (
+                <option key={month} value={month}>{month + 1}월</option>
+              ))}
+            </select>
           </div>
           <Button variant="outline" size="icon" onClick={handleNextMonth}>
             <ChevronRight className="h-4 w-4" />
@@ -367,6 +384,7 @@ function CalendarView({
   for (let day = 1; day <= daysInMonth; day++) {
     calendarDays.push(day);
   }
+  while (calendarDays.length < 42) calendarDays.push(null);
 
   // Group sessions by date
   const sessionsByDate = new Map<string, EnrichedSession[]>();
@@ -413,7 +431,7 @@ function CalendarView({
         <div className="grid grid-cols-7 gap-2">
           {calendarDays.map((day, idx) => {
             if (day === null) {
-              return <div key={`empty-${idx}`} className="aspect-square" />;
+              return <div key={`empty-${idx}`} className="aspect-[4/5]" />;
             }
 
             const dateString = formatDate(day);

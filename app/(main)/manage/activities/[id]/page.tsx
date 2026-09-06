@@ -83,6 +83,7 @@ import {
   updateActivityParticipantCompleted,
   createActivityParticipant,
   getActivityParticipantRefundAccounts,
+  deleteActivityParticipantByAdmin,
 } from "@/lib/api/activity-participant";
 import { getAllUsers } from "@/lib/api/user";
 import { UserResponseDto } from "@/lib/interfaces/auth";
@@ -149,7 +150,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ParticipantStatusSelector } from "@/components/custom/participant/participant-status-selector";
-import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useAuth } from "@/lib/contexts/AuthContext";
 
@@ -354,6 +354,7 @@ export function ActivityManagementScreen({
       : "";
   const backLabel = returnTarget.label;
   const { userId, hasRole, isLoading: authLoading } = useAuth();
+  const isAdmin = hasRole("ADMIN");
   const hasAdminRole = hasRole("MANAGER");
   const canAdministerActivity = hasAdminRole;
 
@@ -509,6 +510,9 @@ export function ActivityManagementScreen({
   const [rejectionMessage, setRejectionMessage] = useState("");
   const [applicationTarget, setApplicationTarget] =
     useState<ActivityParticipantResponse | null>(null);
+  const [participantDeleteTarget, setParticipantDeleteTarget] =
+    useState<ActivityParticipantResponse | null>(null);
+  const [participantDeleting, setParticipantDeleting] = useState(false);
 
   // Session selection states
   const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(
@@ -1021,6 +1025,53 @@ export function ActivityManagementScreen({
     if (updated) {
       setRejectionTarget(null);
       setRejectionMessage("");
+    }
+  }
+
+  async function handleDeleteParticipant() {
+    if (!participantDeleteTarget || participantDeleting) return;
+
+    const participantId = participantDeleteTarget.id;
+    setParticipantDeleting(true);
+    try {
+      await deleteActivityParticipantByAdmin(participantId);
+      setParticipants((prev) =>
+        prev.filter((participant) => participant.id !== participantId),
+      );
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(participantId);
+        return next;
+      });
+      setSelectedCompletionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(participantId);
+        return next;
+      });
+      setAttendanceStats((prev) => {
+        const next = new Map(prev);
+        next.delete(participantId);
+        return next;
+      });
+      setRefundAccounts((prev) =>
+        prev.filter((account) => account.participantId !== participantId),
+      );
+      statsLoadedRef.current = false;
+      summaryLoadedRef.current = false;
+      setParticipantDeleteTarget(null);
+      toast.success("참여자를 삭제했습니다.");
+    } catch (error: unknown) {
+      console.error("Failed to delete participant:", error);
+      const responseMessage = (
+        error as { response?: { data?: unknown } }
+      ).response?.data;
+      toast.error(
+        typeof responseMessage === "string"
+          ? responseMessage
+          : "참여자 삭제에 실패했습니다.",
+      );
+    } finally {
+      setParticipantDeleting(false);
     }
   }
 
@@ -2053,6 +2104,9 @@ export function ActivityManagementScreen({
                       )}
                       <TableHead className="w-25 text-center">상태</TableHead>
                       <TableHead className="w-30 text-center">신청일</TableHead>
+                      {isAdmin && (
+                        <TableHead className="w-16 text-center">관리</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2146,6 +2200,24 @@ export function ActivityManagementScreen({
                           <TableCell className="text-center text-muted-foreground text-sm">
                             {formatDate(participant.createdAt)}
                           </TableCell>
+                          {isAdmin && (
+                            <TableCell
+                              className="text-center"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                title="참여자 삭제"
+                                aria-label={`${participant.user?.name || "참여자"} 삭제`}
+                                onClick={() => setParticipantDeleteTarget(participant)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })}
@@ -2754,16 +2826,16 @@ export function ActivityManagementScreen({
                 <label className="text-sm font-medium" htmlFor="bulk-session-start">
                   시작일
                 </label>
-                <Input
+                <DatePicker
                   id="bulk-session-start"
-                  type="date"
+                  clearable
                   min={activity.startDate}
                   max={activity.endDate}
                   value={bulkSessionForm.startDate}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     setBulkSessionForm((previous) => ({
                       ...previous,
-                      startDate: event.target.value,
+                      startDate: value,
                     }))
                   }
                 />
@@ -2772,16 +2844,16 @@ export function ActivityManagementScreen({
                 <label className="text-sm font-medium" htmlFor="bulk-session-end">
                   종료일
                 </label>
-                <Input
+                <DatePicker
                   id="bulk-session-end"
-                  type="date"
+                  clearable
                   min={activity.startDate}
                   max={activity.endDate}
                   value={bulkSessionForm.endDate}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     setBulkSessionForm((previous) => ({
                       ...previous,
-                      endDate: event.target.value,
+                      endDate: value,
                     }))
                   }
                 />
@@ -3294,6 +3366,17 @@ export function ActivityManagementScreen({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmDialog
+        open={participantDeleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !participantDeleting) setParticipantDeleteTarget(null);
+        }}
+        itemValue={`${participantDeleteTarget?.user?.name || "선택한 학회원"}님의 활동 참여 기록`}
+        title="참여자를 삭제하시겠습니까?"
+        onConfirm={() => void handleDeleteParticipant()}
+        loading={participantDeleting}
+      />
 
       {/* Bulk Update Confirmation Dialog */}
       <AlertDialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>

@@ -34,7 +34,15 @@ export function SiteFooter() {
           <address className="max-w-[520px] not-italic">
               04107 서울시 마포구 백범로 35 (신수동) 서강대학교 리치과학관(R관) 912호
           </address>
-          <p>© {new Date().getFullYear()} CNU. All rights reserved.</p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <p>© {new Date().getFullYear()} CNU. All rights reserved.</p>
+            <p className="flex items-center gap-1.5">
+              <span className="text-white/40">Developed by</span>
+              <span className="font-medium text-white/75">
+                이서연 · 홍준영
+              </span>
+            </p>
+          </div>
         </div>
       </div>
     </footer>

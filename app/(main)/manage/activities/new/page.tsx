@@ -1,16 +1,15 @@
 "use client";
 
+import { DatePicker } from "@/components/ui/date-picker";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarIcon, ChevronsUpDown, Check } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { ko } from "date-fns/locale";
+import { ChevronsUpDown, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -537,26 +536,26 @@ export default function ActivityNewPage() {
               <div className="space-y-2 md:col-span-2">
                 <Label>모집 기간 (선택)</Label>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Input
-                    type="date"
+                  <DatePicker
+                    clearable
                     className="w-44"
                     value={formData.recruitmentStartDate}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       handleInputChange(
                         "recruitmentStartDate",
-                        event.target.value,
+                        value,
                       )
                     }
                   />
                   <span className="text-sm text-muted-foreground">~</span>
-                  <Input
-                    type="date"
+                  <DatePicker
+                    clearable
                     className="w-44"
                     value={formData.recruitmentEndDate}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       handleInputChange(
                         "recruitmentEndDate",
-                        event.target.value,
+                        value,
                       )
                     }
                   />
@@ -779,41 +778,12 @@ export default function ActivityNewPage() {
                 <Label>
                   시작일 <span className="text-destructive">*</span>
                 </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal text-xs",
-                        !formData.startDate && "text-muted-foreground",
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.startDate
-                        ? format(parseISO(formData.startDate), "PPP", {
-                            locale: ko,
-                          })
-                        : "시작일 선택"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={
-                        formData.startDate
-                          ? parseISO(formData.startDate)
-                          : undefined
-                      }
-                      onSelect={(date) =>
-                        handleInputChange(
-                          "startDate",
-                          date ? format(date, "yyyy-MM-dd") : "",
-                        )
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker
+                    value={formData.startDate}
+                    onChange={(value) => handleInputChange("startDate", value)}
+                    placeholder="시작일 선택"
+                    clearable
+                  />
               </div>
 
               {/* End Date */}
@@ -821,41 +791,13 @@ export default function ActivityNewPage() {
                 <Label>
                   종료일 <span className="text-destructive">*</span>
                 </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal text-xs",
-                        !formData.endDate && "text-muted-foreground",
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.endDate
-                        ? format(parseISO(formData.endDate), "PPP", {
-                            locale: ko,
-                          })
-                        : "종료일 선택"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={
-                        formData.endDate
-                          ? parseISO(formData.endDate)
-                          : undefined
-                      }
-                      onSelect={(date) =>
-                        handleInputChange(
-                          "endDate",
-                          date ? format(date, "yyyy-MM-dd") : "",
-                        )
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker
+                    value={formData.endDate}
+                    onChange={(value) => handleInputChange("endDate", value)}
+                    placeholder="종료일 선택"
+                    min={formData.startDate || undefined}
+                    clearable
+                  />
               </div>
             </div>
             <p className="text-sm text-muted-foreground">

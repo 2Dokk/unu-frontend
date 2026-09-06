@@ -1,5 +1,7 @@
 "use client";
 
+import { DatePicker } from "@/components/ui/date-picker";
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -752,12 +754,12 @@ export default function ActivityOpeningRequestManagementDetailPage() {
                   </Label>
 
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                    <Input
-                      type="date"
+                    <DatePicker
+                      clearable
                       value={recruitmentStartDate}
-                      onChange={(event) =>
+                      onChange={(value) =>
                         setRecruitmentStartDate(
-                          event.target.value,
+                          value,
                         )
                       }
                       disabled={!reviewable || updating}
@@ -767,12 +769,12 @@ export default function ActivityOpeningRequestManagementDetailPage() {
                       ~
                     </span>
 
-                    <Input
-                      type="date"
+                    <DatePicker
+                      clearable
                       value={recruitmentEndDate}
-                      onChange={(event) =>
+                      onChange={(value) =>
                         setRecruitmentEndDate(
-                          event.target.value,
+                          value,
                         )
                       }
                       disabled={!reviewable || updating}

@@ -73,6 +73,12 @@ export async function deleteActivityParticipant(id: string): Promise<void> {
   await axiosInstance.delete(`/activity-participants/${id}`);
 }
 
+export async function deleteActivityParticipantByAdmin(
+  id: string,
+): Promise<void> {
+  await axiosInstance.delete(`/activity-participants/${id}/admin`);
+}
+
 export async function getMyParticipantByActivityId(
   activityId: string,
 ): Promise<ActivityParticipantResponse | null> {

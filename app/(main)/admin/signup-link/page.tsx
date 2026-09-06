@@ -1,5 +1,7 @@
 "use client";
 
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Ban, CalendarClock, Check, ChevronRight, Copy, Plus, Trash2, Users } from "lucide-react";
@@ -309,7 +311,7 @@ export default function SignupLinkPage() {
               </div>
 
               <div className="grid gap-4 border-y py-5 sm:grid-cols-[1fr_auto] sm:items-end">
-                <div className="space-y-2"><Label htmlFor="detail-expiration">만료 시간</Label><Input id="detail-expiration" type="datetime-local" value={detailExpiration} onChange={(event) => setDetailExpiration(event.target.value)} disabled={Boolean(selected.revokedAt)} /></div>
+                <div className="space-y-2"><Label htmlFor="detail-expiration">만료 시간</Label><DateTimePicker id="detail-expiration" clearable value={detailExpiration} onChange={(value) => setDetailExpiration(value)} disabled={Boolean(selected.revokedAt)} /></div>
                 <Button variant="outline" onClick={handleExpirationUpdate} disabled={working || Boolean(selected.revokedAt)}><CalendarClock className="mr-2 size-4" />만료 시간 변경</Button>
               </div>
 
@@ -353,7 +355,7 @@ export default function SignupLinkPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label htmlFor="invitation-expiration">만료 시간</Label><Input id="invitation-expiration" type="datetime-local" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="invitation-expiration">만료 시간</Label><DateTimePicker id="invitation-expiration" clearable value={expiresAt} onChange={(value) => setExpiresAt(value)} /></div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="student-ids">허용 학번</Label><Textarea id="student-ids" value={studentIdText} onChange={(event) => setStudentIdText(event.target.value)} placeholder={"구글 시트의 학번 열을 그대로 붙여넣을 수 있습니다.\n20221234\n20231234"} className="min-h-44 resize-y font-mono" />

@@ -1,5 +1,7 @@
 "use client";
 
+import { DatePicker } from "@/components/ui/date-picker";
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, Search, X } from "lucide-react";
@@ -675,8 +677,8 @@ export function ActivityOpeningRequestForm({ requestId }: Props) {
             </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2"><Label htmlFor="opening-start">시작일<span className="text-red-500">*</span></Label><Input id="opening-start" type="date" value={form.startDate} onChange={(event) => change("startDate", event.target.value)} /></div>
-            <div className="space-y-2"><Label htmlFor="opening-end">종료일<span className="text-red-500">*</span></Label><Input id="opening-end" type="date" value={form.endDate} onChange={(event) => change("endDate", event.target.value)} /></div>
+            <div className="space-y-2"><Label htmlFor="opening-start">시작일<span className="text-red-500">*</span></Label><DatePicker id="opening-start" clearable value={form.startDate} onChange={(value) => change("startDate", value)} /></div>
+            <div className="space-y-2"><Label htmlFor="opening-end">종료일<span className="text-red-500">*</span></Label><DatePicker id="opening-end" clearable value={form.endDate} onChange={(value) => change("endDate", value)} /></div>
           </div>
           {selectedActivityType?.code === "PROJECT" ? (
             <div className="space-y-3">

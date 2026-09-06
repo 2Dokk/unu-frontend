@@ -1,5 +1,7 @@
 "use client";
 
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CalendarClock, Save, Search } from "lucide-react";
@@ -160,15 +162,15 @@ export default function ActivityOpeningRequestsManagementPage() {
               <div className="grid gap-4 lg:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="opening-period-start">신청 시작</Label>
-                  <Input id="opening-period-start" type="datetime-local" value={periodForm.startAt} onChange={(event) => setPeriodForm((prev) => ({ ...prev, startAt: event.target.value }))} />
+                  <DateTimePicker id="opening-period-start" clearable value={periodForm.startAt} onChange={(value) => setPeriodForm((prev) => ({ ...prev, startAt: value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="opening-period-end">신청 마감</Label>
-                  <Input id="opening-period-end" type="datetime-local" value={periodForm.endAt} onChange={(event) => setPeriodForm((prev) => ({ ...prev, endAt: event.target.value }))} />
+                  <DateTimePicker id="opening-period-end" clearable value={periodForm.endAt} onChange={(value) => setPeriodForm((prev) => ({ ...prev, endAt: value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="opening-revision-end">보완 제출 마감</Label>
-                  <Input id="opening-revision-end" type="datetime-local" value={periodForm.revisionEndAt} onChange={(event) => setPeriodForm((prev) => ({ ...prev, revisionEndAt: event.target.value }))} />
+                  <DateTimePicker id="opening-revision-end" clearable value={periodForm.revisionEndAt} onChange={(value) => setPeriodForm((prev) => ({ ...prev, revisionEndAt: value }))} />
                 </div>
               </div>
               <div className="flex flex-col justify-between gap-4 border-t pt-4 sm:flex-row sm:items-center">
