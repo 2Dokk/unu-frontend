@@ -103,7 +103,6 @@ import { ActivityResponse } from "@/lib/interfaces/activity";
 import {
   ActivityParticipantRefundAccount,
   ActivityParticipantResponse,
-  LectureParticipationMode,
 } from "@/lib/interfaces/activity-participant";
 import{
   supportsDiscordLink
@@ -135,13 +134,6 @@ const PARTICIPANT_STATUS_OPTIONS = [
   { value: "REJECTED", label: "신청 반려" },
 ];
 
-const LECTURE_PARTICIPATION_MODE_LABELS: Record<
-  LectureParticipationMode,
-  string
-> = {
-  INDIVIDUAL: "개인 수강 희망",
-  GROUP: "그룹 수강 희망",
-};
 import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -2099,9 +2091,6 @@ export function ActivityManagementScreen({
                           <TableHead className="w-28 text-center">지원 내용</TableHead>
                         </>
                       )}
-                      {activity.activityType.code === "LECTURE" && (
-                        <TableHead className="w-36">수강 방식</TableHead>
-                      )}
                       <TableHead className="w-25 text-center">상태</TableHead>
                       <TableHead className="w-30 text-center">신청일</TableHead>
                       {isAdmin && (
@@ -2170,15 +2159,6 @@ export function ActivityManagementScreen({
                                 )}
                               </TableCell>
                             </>
-                          )}
-                          {activity.activityType.code === "LECTURE" && (
-                            <TableCell className="text-sm">
-                              {participant.lectureParticipationMode
-                                ? LECTURE_PARTICIPATION_MODE_LABELS[
-                                    participant.lectureParticipationMode
-                                  ]
-                                : "미선택"}
-                            </TableCell>
                           )}
                           <TableCell className="text-center">
                             {activity.activityType.code === "PROJECT" &&
@@ -2255,6 +2235,7 @@ export function ActivityManagementScreen({
                             <TableHead>은행</TableHead>
                             <TableHead>계좌번호</TableHead>
                             <TableHead>예금주</TableHead>
+                            <TableHead>홍보 활용 동의</TableHead>
                             <TableHead>입금 확인 시각</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -2270,6 +2251,18 @@ export function ActivityManagementScreen({
                                 {account.accountNumber}
                               </TableCell>
                               <TableCell>{account.accountHolder}</TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs ${
+                                    account.promotionAgreedAt
+                                      ? STATUS_TONES.positive
+                                      : STATUS_TONES.neutral
+                                  }`}
+                                >
+                                  {account.promotionAgreedAt ? "동의" : "미동의"}
+                                </Badge>
+                              </TableCell>
                               <TableCell className="text-sm text-muted-foreground">
                                 {formatDateTime(account.paymentConfirmedAt)}
                               </TableCell>

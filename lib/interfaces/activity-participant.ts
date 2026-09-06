@@ -31,10 +31,10 @@ export interface ActivityJoinRequest {
   refundAccountHolder?: string;
   agreedToDepositPolicy?: boolean;
   confirmedDepositPayment?: boolean;
+  agreedToPrivacy?: boolean;
   agreedToPromotion?: boolean;
   appliedPosition?: string;
   applicationMessage?: string;
-  lectureParticipationMode?: LectureParticipationMode;
 }
 
 export interface ActivityParticipantRefundAccount {
@@ -46,6 +46,7 @@ export interface ActivityParticipantRefundAccount {
   accountNumber: string;
   accountHolder: string;
   paymentConfirmedAt: string;
+  promotionAgreedAt: string | null;
 }
 
 export interface ActivityParticipantSummary {
