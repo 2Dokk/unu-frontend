@@ -49,13 +49,20 @@ import {
   activityMaterialPlaceholder,
 } from "@/lib/constants/activity-material";
 import { isMaterialUrl } from "@/lib/utils/material-url";
+import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "준비 중" },
-  { value: "OPEN", label: "모집 중" },
   { value: "ONGOING", label: "진행 중" },
   { value: "COMPLETED", label: "종료" },
 ];
+
+const STATUS_LABELS: Record<string, string> = {
+  CREATED: "준비 중",
+  OPEN: "모집 중",
+  ONGOING: "진행 중",
+  COMPLETED: "종료",
+};
 
 export default function ActivityNewPage() {
   const router = useRouter();
@@ -121,6 +128,10 @@ export default function ActivityNewPage() {
         : "",
       recruitmentPositions:
         mode === "RECRUITING" ? prev.recruitmentPositions : "",
+      recruitmentStartDate:
+        mode === "RECRUITING" ? prev.recruitmentStartDate : "",
+      recruitmentEndDate:
+        mode === "RECRUITING" ? prev.recruitmentEndDate : "",
     }));
     if (!fields.allowsInitialMembers) setNewParticipantIds([]);
   }
@@ -179,6 +190,13 @@ export default function ActivityNewPage() {
           .length
     ) {
       return "추가 참여 정원은 미리 추가한 학회원 수보다 적을 수 없습니다.";
+    }
+    if (
+      isProject &&
+      projectMode === "RECRUITING" &&
+      (!formData.recruitmentStartDate || !formData.recruitmentEndDate)
+    ) {
+      return "추가 팀원을 모집하려면 모집 기간을 설정해주세요.";
     }
     if (
       Boolean(formData.recruitmentStartDate) !==
@@ -737,12 +755,18 @@ export default function ActivityNewPage() {
               {/* Status */}
               <div className="space-y-2">
                 <Label htmlFor="status">상태</Label>
-                {isProject ? (
-                  <p className="text-sm">
-                    {modeFields.status === "OPEN"
-                      ? "모집중 — 진행 방식에 따라 자동으로 설정됩니다."
-                      : "생성됨 — 진행 방식에 따라 자동으로 설정됩니다."}
-                  </p>
+                {formData.recruitmentStartDate &&
+                formData.recruitmentEndDate ? (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">
+                      {STATUS_LABELS[activityDisplayStatus(formData)]}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      모집 기간과 활동 일정에 따라 상태가 자동 전환됩니다.
+                    </p>
+                  </div>
+                ) : isProject ? (
+                  <p className="text-sm font-medium">준비 중</p>
                 ) : (
                   <Select
                     value={formData.status}

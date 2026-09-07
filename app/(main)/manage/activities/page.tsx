@@ -70,7 +70,6 @@ import { toast } from "sonner";
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "준비 중" },
-  { value: "OPEN", label: "모집 중" },
   { value: "ONGOING", label: "진행 중" },
   { value: "COMPLETED", label: "종료" },
 ];

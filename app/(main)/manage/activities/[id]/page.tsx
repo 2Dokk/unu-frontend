@@ -1918,6 +1918,13 @@ export function ActivityManagementScreen({
                   label="기간"
                   value={`${formatDate(activity.startDate)} ~ ${formatDate(activity.endDate)}`}
                 />
+                {activity.recruitmentStartDate && activity.recruitmentEndDate && (
+                  <InfoRow
+                    icon={<CalendarRange className="h-4 w-4" />}
+                    label="모집 기간"
+                    value={`${formatDate(activity.recruitmentStartDate)} ~ ${formatDate(activity.recruitmentEndDate)}`}
+                  />
+                )}
                 <InfoRow
                   icon={<UserRound className="h-4 w-4" />}
                   label={

@@ -10,17 +10,22 @@ const STATUS_META: Record<string, { label: string; tone: string }> = {
 
 interface ActivityStatusBadgeProps {
   status: string;
+  detail?: string | null;
 }
 
-export function ActivityStatusBadge({ status }: ActivityStatusBadgeProps) {
+export function ActivityStatusBadge({
+  status,
+  detail,
+}: ActivityStatusBadgeProps) {
   const meta = STATUS_META[status] ?? {
     label: status,
     tone: STATUS_TONES.neutral,
   };
 
   return (
-    <Badge variant="outline" className={meta.tone}>
+    <Badge variant="outline" className={`${meta.tone} shrink-0 whitespace-nowrap`}>
       {meta.label}
+      {detail ? ` ${detail}` : ""}
     </Badge>
   );
 }

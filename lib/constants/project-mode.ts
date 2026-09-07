@@ -48,7 +48,7 @@ const PROJECT_MODE_FIELDS: Record<ProjectMode, ProjectModeFields> = {
   },
   RECRUITING: {
     listed: true,
-    status: "OPEN",
+    status: "CREATED",
     allowsInitialMembers: true,
     allowsParticipantLimit: true,
   },
@@ -61,8 +61,11 @@ export function projectModeFields(mode: ProjectMode): ProjectModeFields {
 /** 저장된 활동에서 진행 방식을 역으로 복원한다. */
 export function deriveProjectMode(activity: {
   listed?: boolean;
-  status?: string;
+  recruitmentStartDate?: string | null;
+  recruitmentEndDate?: string | null;
 }): ProjectMode {
   if (activity.listed === false) return "PERSONAL";
-  return activity.status === "OPEN" ? "RECRUITING" : "FIXED_TEAM";
+  return activity.recruitmentStartDate && activity.recruitmentEndDate
+    ? "RECRUITING"
+    : "FIXED_TEAM";
 }

@@ -156,7 +156,7 @@ export function WeeklyMaterials({
       return;
     }
     if (form.driveUrl.trim() && !isMaterialUrl(form.driveUrl.trim())) {
-      toast.error("Google Drive 또는 Notion 공유 링크를 확인해주세요.");
+      toast.error("자료 링크를 확인해주세요.");
       return;
     }
 

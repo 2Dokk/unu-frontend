@@ -62,6 +62,7 @@ import {
 } from "@/lib/interfaces/activity-participant";
 import {
   Calendar,
+  CalendarRange,
   User,
   ClipboardList,
   BadgeCheck,
@@ -269,7 +270,6 @@ function deriveCtaConfig(
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "생성됨" },
-  { value: "OPEN", label: "모집중" },
   { value: "ONGOING", label: "진행중" },
   { value: "COMPLETED", label: "완료됨" },
 ];
@@ -718,9 +718,15 @@ export default function ActivityDetails() {
   const activityManagementPathWithReturn =
     `${activityManagementPath}?from=activity-detail&detailFrom=${returnSource}`;
   const canManageMaterials = canManage;
+  const materialLinkLabel = activityMaterialLabel(activity.activityType.code);
+  const primaryMaterial =
+    lectureMaterials.find((material) => material.primary) ?? null;
   const unassignedMaterials = lectureMaterials.filter(
-    (material) => material.weekNumber == null,
+    (material) => material.weekNumber == null && !material.primary,
   );
+  const materialSectionItems = materialLinkLabel
+    ? [...(primaryMaterial ? [primaryMaterial] : []), ...unassignedMaterials]
+    : unassignedMaterials;
   const ctaConfig = deriveCtaConfig(
     activity,
     myParticipant,
@@ -1000,6 +1006,14 @@ export default function ActivityDetails() {
                 value={`${formatDate(activity.startDate)} ~ ${formatDate(activity.endDate)}`}
               />
 
+              {activity.recruitmentStartDate && activity.recruitmentEndDate && (
+                <InfoRow
+                  icon={<CalendarRange className="h-4 w-4" />}
+                  label="모집 기간"
+                  value={`${formatDate(activity.recruitmentStartDate)} ~ ${formatDate(activity.recruitmentEndDate)}`}
+                />
+              )}
+
               {(activity.activityType.code === "STUDY" ||
                 activity.activityType.code === "SPECIAL_LECTURE" ||
                 activity.activityType.code === "LECTURE") && (
@@ -1111,8 +1125,7 @@ export default function ActivityDetails() {
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <p className="text-xs text-muted-foreground">
-                      {activityMaterialLabel(activity.activityType.code) ??
-                        "활동 자료"}
+                      {materialLinkLabel ?? "활동 자료"}
                     </p>
                     {canManageMaterials && (
                       <button
@@ -1128,11 +1141,11 @@ export default function ActivityDetails() {
                       </button>
                     )}
                   </div>
-                  {unassignedMaterials.length === 0 ? (
+                  {materialSectionItems.length === 0 ? (
                     <p className="text-sm font-medium">—</p>
                   ) : (
                     <div className="space-y-1.5">
-                      {unassignedMaterials.map((material) => (
+                      {materialSectionItems.map((material) => (
                         <a
                           key={material.id}
                           href={material.driveUrl}

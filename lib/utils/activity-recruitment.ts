@@ -28,11 +28,31 @@ export function isActivityRecruiting(activity: RecruitmentPeriod): boolean {
   return today >= start && today <= end;
 }
 
-/**
- * 뱃지에 보여줄 상태. 모집 기간 중이면 활동 status와 무관하게 모집 중으로 표시한다.
- */
+export function activityRecruitmentDeadlineLabel(
+  activity: RecruitmentPeriod,
+): string | null {
+  if (!isActivityRecruiting(activity) || !activity.recruitmentEndDate) {
+    return null;
+  }
+
+  const [, month, day] = activity.recruitmentEndDate.split("-").map(Number);
+  return `~${month}.${day}`;
+}
+
+/** 모집 기간과 활동 종료일을 기준으로 화면에 표시할 상태를 계산한다. */
 export function activityDisplayStatus(
-  activity: RecruitmentPeriod & { status: string },
+  activity: RecruitmentPeriod & Pick<ActivityResponse, "endDate"> & { status: string },
 ): string {
-  return isActivityRecruiting(activity) ? "OPEN" : activity.status;
+  if (activity.status === "COMPLETED") return "COMPLETED";
+
+  const today = localDateValue();
+  if (activity.endDate && today > activity.endDate) return "COMPLETED";
+
+  const start = activity.recruitmentStartDate;
+  const end = activity.recruitmentEndDate;
+  if (!start || !end) return activity.status;
+
+  if (today < start) return "CREATED";
+  if (today <= end) return "OPEN";
+  return "ONGOING";
 }

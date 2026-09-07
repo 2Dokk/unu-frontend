@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/lib/utils/date-utils";
 import {
+  activityRecruitmentDeadlineLabel,
   activityDisplayStatus,
   isActivityRecruiting as isRecruiting,
 } from "@/lib/utils/activity-recruitment";
@@ -121,7 +122,10 @@ function ActivityRow({
       </div>
 
       <div className="flex items-center justify-between gap-2 lg:justify-end">
-        <ActivityStatusBadge status={activityDisplayStatus(activity)} />
+        <ActivityStatusBadge
+          status={activityDisplayStatus(activity)}
+          detail={activityRecruitmentDeadlineLabel(activity)}
+        />
 
         <Button
           size="sm"

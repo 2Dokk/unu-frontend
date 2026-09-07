@@ -4,7 +4,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ChevronsUpDown, Check, LockKeyhole } from "lucide-react";
+import { ChevronsUpDown, Check, LockKeyhole, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,13 +63,14 @@ import {
 import { isDiscordUrl, supportsDiscordLink } from "@/lib/constants/discord-link";
 import { operationPlanLabel } from "@/lib/constants/operation-plan";
 import {
-  activityMaterialHelpText,
   activityMaterialLabel,
   activityMaterialPlaceholder,
 } from "@/lib/constants/activity-material";
 import { resolveActivityReturnSource } from "@/lib/constants/activity-navigation";
 import { isMaterialUrl } from "@/lib/utils/material-url";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
+import { LectureMaterial } from "@/lib/interfaces/lecture-material";
 
 // ========================
 // HELPER FUNCTIONS
@@ -103,10 +104,16 @@ function toDateInputValue(dateString: string): string {
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "준비 중" },
-  { value: "OPEN", label: "모집 중" },
   { value: "ONGOING", label: "진행 중" },
   { value: "COMPLETED", label: "종료" },
 ];
+
+const STATUS_LABELS: Record<string, string> = {
+  CREATED: "준비 중",
+  OPEN: "모집 중",
+  ONGOING: "진행 중",
+  COMPLETED: "종료",
+};
 
 // ========================
 // MAIN COMPONENT
@@ -148,6 +155,7 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
   );
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
   const [users, setUsers] = useState<UserResponseDto[]>([]);
+  const [lectureMaterials, setLectureMaterials] = useState<LectureMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [existingParticipants, setExistingParticipants] = useState<
@@ -265,6 +273,7 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
       setQuarters(quartersData);
       setUsers(usersData);
       setExistingParticipants(participantsData);
+      setLectureMaterials(materialsData);
 
       // Initialize form with activity data
       setFormData({
@@ -335,6 +344,14 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
     }
 
     const participantLimit = Number(formData.participantLimit);
+    if (
+      canEditOperations &&
+      isProject &&
+      projectMode === "RECRUITING" &&
+      (!formData.recruitmentStartDate || !formData.recruitmentEndDate)
+    ) {
+      return "추가 팀원을 모집하려면 모집 기간을 설정해주세요.";
+    }
     if (
       canEditOperations &&
       formData.participantLimit &&
@@ -522,8 +539,8 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
             <CardContent className="space-y-4">
               {!canEditOperations && (
                 <p className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                  활동명과 설명은 수정할 수 있습니다. 활동 유형, 프로젝트 진행 방식,
-                  담당자, 일정, 모집 조건과 상태 변경은 운영진에게 요청해주세요.
+                  활동명, 설명, 활동 자료와 소통 링크를 수정할 수 있습니다. 활동 유형,
+                  프로젝트 진행 방식, 담당자, 일정, 모집 조건과 상태 변경은 운영진에게 요청해주세요.
                 </p>
               )}
               {/* Activity Type */}
@@ -707,7 +724,7 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
 
                 {materialLabel && (
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="materialUrl">{materialLabel} (선택)</Label>
+                    <Label htmlFor="materialUrl">대표 {materialLabel} (선택)</Label>
                     <Input
                       id="materialUrl"
                       type="url"
@@ -721,10 +738,37 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
                       )}
                       autoComplete="off"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      {activityMaterialHelpText()} 비워
-                      두고 저장하면 기존 링크가 제거됩니다.
-                    </p>
+                    {lectureMaterials.some(
+                      (material) => !material.primary && material.weekNumber == null,
+                    ) && (
+                      <div className="rounded-md border bg-muted/20 px-3 py-2.5">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <p className="text-xs font-medium">강의자료 탭에서 연결한 자료</p>
+                          <Button type="button" variant="ghost" size="sm" asChild className="h-7 px-2 text-xs">
+                            <a href="/lecture-materials">자료 관리</a>
+                          </Button>
+                        </div>
+                        <div className="space-y-1.5">
+                          {lectureMaterials
+                            .filter(
+                              (material) =>
+                                !material.primary && material.weekNumber == null,
+                            )
+                            .map((material) => (
+                              <a
+                                key={material.id}
+                                href={material.driveUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex min-w-0 items-center gap-1.5 text-sm text-[#174b3a] hover:underline"
+                              >
+                                <span className="truncate">{material.title}</span>
+                                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                              </a>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -878,24 +922,36 @@ export function ActivityEditScreen({ viewMode }: ActivityEditScreenProps) {
                 {/* Status */}
                 <div className="space-y-2">
                   <Label htmlFor="status">상태</Label>
-                  <Select
-                    value={formData.status}
-                    disabled={!canEditOperations}
-                    onValueChange={(value) =>
-                      handleInputChange("status", value)
-                    }
-                  >
-                    <SelectTrigger id="status" className="w-48">
-                      <SelectValue placeholder="상태 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {formData.recruitmentStartDate &&
+                  formData.recruitmentEndDate ? (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">
+                        {STATUS_LABELS[activityDisplayStatus(formData)]}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        모집 기간과 활동 일정에 따라 상태가 자동 전환됩니다.
+                      </p>
+                    </div>
+                  ) : (
+                    <Select
+                      value={formData.status}
+                      disabled={!canEditOperations}
+                      onValueChange={(value) =>
+                        handleInputChange("status", value)
+                      }
+                    >
+                      <SelectTrigger id="status" className="w-48">
+                        <SelectValue placeholder="상태 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 {/* Assignee */}

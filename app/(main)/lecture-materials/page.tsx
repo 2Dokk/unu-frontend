@@ -166,7 +166,7 @@ function LectureMaterialsContent() {
       return;
     }
     if (!isMaterialUrl(form.driveUrl.trim())) {
-      toast.error("Google Drive 또는 Notion 공유 링크를 확인해주세요.");
+      toast.error("자료 링크를 확인해주세요.");
       return;
     }
 
@@ -422,7 +422,7 @@ function LectureMaterialsContent() {
               {editingMaterial ? "강의자료 수정" : "강의자료 추가"}
             </DialogTitle>
             <DialogDescription>
-              학회원에게 공유할 Google Drive 또는 Notion 자료를 등록합니다.
+              학회원에게 공유할 외부 자료 링크를 등록합니다.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -498,7 +498,7 @@ function LectureMaterialsContent() {
                     driveUrl: event.target.value,
                   }))
                 }
-                placeholder="Google Drive·Docs 또는 Notion 공유 링크"
+                placeholder="https://..."
               />
               <p className="text-xs text-muted-foreground">
                 학회원이 열람할 수 있도록 공유 권한을 확인해주세요.

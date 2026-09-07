@@ -1,5 +1,7 @@
 import axiosInstance from "./axiosInstance";
 import {
+  LectureRoomScheduleImportRequestDto,
+  LectureRoomScheduleImportResponseDto,
   LectureRoomScheduleRequestDto,
   LectureRoomScheduleResponseDto,
 } from "../interfaces/lecture-room-schedule";
@@ -38,4 +40,15 @@ export async function createLectureRoomScheduleForMe(
 
 export async function deleteLectureRoomSchedule(id: string): Promise<void> {
   await axiosInstance.delete(`/lecture-room-schedules/${id}`);
+}
+
+export async function importLectureRoomSchedulesFromGoogleForm(
+  dto: LectureRoomScheduleImportRequestDto,
+): Promise<LectureRoomScheduleImportResponseDto> {
+  const response =
+    await axiosInstance.post<LectureRoomScheduleImportResponseDto>(
+      "/lecture-room-schedules/imports/google-form",
+      dto,
+    );
+  return response.data;
 }
