@@ -403,7 +403,9 @@ export function ActivityManagementScreen({
   // Session & Attendance states
   const [sessions, setSessions] = useState<ActivitySessionResponseDto[]>([]);
   const [sessionPage, setSessionPage] = useState(1);
-  const [activeTab, setActiveTab] = useState("info");
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("tab") === "applications" ? "applications" : "info",
+  );
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [attendanceStats, setAttendanceStats] = useState<
     Map<

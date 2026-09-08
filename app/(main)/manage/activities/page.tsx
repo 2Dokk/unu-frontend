@@ -67,6 +67,7 @@ import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { formatDate } from "@/lib/utils/date-utils";
 import { toast } from "sonner";
+import { ActivityManagementNav } from "@/components/custom/activity/activity-management-nav";
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "준비 중" },
@@ -289,6 +290,8 @@ export default function ActivitiesManagementPage() {
           학회 활동을 관리합니다
         </p>
       </div>
+
+      <ActivityManagementNav />
 
       <Card>
         <CardHeader>

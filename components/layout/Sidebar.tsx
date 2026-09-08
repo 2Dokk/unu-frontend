@@ -39,7 +39,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               return <Separator key={`separator-${index}`} className="my-2" />;
             }
 
-            const isCurrentQuarterActive = pathname === item.href;
+            const isCurrentQuarterActive =
+              pathname === item.href ||
+              (item.href === "/manage/activities" &&
+                pathname.startsWith("/manage/activities/"));
             const Icon = item.icon;
             const unreadCount = getUnreadCount(item.href);
 
