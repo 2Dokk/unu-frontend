@@ -88,8 +88,7 @@ export default function ActivityApplicationsPage() {
         ]);
         const currentParticipants = allParticipants.filter(
           (participant) =>
-            participant.activity?.quarter?.id === currentQuarter.id &&
-            participant.user?.id !== participant.activity?.assignee?.id,
+            participant.activity?.quarter?.id === currentQuarter.id,
         );
         const depositActivityIds = Array.from(
           new Set(
@@ -233,7 +232,7 @@ export default function ActivityApplicationsPage() {
         <div className="space-y-5">
           {groups.map(({ activity, participants: activityParticipants }) => (
             <Card key={activity.id} className="gap-0 overflow-hidden py-0">
-              <CardHeader className="border-b py-4">
+              <CardHeader className="py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -265,20 +264,30 @@ export default function ActivityApplicationsPage() {
               </CardHeader>
 
               <CardContent className="px-0">
-                <div className="hidden md:block">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="pl-6">신청자</TableHead>
-                        <TableHead>학번</TableHead>
-                        <TableHead>환급 계좌번호</TableHead>
-                        <TableHead className="text-center">상태</TableHead>
-                        <TableHead className="pr-6 text-right">신청일</TableHead>
+                <div className="hidden lg:block">
+                  <Table className="table-fixed">
+                    <TableHeader className="[&_tr]:border-b">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="h-11 w-[16%] pl-6 text-xs font-semibold text-foreground/70">
+                          신청자
+                        </TableHead>
+                        <TableHead className="h-11 w-[14%] text-xs font-semibold text-foreground/70">
+                          학번
+                        </TableHead>
+                        <TableHead className="h-11 w-[30%] text-xs font-semibold text-foreground/70">
+                          환급 계좌번호
+                        </TableHead>
+                        <TableHead className="h-11 w-[16%] text-center text-xs font-semibold text-foreground/70">
+                          상태
+                        </TableHead>
+                        <TableHead className="h-11 w-[24%] pr-6 text-right text-xs font-semibold text-foreground/70">
+                          신청일
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {activityParticipants.map((participant) => (
-                        <TableRow key={participant.id}>
+                        <TableRow key={participant.id} className="h-14">
                           <TableCell className="pl-6 font-medium">
                             {participant.user?.name || "—"}
                           </TableCell>
@@ -302,7 +311,7 @@ export default function ActivityApplicationsPage() {
                   </Table>
                 </div>
 
-                <div className="divide-y md:hidden">
+                <div className="divide-y lg:hidden">
                   {activityParticipants.map((participant) => (
                     <div key={participant.id} className="space-y-3 px-4 py-4">
                       <div className="flex items-start justify-between gap-3">
