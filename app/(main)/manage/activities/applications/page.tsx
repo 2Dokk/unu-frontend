@@ -46,12 +46,20 @@ type ActivityGroup = {
   participants: ActivityParticipantResponse[];
 };
 
-const STATUS_OPTIONS = [
-  { value: "ALL", label: "전체 상태" },
-  { value: "APPLIED", label: "신청 완료" },
-  { value: "APPROVED", label: "참여 확정" },
-  { value: "REJECTED", label: "신청 반려" },
+const ACTIVITY_TYPE_OPTIONS = [
+  { value: "ALL", label: "전체 유형" },
+  { value: "SPECIAL_LECTURE", label: "강의" },
+  { value: "LECTURE", label: "인강" },
+  { value: "STUDY", label: "스터디" },
+  { value: "PROJECT", label: "프로젝트" },
 ];
+
+const ACTIVITY_TYPE_ORDER: Record<string, number> = {
+  SPECIAL_LECTURE: 0,
+  LECTURE: 1,
+  STUDY: 2,
+  PROJECT: 3,
+};
 
 function depositLabel(amount: number) {
   return amount > 0 ? `${amount.toLocaleString("ko-KR")}원` : "없음";
@@ -70,7 +78,7 @@ export default function ActivityApplicationsPage() {
   >(new Map());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("ALL");
+  const [activityType, setActivityType] = useState("ALL");
 
   useEffect(() => {
     if (authLoading) return;
@@ -130,7 +138,12 @@ export default function ActivityApplicationsPage() {
   const groups = useMemo<ActivityGroup[]>(() => {
     const query = search.trim().toLowerCase();
     const filtered = participants.filter((participant) => {
-      if (status !== "ALL" && participant.status !== status) return false;
+      if (
+        activityType !== "ALL" &&
+        participant.activity.activityType.code !== activityType
+      ) {
+        return false;
+      }
       if (!query) return true;
 
       return [
@@ -155,12 +168,16 @@ export default function ActivityApplicationsPage() {
           b.createdAt.localeCompare(a.createdAt),
         ),
       }))
-      .sort((a, b) =>
-        (b.participants[0]?.createdAt ?? "").localeCompare(
+      .sort((a, b) => {
+        const typeDifference =
+          (ACTIVITY_TYPE_ORDER[a.activity.activityType.code] ?? 99) -
+          (ACTIVITY_TYPE_ORDER[b.activity.activityType.code] ?? 99);
+        if (typeDifference !== 0) return typeDifference;
+        return (b.participants[0]?.createdAt ?? "").localeCompare(
           a.participants[0]?.createdAt ?? "",
-        ),
-      );
-  }, [participants, search, status]);
+        );
+      });
+  }, [activityType, participants, search]);
 
   const visibleParticipantCount = groups.reduce(
     (sum, group) => sum + group.participants.length,
@@ -205,12 +222,12 @@ export default function ActivityApplicationsPage() {
               className="pl-9"
             />
           </div>
-          <Select value={status} onValueChange={setStatus}>
+          <Select value={activityType} onValueChange={setActivityType}>
             <SelectTrigger className="w-full bg-white sm:w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {STATUS_OPTIONS.map((option) => (
+              {ACTIVITY_TYPE_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
