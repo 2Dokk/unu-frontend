@@ -20,3 +20,24 @@ export interface LectureRoomScheduleResponseDto {
   createdBy: AuditorDto;
   modifiedBy: AuditorDto;
 }
+
+export interface LectureRoomScheduleImportSlot {
+  dayOfWeek: string;
+  period: number;
+}
+
+export interface LectureRoomScheduleImportUser {
+  studentId: string;
+  slots: LectureRoomScheduleImportSlot[];
+}
+
+export interface LectureRoomScheduleImportRequestDto {
+  quarterId: string;
+  users: LectureRoomScheduleImportUser[];
+}
+
+export interface LectureRoomScheduleImportResponseDto {
+  userCount: number;
+  deletedCount: number;
+  createdCount: number;
+}

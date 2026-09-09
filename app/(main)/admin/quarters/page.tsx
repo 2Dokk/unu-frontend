@@ -66,10 +66,10 @@ import { formatDate } from "@/lib/utils/date-utils";
 import { DatePicker } from "@/components/ui/date-picker";
 
 const SEASONS = [
-  { value: "Spring", label: "봄", Icon: Flower2, color: "text-pink-500" },
-  { value: "Summer", label: "여름", Icon: Sun, color: "text-amber-500" },
-  { value: "Fall", label: "가을", Icon: Leaf, color: "text-orange-500" },
-  { value: "Winter", label: "겨울", Icon: Snowflake, color: "text-sky-500" },
+  { value: "SPRING", label: "봄", Icon: Flower2, color: "text-pink-500" },
+  { value: "SUMMER", label: "여름", Icon: Sun, color: "text-amber-500" },
+  { value: "FALL", label: "가을", Icon: Leaf, color: "text-orange-500" },
+  { value: "WINTER", label: "겨울", Icon: Snowflake, color: "text-sky-500" },
 ];
 
 function SeasonIcon({ season, className }: { season: string; className?: string }) {
@@ -89,7 +89,7 @@ export default function QuartersPage() {
   const [editingQuarter, setEditingQuarter] = useState<QuarterResponse | null>(null);
   const [formData, setFormData] = useState({
     year: new Date().getFullYear(),
-    season: "Spring",
+    season: "SPRING",
     startDate: "",
     endDate: "",
   });
@@ -129,7 +129,7 @@ export default function QuartersPage() {
 
   function handleOpenCreateDialog() {
     setEditingQuarter(null);
-    setFormData({ year: new Date().getFullYear(), season: "Spring", startDate: "", endDate: "" });
+    setFormData({ year: new Date().getFullYear(), season: "SPRING", startDate: "", endDate: "" });
     setShowDialog(true);
   }
 

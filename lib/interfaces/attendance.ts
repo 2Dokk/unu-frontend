@@ -26,3 +26,11 @@ export interface AttendanceStatsResponseDto {
   absentCount: number;
   excusedCount: number;
 }
+
+export interface SessionAttendanceSummaryDto {
+  sessionId: string;
+  present: number;
+  absent: number;
+  excused: number;
+  total: number;
+}

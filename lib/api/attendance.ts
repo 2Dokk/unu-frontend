@@ -4,6 +4,7 @@ import {
   AttendanceResponseDto,
   AttendanceBulkRequestDto,
   AttendanceStatsResponseDto,
+  SessionAttendanceSummaryDto,
 } from "../interfaces/attendance";
 
 /**
@@ -104,6 +105,18 @@ export const getAttendancesByParticipantId = async (
 ): Promise<AttendanceResponseDto[]> => {
   const response = await axiosInstance.get<AttendanceResponseDto[]>(
     `/attendances/participants/${participantId}`,
+  );
+  return response.data;
+};
+
+/**
+ * 활동의 세션별 출석 요약(회차마다 개별 호출 대신 활동 단위로 한 번에 집계)
+ */
+export const getSessionAttendanceSummaryByActivity = async (
+  activityId: string,
+): Promise<SessionAttendanceSummaryDto[]> => {
+  const response = await axiosInstance.get<SessionAttendanceSummaryDto[]>(
+    `/attendances/activities/${activityId}/session-summary`,
   );
   return response.data;
 };

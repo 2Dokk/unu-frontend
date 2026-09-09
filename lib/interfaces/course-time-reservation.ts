@@ -16,3 +16,10 @@ export interface CourseTimeReservationResponse {
   durationMinutes: number;
   createdAt: string;
 }
+
+export interface CourseTimeReservationSlotResponse {
+  id: string;
+  startAt: string;
+  endAt: string;
+  durationMinutes: number;
+}

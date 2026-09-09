@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { getAllActivitySessions } from "@/lib/api/activity-session";
@@ -47,7 +47,6 @@ import { getAllActivityTypes } from "@/lib/api/activity-type";
 
 interface EnrichedSession {
   session: ActivitySessionResponseDto;
-  attendances: AttendanceResponseDto[];
 }
 
 const CATEGORY_MAP: Record<string, { label: string; color: string }> = {
@@ -62,6 +61,14 @@ const CATEGORY_MAP: Record<string, { label: string; color: string }> = {
   ONLINE_COURSE: {
     label: "온라인 강좌",
     color: "bg-amber-50 text-amber-700 border-amber-200",
+  },
+  LECTURE: {
+    label: "인강",
+    color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  SPECIAL_LECTURE: {
+    label: "강의",
+    color: "bg-rose-50 text-rose-700 border-rose-200",
   },
 };
 
@@ -97,6 +104,45 @@ export default function ManagePage() {
     [],
   );
   const [loading, setLoading] = useState(true);
+  // 선택한 세션의 출석 데이터만 lazy load. 페이지 생명주기 동안 세션별로 캐시한다.
+  const [selectedSessionAttendances, setSelectedSessionAttendances] = useState<
+    AttendanceResponseDto[]
+  >([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const attendanceCacheRef = useRef<Map<string, AttendanceResponseDto[]>>(
+    new Map(),
+  );
+
+  // 특정 세션을 열었을 때만 그 세션의 출석을 1회 조회한다(동일 세션 재오픈 시 캐시 사용).
+  useEffect(() => {
+    if (!selectedSession) {
+      setSelectedSessionAttendances([]);
+      return;
+    }
+    const sessionId = selectedSession.session.id;
+    const cached = attendanceCacheRef.current.get(sessionId);
+    if (cached) {
+      setSelectedSessionAttendances(cached);
+      return;
+    }
+    let cancelled = false;
+    setAttendanceLoading(true);
+    getAttendancesBySessionId(sessionId)
+      .then((data) => {
+        if (cancelled) return;
+        attendanceCacheRef.current.set(sessionId, data);
+        setSelectedSessionAttendances(data);
+      })
+      .catch(() => {
+        if (!cancelled) setSelectedSessionAttendances([]);
+      })
+      .finally(() => {
+        if (!cancelled) setAttendanceLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSession]);
 
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !hasRole("MANAGER"))) {
@@ -124,27 +170,12 @@ export default function ManagePage() {
           activityMap.set(activity.id, activity);
         });
 
-        // Enrich sessions with activity data and attendances
-        const enrichedSessions = await Promise.all(
-          sessionsData.map(async (session) => {
-            const activity = activityMap.get(session.activity.id) || null;
-            let attendances: AttendanceResponseDto[] = [];
-
-            try {
-              attendances = await getAttendancesBySessionId(session.id);
-            } catch (error: any) {
-              console.error(
-                `Failed to fetch attendances for session ${session.id}`,
-              );
-            }
-
-            return {
-              session,
-              activity,
-              attendances,
-            };
-          }),
-        );
+        // 캘린더 표시에는 세션(+임베디드 활동 정보)만 필요하다.
+        // 세션별 출석 데이터는 최초 진입 시 불러오지 않고, 특정 세션 상세를 열 때만 lazy load 한다.
+        const enrichedSessions = sessionsData.map((session) => ({
+          session,
+          activity: activityMap.get(session.activity.id) || null,
+        }));
 
         setSessions(enrichedSessions);
         setActivityTypes(activityTypesData);
@@ -221,10 +252,27 @@ export default function ManagePage() {
           <Button variant="outline" size="icon" onClick={handlePrevMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="min-w-45 text-center">
-            <h2 className="text-lg font-semibold">
-              {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
-            </h2>
+          <div className="flex shrink-0 items-center gap-1">
+            <select
+              aria-label="연도 선택"
+              className="h-9 w-20 rounded-md border border-input bg-background px-2 text-sm"
+              value={currentDate.getFullYear()}
+              onChange={(event) => setCurrentDate(new Date(Number(event.target.value), currentDate.getMonth(), 1))}
+            >
+              {Array.from({ length: 201 }, (_, index) => 1900 + index).map((year) => (
+                <option key={year} value={year}>{year}년</option>
+              ))}
+            </select>
+            <select
+              aria-label="월 선택"
+              className="h-9 w-18 rounded-md border border-input bg-background px-2 text-sm"
+              value={currentDate.getMonth()}
+              onChange={(event) => setCurrentDate(new Date(currentDate.getFullYear(), Number(event.target.value), 1))}
+            >
+              {Array.from({ length: 12 }, (_, month) => (
+                <option key={month} value={month}>{month + 1}월</option>
+              ))}
+            </select>
           </div>
           <Button variant="outline" size="icon" onClick={handleNextMonth}>
             <ChevronRight className="h-4 w-4" />
@@ -293,6 +341,8 @@ export default function ManagePage() {
           {selectedSession && (
             <SessionDetailPanel
               session={selectedSession}
+              attendances={selectedSessionAttendances}
+              loading={attendanceLoading}
               onClose={() => setSelectedSession(null)}
             />
           )}
@@ -334,6 +384,7 @@ function CalendarView({
   for (let day = 1; day <= daysInMonth; day++) {
     calendarDays.push(day);
   }
+  while (calendarDays.length < 42) calendarDays.push(null);
 
   // Group sessions by date
   const sessionsByDate = new Map<string, EnrichedSession[]>();
@@ -380,7 +431,7 @@ function CalendarView({
         <div className="grid grid-cols-7 gap-2">
           {calendarDays.map((day, idx) => {
             if (day === null) {
-              return <div key={`empty-${idx}`} className="aspect-square" />;
+              return <div key={`empty-${idx}`} className="aspect-[4/5]" />;
             }
 
             const dateString = formatDate(day);
@@ -497,13 +548,19 @@ function CalendarView({
 // Session Detail Panel Component
 interface SessionDetailPanelProps {
   session: EnrichedSession | null;
+  attendances: AttendanceResponseDto[];
+  loading: boolean;
   onClose: () => void;
 }
 
-function SessionDetailPanel({ session }: SessionDetailPanelProps) {
+function SessionDetailPanel({
+  session,
+  attendances,
+  loading,
+}: SessionDetailPanelProps) {
   if (!session) return null;
 
-  const { session: sessionData, attendances } = session;
+  const { session: sessionData } = session;
   const categoryCode = session.session.activity?.activityType?.code || "";
   const categoryColor =
     CATEGORY_MAP[categoryCode]?.color ??
@@ -511,7 +568,9 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
 
   const attendanceStats = {
     present: attendances.filter((a) => a.status === "PRESENT").length,
-    absent: attendances.filter((a) => a.status === "ABSENT").length,
+    absent: attendances.filter(
+      (a) => a.status === "ABSENT" || a.status === "LATE",
+    ).length,
     excused: attendances.filter((a) => a.status === "EXCUSED").length,
     total: attendances.length,
   };
@@ -593,7 +652,11 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
           <h4 className="font-semibold text-sm">참가자 목록</h4>
           <ScrollArea className="h-75">
             <div className="space-y-2">
-              {attendances.length === 0 ? (
+              {loading ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  출석 정보를 불러오는 중입니다
+                </p>
+              ) : attendances.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   참가자 정보가 없습니다
                 </p>
@@ -603,7 +666,9 @@ function SessionDetailPanel({ session }: SessionDetailPanelProps) {
                     attendance.participant?.user?.name || "이름 없음";
                   const isPresent = attendance.status === "PRESENT";
                   const isExcused = attendance.status === "EXCUSED";
-                  const isAbsent = attendance.status === "ABSENT";
+                  const isAbsent =
+                    attendance.status === "ABSENT" ||
+                    attendance.status === "LATE";
 
                   return (
                     <div

@@ -1,16 +1,15 @@
 "use client";
 
+import { DatePicker } from "@/components/ui/date-picker";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarIcon, ChevronsUpDown, Check } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { ko } from "date-fns/locale";
+import { ChevronsUpDown, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -37,13 +36,33 @@ import {
 import { QuarterResponse } from "@/lib/interfaces/quarter";
 import { UserResponseDto } from "@/lib/interfaces/auth";
 import { ParticipantsCard } from "@/components/custom/activity/participants-card";
+import {
+  PROJECT_MODE_OPTIONS,
+  ProjectMode,
+  projectModeFields,
+} from "@/lib/constants/project-mode";
+import { isDiscordUrl, supportsDiscordLink } from "@/lib/constants/discord-link";
+import { operationPlanLabel } from "@/lib/constants/operation-plan";
+import {
+  activityMaterialHelpText,
+  activityMaterialLabel,
+  activityMaterialPlaceholder,
+} from "@/lib/constants/activity-material";
+import { isMaterialUrl } from "@/lib/utils/material-url";
+import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "준비 중" },
-  { value: "OPEN", label: "모집 중" },
   { value: "ONGOING", label: "진행 중" },
   { value: "COMPLETED", label: "종료" },
 ];
+
+const STATUS_LABELS: Record<string, string> = {
+  CREATED: "준비 중",
+  OPEN: "모집 중",
+  ONGOING: "진행 중",
+  COMPLETED: "종료",
+};
 
 export default function ActivityNewPage() {
   const router = useRouter();
@@ -68,7 +87,54 @@ export default function ActivityNewPage() {
     quarterId: "",
     startDate: "",
     endDate: "",
+    depositAmount: "30000",
+    participantLimit: "",
+    recruitmentPositions: "",
+    discordUrl: "",
+    recruitmentStartDate: "",
+    recruitmentEndDate: "",
+    operationPlan: "",
+    instructorCareer: "",
+    materialUrl: "",
   });
+  const [projectMode, setProjectMode] = useState<ProjectMode>("FIXED_TEAM");
+
+  const selectedActivityType = activityTypes.find(
+    (type) => type.id === formData.activityTypeId,
+  );
+  const requiresDeposit =
+    selectedActivityType?.code === "STUDY" ||
+    selectedActivityType?.code === "SPECIAL_LECTURE" ||
+    selectedActivityType?.code === "LECTURE";
+  const isProject = selectedActivityType?.code === "PROJECT";
+  const registersAssigneeAsParticipant =
+    selectedActivityType?.code === "STUDY";
+  const allowsDiscordLink = supportsDiscordLink(selectedActivityType?.code);
+  const planLabel = operationPlanLabel(selectedActivityType?.code);
+  const isSpecialLecture = selectedActivityType?.code === "SPECIAL_LECTURE";
+  const materialLabel = activityMaterialLabel(selectedActivityType?.code);
+  const modeFields = projectModeFields(projectMode);
+  const allowsInitialMembers = !isProject || modeFields.allowsInitialMembers;
+  const showsParticipantLimit = !isProject || modeFields.allowsParticipantLimit;
+
+  function handleProjectModeChange(mode: ProjectMode) {
+    setProjectMode(mode);
+    const fields = projectModeFields(mode);
+    setFormData((prev) => ({
+      ...prev,
+      status: fields.status,
+      participantLimit: fields.allowsParticipantLimit
+        ? prev.participantLimit
+        : "",
+      recruitmentPositions:
+        mode === "RECRUITING" ? prev.recruitmentPositions : "",
+      recruitmentStartDate:
+        mode === "RECRUITING" ? prev.recruitmentStartDate : "",
+      recruitmentEndDate:
+        mode === "RECRUITING" ? prev.recruitmentEndDate : "",
+    }));
+    if (!fields.allowsInitialMembers) setNewParticipantIds([]);
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -90,14 +156,82 @@ export default function ActivityNewPage() {
   }
 
   function validateForm(): string | null {
+    if (!formData.activityTypeId) return "활동 유형을 선택해주세요.";
     if (!formData.title.trim()) return "활동명을 입력해주세요.";
     if (!formData.startDate || !formData.endDate)
       return "시작일과 종료일을 입력해주세요.";
     if (new Date(formData.startDate) > new Date(formData.endDate))
       return "종료일은 시작일 이후여야 합니다.";
-    if (!formData.activityTypeId) return "활동 유형을 선택해주세요.";
     if (!formData.quarterId) return "분기를 선택해주세요.";
     if (!formData.assigneeId) return "담당자를 선택해주세요.";
+    const depositAmount = Number(formData.depositAmount);
+    if (
+      requiresDeposit &&
+      (!formData.depositAmount ||
+        !Number.isInteger(depositAmount) ||
+        depositAmount < 0 ||
+        depositAmount > 1_000_000)
+    ) {
+      return "참여 보증금은 0원 이상 1,000,000원 이하로 입력해주세요.";
+    }
+    const participantLimit = Number(formData.participantLimit);
+    if (
+      formData.participantLimit &&
+      (!Number.isInteger(participantLimit) ||
+        participantLimit < 1 ||
+        participantLimit > 1000)
+    ) {
+      return "추가 참여 정원은 1명 이상 1,000명 이하로 입력해주세요.";
+    }
+    if (
+      formData.participantLimit &&
+      participantLimit <
+        newParticipantIds.filter((userId) => userId !== formData.assigneeId)
+          .length
+    ) {
+      return "추가 참여 정원은 미리 추가한 학회원 수보다 적을 수 없습니다.";
+    }
+    if (
+      isProject &&
+      projectMode === "RECRUITING" &&
+      (!formData.recruitmentStartDate || !formData.recruitmentEndDate)
+    ) {
+      return "추가 팀원을 모집하려면 모집 기간을 설정해주세요.";
+    }
+    if (
+      Boolean(formData.recruitmentStartDate) !==
+      Boolean(formData.recruitmentEndDate)
+    ) {
+      return "모집 시작일과 종료일을 모두 입력해주세요.";
+    }
+    if (
+      formData.recruitmentStartDate &&
+      formData.recruitmentEndDate &&
+      formData.recruitmentEndDate < formData.recruitmentStartDate
+    ) {
+      return "모집 종료일은 모집 시작일보다 빠를 수 없습니다.";
+    }
+    if (
+      formData.recruitmentEndDate &&
+      formData.startDate &&
+      formData.recruitmentEndDate > formData.startDate
+    ) {
+      return "모집 종료일은 활동 시작일 이후로 설정할 수 없습니다.";
+    }
+    if (
+      allowsDiscordLink &&
+      formData.discordUrl.trim() &&
+      !isDiscordUrl(formData.discordUrl.trim())
+    ) {
+      return "디스코드 초대 링크를 확인해주세요.";
+    }
+    if (
+      materialLabel &&
+      formData.materialUrl.trim() &&
+      !isMaterialUrl(formData.materialUrl.trim())
+    ) {
+      return `${materialLabel} 링크를 확인해주세요.`;
+    }
     return null;
   }
 
@@ -121,12 +255,40 @@ export default function ActivityNewPage() {
         quarterId: formData.quarterId,
         startDate: formData.startDate,
         endDate: formData.endDate,
+        depositAmount: requiresDeposit
+          ? Number(formData.depositAmount)
+          : undefined,
+        participantLimit: formData.participantLimit
+          ? Number(formData.participantLimit)
+          : undefined,
+        listed: isProject ? modeFields.listed : undefined,
+        recruitmentPositions:
+          projectMode === "RECRUITING" && isProject
+            ? formData.recruitmentPositions.trim() || undefined
+            : undefined,
+        discordUrl: allowsDiscordLink
+          ? formData.discordUrl.trim() || undefined
+          : undefined,
+        recruitmentStartDate: formData.recruitmentStartDate || undefined,
+        recruitmentEndDate: formData.recruitmentEndDate || undefined,
+        operationPlan: planLabel
+          ? formData.operationPlan.trim() || undefined
+          : undefined,
+        instructorCareer: isSpecialLecture
+          ? formData.instructorCareer.trim() || undefined
+          : undefined,
+        materialUrl: materialLabel
+          ? formData.materialUrl.trim() || undefined
+          : undefined,
       };
 
       const created = await createActivity(data);
-      if (newParticipantIds.length > 0) {
+      const participantIdsToAdd = registersAssigneeAsParticipant
+        ? newParticipantIds.filter((userId) => userId !== formData.assigneeId)
+        : newParticipantIds;
+      if (participantIdsToAdd.length > 0) {
         await Promise.all(
-          newParticipantIds.map((userId) =>
+          participantIdsToAdd.map((userId) =>
             createActivityParticipant({
               activityId: created.id,
               userId,
@@ -168,6 +330,45 @@ export default function ActivityNewPage() {
             <CardTitle>기본 정보</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Activity Type */}
+            <div className="space-y-2">
+              <Label htmlFor="activityType">
+                활동 유형 <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={formData.activityTypeId}
+                onValueChange={(value) => {
+                  handleInputChange("activityTypeId", value);
+                  const type = activityTypes.find((item) => item.id === value);
+                  if (
+                    (type?.code === "STUDY" ||
+                      type?.code === "SPECIAL_LECTURE" ||
+                      type?.code === "LECTURE") &&
+                    !formData.depositAmount
+                  ) {
+                    handleInputChange("depositAmount", "30000");
+                  }
+                  if (type?.code === "LECTURE" && !formData.participantLimit) {
+                    handleInputChange("participantLimit", "5");
+                  }
+                  if (type?.code === "PROJECT") {
+                    handleProjectModeChange(projectMode);
+                  }
+                }}
+              >
+                <SelectTrigger id="activityType" className="w-48">
+                  <SelectValue placeholder="유형 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activityTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="title">
@@ -196,28 +397,191 @@ export default function ActivityNewPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Activity Type */}
-              <div className="space-y-2">
-                <Label htmlFor="activityType">
-                  유형 <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={formData.activityTypeId}
-                  onValueChange={(value) =>
-                    handleInputChange("activityTypeId", value)
-                  }
-                >
-                  <SelectTrigger id="activityType" className="w-48">
-                    <SelectValue placeholder="유형 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activityTypes.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
+              {requiresDeposit && (
+                <div className="space-y-2">
+                  <Label htmlFor="depositAmount">참여 보증금</Label>
+                  <div className="relative w-48">
+                    <Input
+                      id="depositAmount"
+                      value={formData.depositAmount}
+                      onChange={(event) =>
+                        handleInputChange(
+                          "depositAmount",
+                          event.target.value.replace(/\D/g, ""),
+                        )
+                      }
+                      inputMode="numeric"
+                      className="pr-9"
+                      maxLength={7}
+                    />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      원
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    0원으로 설정하면 보증금 절차를 사용하지 않습니다.
+                  </p>
+                </div>
+              )}
+
+              {isProject && (
+                <div className="space-y-2 md:col-span-2">
+                  <p className="text-sm font-medium">프로젝트 진행 방식</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PROJECT_MODE_OPTIONS.map((option) => (
+                      <button
+                        key={option.mode}
+                        type="button"
+                        aria-pressed={projectMode === option.mode}
+                        className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                          projectMode === option.mode
+                            ? "border-[#264638] bg-[#264638]/5 text-[#264638]"
+                            : "text-muted-foreground hover:bg-muted"
+                        }`}
+                        onClick={() => handleProjectModeChange(option.mode)}
+                      >
+                        {option.label}
+                      </button>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {
+                      PROJECT_MODE_OPTIONS.find(
+                        (option) => option.mode === projectMode,
+                      )?.description
+                    }
+                  </p>
+                </div>
+              )}
+
+              {isProject && projectMode === "RECRUITING" && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="recruitmentPositions">희망 포지션</Label>
+                  <Textarea
+                    id="recruitmentPositions"
+                    value={formData.recruitmentPositions}
+                    onChange={(event) =>
+                      handleInputChange(
+                        "recruitmentPositions",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="예: 프론트엔드 1명 (React), 백엔드 1명 (Spring), 디자이너 1명"
+                    rows={2}
+                    maxLength={500}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    어떤 포지션의 팀원을 찾는지 적어두면 신청자가 활동 상세에서
+                    확인할 수 있습니다.
+                  </p>
+                </div>
+              )}
+
+              {allowsDiscordLink && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="discordUrl">디스코드 링크 (선택)</Label>
+                  <Input
+                    id="discordUrl"
+                    type="url"
+                    value={formData.discordUrl}
+                    onChange={(event) =>
+                      handleInputChange("discordUrl", event.target.value)
+                    }
+                    placeholder="https://discord.gg/..."
+                    maxLength={2048}
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    입력하면 활동 상세의 활동 내용 탭에 참여 링크로 표시됩니다.
+                  </p>
+                </div>
+              )}
+
+              {isSpecialLecture && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="instructorCareer">강의자 경력</Label>
+                  <Textarea
+                    id="instructorCareer"
+                    rows={4}
+                    maxLength={2000}
+                    value={formData.instructorCareer}
+                    onChange={(event) =>
+                      handleInputChange("instructorCareer", event.target.value)
+                    }
+                    placeholder="관련 프로젝트, 인턴십, 수상, 학습 경험 등"
+                  />
+                </div>
+              )}
+
+              {planLabel && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="operationPlan">{planLabel}</Label>
+                  <Input
+                    id="study-plan-link"
+                    type="url"
+                    value={formData.operationPlan}
+                    onChange={(event) => handleInputChange("operationPlan", event.target.value)}
+                    placeholder={activityMaterialPlaceholder(
+                      selectedActivityType?.code,
+                    )}
+                  />
+                </div>
+              )}
+
+              {materialLabel && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="materialUrl">{materialLabel} (선택)</Label>
+                  <Input
+                    id="materialUrl"
+                    type="url"
+                    maxLength={2048}
+                    value={formData.materialUrl}
+                    onChange={(event) =>
+                      handleInputChange("materialUrl", event.target.value)
+                    }
+                    placeholder={activityMaterialPlaceholder(
+                      selectedActivityType?.code,
+                    )}
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {activityMaterialHelpText()} 등록 후 해당 활동 상세에서
+                    확인할 수 있습니다.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-2 md:col-span-2">
+                <Label>모집 기간 (선택)</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <DatePicker
+                    clearable
+                    className="w-44"
+                    value={formData.recruitmentStartDate}
+                    onChange={(value) =>
+                      handleInputChange(
+                        "recruitmentStartDate",
+                        value,
+                      )
+                    }
+                  />
+                  <span className="text-sm text-muted-foreground">~</span>
+                  <DatePicker
+                    clearable
+                    className="w-44"
+                    value={formData.recruitmentEndDate}
+                    onChange={(value) =>
+                      handleInputChange(
+                        "recruitmentEndDate",
+                        value,
+                      )
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  이 기간에만 참여 신청을 받습니다. 비워두면 모집을 진행하지
+                  않습니다. 종료일은 활동 시작일 이후로 설정할 수 없습니다.
+                </p>
               </div>
 
               {/* Quarter */}
@@ -245,24 +609,49 @@ export default function ActivityNewPage() {
                 </Select>
               </div>
 
-              {/* Status */}
-              <div className="space-y-2">
-                <Label htmlFor="status">상태</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleInputChange("status", value)}
-                >
-                  <SelectTrigger id="status" className="w-48">
-                    <SelectValue placeholder="상태 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {isProject && !showsParticipantLimit && (
+                <div className="space-y-2">
+                  <Label>추가 참여 정원</Label>
+                  <p className="text-sm">
+                    {projectMode === "PERSONAL"
+                      ? "담당자 혼자 진행하므로 추가 참여 정원을 설정하지 않습니다."
+                      : `함께 시작할 팀원 ${newParticipantIds.length}명으로 확정되며, 추가 신청은 받지 않습니다.`}
+                  </p>
+                </div>
+              )}
+
+              <div className={showsParticipantLimit ? "space-y-2" : "hidden"}>
+                <Label htmlFor="participantLimit">추가 참여 정원</Label>
+                <div className="relative w-48">
+                  <Input
+                    id="participantLimit"
+                    value={formData.participantLimit}
+                    onChange={(event) =>
+                      handleInputChange(
+                        "participantLimit",
+                        event.target.value.replace(/\D/g, ""),
+                      )
+                    }
+                    placeholder="제한 없음"
+                    inputMode="numeric"
+                    className="pr-9"
+                    maxLength={4}
+                  />
+                  {formData.participantLimit && (
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      명
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {selectedActivityType?.code === "LECTURE"
+                    ? "인강 활동은 기본 추가 참여 정원이 5명입니다. "
+                    : "비워두면 제한이 없습니다. "}
+                  담당자를 제외하고 추가로 신청받을 수 있는 인원입니다.
+                  {isProject &&
+                    newParticipantIds.length > 0 &&
+                    ` 현재 ${newParticipantIds.length}명을 미리 추가했습니다.`}
+                </p>
               </div>
 
               {/* Assignee */}
@@ -363,6 +752,40 @@ export default function ActivityNewPage() {
                   </PopoverContent>
                 </Popover>
               </div>
+              {/* Status */}
+              <div className="space-y-2">
+                <Label htmlFor="status">상태</Label>
+                {formData.recruitmentStartDate &&
+                formData.recruitmentEndDate ? (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">
+                      {STATUS_LABELS[activityDisplayStatus(formData)]}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      모집 기간과 활동 일정에 따라 상태가 자동 전환됩니다.
+                    </p>
+                  </div>
+                ) : isProject ? (
+                  <p className="text-sm font-medium">준비 중</p>
+                ) : (
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => handleInputChange("status", value)}
+                  >
+                    <SelectTrigger id="status" className="w-48">
+                      <SelectValue placeholder="상태 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
             </div>
           </CardContent>
         </Card>
@@ -379,41 +802,12 @@ export default function ActivityNewPage() {
                 <Label>
                   시작일 <span className="text-destructive">*</span>
                 </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal text-xs",
-                        !formData.startDate && "text-muted-foreground",
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.startDate
-                        ? format(parseISO(formData.startDate), "PPP", {
-                            locale: ko,
-                          })
-                        : "시작일 선택"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={
-                        formData.startDate
-                          ? parseISO(formData.startDate)
-                          : undefined
-                      }
-                      onSelect={(date) =>
-                        handleInputChange(
-                          "startDate",
-                          date ? format(date, "yyyy-MM-dd") : "",
-                        )
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker
+                    value={formData.startDate}
+                    onChange={(value) => handleInputChange("startDate", value)}
+                    placeholder="시작일 선택"
+                    clearable
+                  />
               </div>
 
               {/* End Date */}
@@ -421,41 +815,13 @@ export default function ActivityNewPage() {
                 <Label>
                   종료일 <span className="text-destructive">*</span>
                 </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal text-xs",
-                        !formData.endDate && "text-muted-foreground",
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.endDate
-                        ? format(parseISO(formData.endDate), "PPP", {
-                            locale: ko,
-                          })
-                        : "종료일 선택"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={
-                        formData.endDate
-                          ? parseISO(formData.endDate)
-                          : undefined
-                      }
-                      onSelect={(date) =>
-                        handleInputChange(
-                          "endDate",
-                          date ? format(date, "yyyy-MM-dd") : "",
-                        )
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker
+                    value={formData.endDate}
+                    onChange={(value) => handleInputChange("endDate", value)}
+                    placeholder="종료일 선택"
+                    min={formData.startDate || undefined}
+                    clearable
+                  />
               </div>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -465,15 +831,19 @@ export default function ActivityNewPage() {
         </Card>
 
         {/* 참여자 Card */}
-        <ParticipantsCard
-          allUsers={users}
-          newUserIds={newParticipantIds}
-          onToggleNew={(uid) =>
-            setNewParticipantIds((prev) =>
-              prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid],
-            )
-          }
-        />
+        {allowsInitialMembers && (
+          <ParticipantsCard
+            allUsers={users}
+            newUserIds={newParticipantIds}
+            onToggleNew={(uid) =>
+              setNewParticipantIds((prev) =>
+                prev.includes(uid)
+                  ? prev.filter((id) => id !== uid)
+                  : [...prev, uid],
+              )
+            }
+          />
+        )}
 
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-4">

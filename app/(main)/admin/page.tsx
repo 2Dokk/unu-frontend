@@ -2,7 +2,15 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus, Tag, CalendarDays, Users, KeyRound, RefreshCw } from "lucide-react";
+import {
+  UserPlus,
+  Tag,
+  CalendarDays,
+  Users,
+  KeyRound,
+  RefreshCw,
+  type LucideIcon,
+} from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import {
   Card,
@@ -17,7 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface AdminMenuItem {
   title: string;
   description: string;
-  icon: React.ElementType;
+  icon: LucideIcon;
   href: string;
 }
 
@@ -35,8 +43,8 @@ const adminMenuItems: AdminMenuItem[] = [
     href: "/admin/quarters",
   },
   {
-    title: "회원가입 링크 생성",
-    description: "새 학회원을 초대하기 위한 1회성 회원가입 링크를 생성합니다.",
+    title: "회원가입 관리",
+    description: "가입 대상 학번을 등록하고 공용 초대 링크와 가입 현황을 관리합니다.",
     icon: UserPlus,
     href: "/admin/signup-link",
   },

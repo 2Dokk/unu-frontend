@@ -349,6 +349,8 @@ export function CourseTimeReservationCard({
               <Calendar
                 mode="single"
                 selected={selectedDate}
+                defaultMonth={selectedDate}
+                startMonth={startOfDay(new Date())}
                 onSelect={handleDateSelect}
                 disabled={(date) => isBefore(date, startOfDay(new Date()))}
                 locale={ko}

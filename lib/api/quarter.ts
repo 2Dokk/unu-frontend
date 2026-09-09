@@ -1,4 +1,5 @@
 import { QuarterRequest, QuarterResponse } from "../interfaces/quarter";
+import { compareQuartersForDisplay } from "../utils/quarter-utils";
 import axiosInstance from "./axiosInstance";
 import publicClient from "./publicClient";
 
@@ -17,7 +18,8 @@ export async function updateCurrentQuarter(data: {
 }
 
 export async function getAllQuarters(): Promise<QuarterResponse[]> {
-  return publicClient.get<QuarterResponse[]>("/public/quarters");
+  const quarters = await publicClient.get<QuarterResponse[]>("/public/quarters");
+  return [...quarters].sort(compareQuartersForDisplay);
 }
 
 export async function getQuarterById(

@@ -1,5 +1,6 @@
 import { ActivityRequest, ActivityResponse } from "../interfaces/activity";
 import axiosInstance from "./axiosInstance";
+import { requestMenuNotificationRefresh } from "@/lib/utils/menu-notification-events";
 
 export async function getAllActivities(): Promise<ActivityResponse[]> {
   const response =
@@ -16,6 +17,13 @@ export async function getActivityById(
   return response.data;
 }
 
+export async function getMyHostedActivities(): Promise<ActivityResponse[]> {
+  const response = await axiosInstance.get<ActivityResponse[]>(
+    "/activities/hosted/me",
+  );
+  return response.data;
+}
+
 export async function createActivity(
   data: ActivityRequest,
 ): Promise<ActivityResponse> {
@@ -23,16 +31,7 @@ export async function createActivity(
     "/activities",
     data,
   );
-  return response.data;
-}
-
-export async function createActivityForMe(
-  data: ActivityRequest,
-): Promise<ActivityResponse> {
-  const response = await axiosInstance.post<ActivityResponse>(
-    "/activities/me",
-    data,
-  );
+  requestMenuNotificationRefresh();
   return response.data;
 }
 
@@ -67,6 +66,7 @@ export interface ActivitySearchParams {
   status?: string;
   activityTypeId?: string;
   quarterId?: string;
+  includeUnlisted?: boolean;
 }
 
 export async function searchActivities(

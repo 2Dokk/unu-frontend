@@ -1,17 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CalendarDays, FileText, Info, Clock } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { getActiveRecruitment } from "@/lib/api/recruitment";
+import { getCurrentQuarter } from "@/lib/api/quarter";
+import { ApiError } from "@/lib/api/publicClient";
 import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
-import { FormResponse } from "@/lib/interfaces/form";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
+
+function formatQuarterLabel(quarter: QuarterResponse): string {
+  return `${String(quarter.year).slice(2)} ${quarter.season.toUpperCase()}`;
+}
 
 type RecruitmentStatus = "모집중" | "모집 예정" | "모집 마감";
 
@@ -21,31 +26,48 @@ export default function ApplyPage() {
   const [recruitment, setRecruitment] = useState<RecruitmentResponse | null>(
     null,
   );
-  const [form, setForm] = useState<FormResponse | null>(null);
   const [quarter, setQuarter] = useState<QuarterResponse | null>(null);
+  const [currentQuarter, setCurrentQuarter] =
+    useState<QuarterResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadActiveRecruitment();
+  const loadActiveRecruitment = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    setRecruitment(null);
+
+    const [recruitmentResult, currentQuarterResult] = await Promise.allSettled([
+      getActiveRecruitment(),
+      getCurrentQuarter(),
+    ]);
+
+    if (currentQuarterResult.status === "fulfilled") {
+      setCurrentQuarter(currentQuarterResult.value);
+    }
+
+    if (recruitmentResult.status === "fulfilled") {
+      const recruitmentData = recruitmentResult.value;
+      setRecruitment(recruitmentData);
+      setQuarter(recruitmentData.quarter);
+    } else {
+      const reason = recruitmentResult.reason;
+      const isNotFound = reason instanceof ApiError && reason.status === 404;
+      if (!isNotFound) {
+        console.error("Failed to load active recruitment:", reason);
+        setError("모집 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+      }
+    }
+
+    setIsLoading(false);
   }, []);
 
-  async function loadActiveRecruitment() {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const recruitmentData = await getActiveRecruitment();
-      setRecruitment(recruitmentData);
-
-      setForm(recruitmentData.form);
-      setQuarter(recruitmentData.quarter);
-    } catch (error: any) {
-      console.error("Failed to load active recruitment:", error);
-      setError("현재 진행 중인 모집 공고가 없습니다");
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadActiveRecruitment();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [loadActiveRecruitment]);
 
   function getRecruitmentStatus(): RecruitmentStatus {
     if (!recruitment) return "모집 마감";
@@ -112,15 +134,13 @@ export default function ApplyPage() {
     );
   }
 
-  if (error || !recruitment) {
+  if (error) {
     return (
       <div className="container mx-auto max-w-4xl py-12 px-4">
         <Card>
           <CardContent className="pt-12 pb-12">
             <div className="text-center space-y-4">
-              <p className="text-lg text-muted-foreground">
-                {error || "현재 진행 중인 모집 공고가 없습니다"}
-              </p>
+              <p className="text-lg text-muted-foreground">{error}</p>
               <div className="flex justify-center gap-3">
                 <Button
                   onClick={() => loadActiveRecruitment()}
@@ -139,12 +159,40 @@ export default function ApplyPage() {
     );
   }
 
+  if (!recruitment) {
+    const quarterLabel = currentQuarter
+      ? formatQuarterLabel(currentQuarter)
+      : null;
+
+    return (
+      <div className="flex min-h-[80vh] flex-col items-center justify-center px-4 py-20 text-center">
+        <h1 className="text-4xl font-bold leading-tight sm:text-5xl">
+          {quarterLabel ? `${quarterLabel} CNU` : "CNU"}
+          <br />
+          리크루팅 안내
+        </h1>
+        <p className="mt-6 text-muted-foreground">
+          {quarterLabel
+            ? `${quarterLabel} 분기 CNU 리크루팅이 곧 시작될 예정입니다.`
+            : "다음 CNU 리크루팅이 곧 시작될 예정입니다."}
+        </p>
+        <Button
+          variant="outline"
+          className="mt-8 rounded-full px-8"
+          onClick={() => router.push("/")}
+        >
+          리크루팅 공고
+        </Button>
+      </div>
+    );
+  }
+
   const status = getRecruitmentStatus();
   const canApply = status === "모집중" && recruitment.active;
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="container mx-auto max-w-5xl w-7xl py-12 px-4">
+      <div className="container mx-auto w-full max-w-5xl px-4 py-12">
         {/* Back Button */}
         <Button
           variant="ghost"
@@ -158,8 +206,8 @@ export default function ApplyPage() {
         <div className="space-y-8">
           {/* SECTION 1: Header */}
           <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <h1 className="text-3xl sm:text-4xl font-bold flex-1">
+            <div className="flex min-w-0 items-start gap-3">
+              <h1 className="min-w-0 flex-1 break-words text-3xl font-bold sm:text-4xl">
                 {recruitment.title}
               </h1>
               {getStatusBadge()}
@@ -199,7 +247,7 @@ export default function ApplyPage() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">모집 안내</h2>
             {recruitment.description ? (
-              <div className="prose prose-sm max-w-none whitespace-pre-wrap text-foreground/90 leading-relaxed">
+              <div className="prose prose-sm max-w-none break-words whitespace-pre-wrap text-foreground/90 leading-relaxed">
                 {recruitment.description}
               </div>
             ) : (
@@ -227,8 +275,8 @@ export default function ApplyPage() {
             {/* Key Info */}
             {canApply && (
               <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between py-2 border-b">
-                  <span className="text-muted-foreground flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b py-2">
+                  <span className="flex shrink-0 items-center gap-2" >
                     <Clock className="h-4 w-4" />
                     모집 마감
                   </span>
@@ -252,9 +300,9 @@ export default function ApplyPage() {
 
               {/* Secondary Action */}
               <Button
-                size="default"
+                size="lg"
                 variant="outline"
-                className="w-full"
+                className="w-full border-foreground/40 text-base font-semibold"
                 onClick={() => router.push("/apply/my")}
               >
                 <FileText className="mr-2 h-4 w-4" />내 지원서 조회
@@ -277,10 +325,10 @@ export default function ApplyPage() {
             <ul className="text-sm text-muted-foreground space-y-1 pl-6">
               <li>지원서는 모집 기간 내에만 제출할 수 있습니다.</li>
               <li>
-                제출 후 내용 확인 및 수정은 "내 지원서 조회" 메뉴를
+                제출 후 내용 확인 및 수정은 &quot;내 지원서 조회&quot; 메뉴를
                 이용해주세요.
               </li>
-              <li>문의사항이 있으시면 학회 관리자에게 연락해주세요.</li>
+              <li>문의사항이 있으시면 admin@cnu.team으로 연락해주세요.</li>
             </ul>
           </div>
         </div>

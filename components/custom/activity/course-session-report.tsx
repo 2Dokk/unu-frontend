@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
 import { ActivitySessionResponseDto } from "@/lib/interfaces/activity-session";
@@ -33,12 +33,11 @@ import {
 // HELPERS
 // ========================
 
-type SubmitStatus = "PRESENT" | "LATE" | "ABSENT";
+type SubmitStatus = "PRESENT" | "ABSENT";
 
 function getSubmitStatus(sessionDate: string): SubmitStatus {
   const daysLate = differenceInDays(new Date(), parseISO(sessionDate));
   if (daysLate <= 0) return "PRESENT";
-  if (daysLate <= 2) return "LATE";
   return "ABSENT";
 }
 
@@ -55,10 +54,6 @@ function getStatusMeta(status: string): StatusMeta {
         className: "bg-green-50 text-green-700 border-green-200",
       };
     case "LATE":
-      return {
-        label: "지각",
-        className: "bg-yellow-50 text-yellow-700 border-yellow-200",
-      };
     case "ABSENT":
       return {
         label: "결석",
@@ -120,9 +115,9 @@ export function CourseSessionReportCard({
         (a, b) => a.sessionNumber - b.sessionNumber,
       );
 
-      // Fetch my attendances if participant exists
+      // Fetch attendance only after participation is confirmed.
       let myAttendances: AttendanceResponseDto[] = [];
-      if (myParticipant) {
+      if (myParticipant?.status === "APPROVED") {
         try {
           myAttendances = await getAttendancesByParticipantId(myParticipant.id);
         } catch {
@@ -175,7 +170,12 @@ export function CourseSessionReportCard({
   };
 
   const handleSubmit = async () => {
-    if (!dialogSession || !myParticipant || !title.trim() || !content.trim())
+    if (
+      !dialogSession ||
+      myParticipant?.status !== "APPROVED" ||
+      !title.trim() ||
+      !content.trim()
+    )
       return;
 
     setSubmitting(true);
@@ -195,10 +195,6 @@ export function CourseSessionReportCard({
       setSubmitting(false);
     }
   };
-
-  const dialogSubmitStatus = dialogSession
-    ? getSubmitStatus(dialogSession.date)
-    : null;
 
   return (
     <>
@@ -262,11 +258,6 @@ export function CourseSessionReportCard({
                               제출 완료
                             </span>
                           )}
-                          {!submitted && submitStatus === "LATE" && (
-                            <span className="text-xs text-yellow-600">
-                              지각 제출
-                            </span>
-                          )}
                         </div>
                         {session.description && (
                           <p className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -294,23 +285,21 @@ export function CourseSessionReportCard({
                             )}
                           </Button>
                         )}
-                        {canSubmit && myParticipant && (
+                        {canSubmit && myParticipant?.status === "APPROVED" && (
                           <Button
                             size="sm"
-                            variant={
-                              submitStatus === "LATE" ? "outline" : "default"
-                            }
+                            variant="default"
                             className="h-7 text-xs"
                             onClick={() => openDialog(session)}
                           >
-                            {submitStatus === "LATE"
-                              ? "지각 제출"
-                              : "보고서 작성"}
+                            보고서 작성
                           </Button>
                         )}
-                        {!myParticipant && canSubmit && (
+                        {canSubmit && myParticipant?.status !== "APPROVED" && (
                           <span className="text-xs text-muted-foreground">
-                            참여 신청 필요
+                            {myParticipant?.status === "APPLIED"
+                              ? "활동 시작 후 이용 가능"
+                              : "참여 신청 필요"}
                           </span>
                         )}
                       </div>
@@ -360,16 +349,6 @@ export function CourseSessionReportCard({
                     {dialogSession.description}
                   </p>
                 )}
-              </div>
-            )}
-
-            {/* Late warning */}
-            {dialogSubmitStatus === "LATE" && (
-              <div className="flex items-start gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2.5">
-                <AlertCircle className="h-4 w-4 shrink-0 text-yellow-600 mt-0.5" />
-                <p className="text-xs text-yellow-700">
-                  마감일이 지나 지각 제출로 처리됩니다.
-                </p>
               </div>
             )}
 

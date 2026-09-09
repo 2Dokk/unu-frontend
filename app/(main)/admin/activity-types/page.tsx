@@ -62,7 +62,7 @@ export default function ActivityTypesPage() {
   const [editingType, setEditingType] = useState<ActivityTypeResponse | null>(
     null,
   );
-  const [formData, setFormData] = useState({ name: "" });
+  const [formData, setFormData] = useState({ name: "", code: "" });
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
@@ -97,19 +97,23 @@ export default function ActivityTypesPage() {
 
   function handleOpenCreateDialog() {
     setEditingType(null);
-    setFormData({ name: "" });
+    setFormData({ name: "", code: "" });
     setShowDialog(true);
   }
 
   function handleOpenEditDialog(type: ActivityTypeResponse) {
     setEditingType(type);
-    setFormData({ name: type.name });
+    setFormData({ name: type.name, code: type.code });
     setShowDialog(true);
   }
 
   async function handleSubmit() {
     if (!formData.name.trim()) {
       toast.error("활동 유형 이름을 입력해주세요.");
+      return;
+    }
+    if (!formData.code.trim()) {
+      toast.error("활동 유형 코드를 입력해주세요.");
       return;
     }
 
@@ -270,12 +274,28 @@ export default function ActivityTypesPage() {
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">이름</label>
               <Input
-                placeholder="예: 대외 활동, 동아리 활동 등"
+                placeholder="예: 강의"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
               />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">코드</label>
+              <Input
+                placeholder="예: LECTURE"
+                value={formData.code}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    code: e.target.value.toUpperCase(),
+                  })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                영문 대문자/언더스코어 조합. 다른 활동 유형과 겹치지 않는 고유값이어야 합니다.
+              </p>
             </div>
           </div>
           <DialogFooter>

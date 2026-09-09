@@ -24,9 +24,18 @@ export interface ActivityResponse {
   quarter: QuarterResponse;
   startDate: string;
   endDate: string;
+  recruitmentStartDate?: string | null;
+  recruitmentEndDate?: string | null;
   parentActivityId?: string;
   budget?: number;
   budgetNote?: string;
+  listed?: boolean;
+  depositAmount: number;
+  participantLimit: number | null;
+  recruitmentPositions?: string | null;
+  discordUrl?: string | null;
+  operationPlan?: string | null;
+  instructorCareer?: string | null;
   createdAt: string;
   modifiedAt: string;
   createdBy: AuditorDto;
@@ -45,6 +54,16 @@ export interface ActivityRequest {
   parentActivityId?: string;
   budget?: number;
   budgetNote?: string;
+  depositAmount?: number;
+  participantLimit?: number;
+  listed?: boolean;
+  recruitmentPositions?: string | null;
+  discordUrl?: string | null;
+  recruitmentStartDate?: string | null;
+  recruitmentEndDate?: string | null;
+  operationPlan?: string | null;
+  instructorCareer?: string | null;
+  materialUrl?: string | null;
 }
 
 export interface ActivityTypeReponse {
@@ -54,4 +73,5 @@ export interface ActivityTypeReponse {
 
 export interface ActivityTypeRequest {
   name: string;
+  code: string;
 }

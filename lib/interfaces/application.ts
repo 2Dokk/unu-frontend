@@ -1,3 +1,11 @@
+import { RecruitmentType } from "./recruitment";
+
+export type ApplicationAnswers = Record<string, string | string[]>;
+
+export interface OperationApplicationRequest {
+  answers: ApplicationAnswers;
+}
+
 export interface ApplicationRequest {
   recruitmentId: string;
   formId: string;
@@ -8,15 +16,17 @@ export interface ApplicationRequest {
   email: string;
   githubId?: string;
   phoneNumber: string;
-  password: string;
-  answers: Record<string, any>;
+  password?: string;
+  answers: ApplicationAnswers;
 }
 
 export interface ApplicationResponse {
   id: string;
   recruitmentId: string;
+  recruitmentTitle: string;
+  recruitmentType: RecruitmentType;
   formId: string;
-  formSnapshot: string; // JSON string of form schema snapshot
+  formSnapshot: string | Record<string, unknown>;
   name: string;
   studentId: string;
   major: string;
@@ -24,8 +34,10 @@ export interface ApplicationResponse {
   email: string;
   githubId: string | null;
   phoneNumber: string;
-  answers: string;
+  answers: string | ApplicationAnswers;
   status: string;
+  submittedAt: string;
+  reviewedAt: string | null;
   createdAt: string;
   modifiedAt: string;
 }
@@ -41,4 +53,25 @@ export interface ApplicationReviewRequest {
 export interface ApplicationSearchQuery {
   name: string;
   email: string;
+}
+
+export interface ApplicationLookupResponse {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface ApplicationVerificationResponse {
+  application: ApplicationResponse;
+  accessToken: string;
+}
+
+export interface ApplicationLectureRoomScheduleImportResponse {
+  quarterId: string;
+  userId: string;
+  userName: string;
+  createdCount: number;
+  existingCount: number;
 }

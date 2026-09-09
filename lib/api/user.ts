@@ -1,29 +1,6 @@
-import { UserResponseDto } from "../interfaces/auth";
+import { UserResponseDto, UserSummaryDto } from "../interfaces/auth";
 import { UserRoleUpdateRequestDto } from "../interfaces/role";
 import axiosInstance from "./axiosInstance";
-import axios from "axios";
-import publicClient from "./publicClient";
-
-export async function getPublicUserByStudentId(
-  studentId: string,
-): Promise<UserResponseDto> {
-  return await publicClient.get<UserResponseDto>(
-    `/users/studentId/${studentId}`,
-  );
-}
-
-export async function searchPublicUsers(params: {
-  name?: string;
-  studentId?: string;
-}): Promise<UserResponseDto[]> {
-  const queryParams = new URLSearchParams();
-  if (params.name) queryParams.append("name", params.name);
-  if (params.studentId) queryParams.append("student-id", params.studentId);
-
-  return await publicClient.get<UserResponseDto[]>(
-    `/users/search?${queryParams.toString()}`,
-  );
-}
 
 // ===== Authenticated APIs =====
 
@@ -75,6 +52,10 @@ export async function resetUserPassword(
   return response.data;
 }
 
+export async function removeUsers(userIds: string[]): Promise<void> {
+  await axiosInstance.post("/admin/users/remove", { userIds });
+}
+
 export async function calculateActiveMembers(): Promise<void> {
   await axiosInstance.post("/admin/users/calculate-active");
 }
@@ -97,6 +78,20 @@ export async function searchUsers(params: {
 
   const response = await axiosInstance.get<UserResponseDto[]>(
     `/users/search?${queryParams.toString()}`,
+  );
+  return response.data;
+}
+
+export async function searchUserSummaries(params: {
+  name?: string;
+  studentId?: string;
+}): Promise<UserSummaryDto[]> {
+  const queryParams = new URLSearchParams();
+  if (params.name) queryParams.append("name", params.name);
+  if (params.studentId) queryParams.append("student-id", params.studentId);
+
+  const response = await axiosInstance.get<UserSummaryDto[]>(
+    `/users/search/summary?${queryParams.toString()}`,
   );
   return response.data;
 }
