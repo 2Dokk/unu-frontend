@@ -186,14 +186,44 @@ export function BudgetLedger({
     }
   }
 
+  // 학회비(INCOME_MEMBERSHIP) 입력값이 바뀌면 15% 환급비(EXPENSE_TAX_REFUND)를
+  // 자동 계산해서 채워준다. 이후 사용자가 환급비 항목을 직접 수정하면
+  // (updateItem이 EXPENSE_TAX_REFUND 항목 자체에 대해 호출되므로) 그 값이 그대로 유지된다.
   function updateItem(
     idx: number,
     field: keyof BudgetItemRequest,
     value: any,
   ) {
-    setFormItems((prev) =>
-      prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item)),
-    );
+    setFormItems((prev) => {
+      const changedCategory = prev[idx]?.category;
+      const updated = prev.map((item, i) =>
+        i === idx ? { ...item, [field]: value } : item,
+      );
+
+      if (
+        changedCategory === "INCOME_MEMBERSHIP" &&
+        (field === "plannedAmount" || field === "actualAmount")
+      ) {
+        const refundIdx = updated.findIndex(
+          (i) => i.category === "EXPENSE_TAX_REFUND",
+        );
+        if (refundIdx !== -1) {
+          if (field === "plannedAmount") {
+            updated[refundIdx] = {
+              ...updated[refundIdx],
+              plannedAmount: -Math.round(Number(value) * 0.15),
+            };
+          } else if (value != null) {
+            updated[refundIdx] = {
+              ...updated[refundIdx],
+              actualAmount: -Math.round(Number(value) * 0.15),
+            };
+          }
+        }
+      }
+
+      return updated;
+    });
   }
 
   // 분기 전체 합계 계산
@@ -530,14 +560,16 @@ export function BudgetLedger({
 
             {/* 15% 환급비 자동계산 안내 */}
             <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
-              💡 15% 환급비는 학회비 수령 금액의 15%입니다. (
+              💡 15% 환급비는 학회비 금액의 15%로 자동 계산되어 채워집니다. (
               {formatCurrency(
-                Math.abs(
-                  formItems.find((i) => i.category === "INCOME_MEMBERSHIP")
-                    ?.plannedAmount ?? 0,
-                ) * 0.15,
+                Math.round(
+                  Math.abs(
+                    formItems.find((i) => i.category === "INCOME_MEMBERSHIP")
+                      ?.plannedAmount ?? 0,
+                  ) * 0.15,
+                ),
               )}{" "}
-              예상)
+              예상) 아래 &quot;15% 환급비&quot; 항목에서 직접 수정할 수도 있습니다.
             </div>
           </div>
 
