@@ -1,19 +1,22 @@
 import {
-  Home,
-  User,
   Calendar,
-  Users,
   Bell,
-  UserPlus,
   Settings,
   type LucideIcon,
   FileText,
-  ClipboardCheck,
   UserRound,
   UserRoundPlus,
   UsersRound,
+  Activity,
   Clock,
   Wallet,
+  MonitorPlay,
+  FilePen,
+  ClipboardCheck,
+  LibraryBig,
+  BookOpen,
+  BriefcaseBusiness,
+  MessagesSquare,
 } from "lucide-react";
 
 export type MenuItem =
@@ -30,6 +33,7 @@ export type MenuItem =
 export interface MenuConfig {
   common: MenuItem[];
   member: MenuItem[];
+  lectureRoomManager: MenuItem[];
   manager: MenuItem[];
   admin: MenuItem[];
 }
@@ -38,19 +42,53 @@ export const menuConfig: MenuConfig = {
   // 모든 로그인 사용자에게 공통으로 표시되는 메뉴
   common: [
     {
+      label : "내 프로필",
+      href: "/profile",
+      icon: UserRound, 
+    },
+    {
+      label: "학회 공지",
+      href: "/notices",
+      icon: Bell,
+    },
+    {
+      label: "학회 내부 신청/모집",
+      href: "/operation-recruitments",
+      icon: BriefcaseBusiness,
+    },
+    {
       label: "내 활동",
       href: "/home",
-      icon: UserRound,
+      icon: Activity,
     },
   ],
 
   // MEMBER 권한 사용자에게만 표시되는 메뉴
   member: [
     {
-      label: "모든 활동",
+      label: "학회 활동",
       href: "/activities",
       icon: Calendar,
     },
+    {
+      label: "강의자료",
+      href: "/lecture-materials",
+      icon: LibraryBig,
+    },
+    {
+      label: "보유 도서",
+      href: "/books",
+      icon: BookOpen,
+    },
+    {
+      label: "인강 예약",
+      href: "/online-lecture",
+      icon: MonitorPlay,
+    },
+  ],
+
+  // 학회실 관리 권한 사용자에게 표시되는 메뉴
+  lectureRoomManager: [
     {
       label: "학회실 관리",
       href: "/manage/lecture-room",
@@ -61,14 +99,34 @@ export const menuConfig: MenuConfig = {
   // MANAGER 권한 사용자에게만 표시되는 메뉴
   manager: [
     {
-      label: "일정 관리",
-      href: "/manage",
-      icon: Calendar,
-    },
-    {
       label: "학회원 관리",
       href: "/manage/members",
       icon: UsersRound,
+    },
+    {
+      label: "모집 관리",
+      href: "/manage/recruitments",
+      icon: UserRoundPlus,
+    },
+    {
+      label: "면접 관리",
+      href: "/manage/interviews",
+      icon: MessagesSquare,
+    },
+    {
+      label: "활동 관리",
+      href: "/manage/activities",
+      icon: FilePen,
+    },
+    {
+      label: "개설 신청 관리",
+      href: "/manage/activity-opening-requests",
+      icon: ClipboardCheck,
+    },
+    {
+      label: "일정 관리",
+      href: "/manage",
+      icon: Calendar,
     },
     {
       label: "신청서 관리",
@@ -79,16 +137,6 @@ export const menuConfig: MenuConfig = {
       label: "공지 관리",
       href: "/manage/notices",
       icon: Bell,
-    },
-    {
-      label: "모집 관리",
-      href: "/manage/recruitments",
-      icon: UserRoundPlus,
-    },
-    {
-      label: "활동 관리",
-      href: "/manage/activities",
-      icon: Calendar,
     },
     {
       label: "예산 관리",
@@ -113,8 +161,15 @@ export const menuConfig: MenuConfig = {
  */
 export function getMenuByRole(
   role: "ADMIN" | "MANAGER" | "MEMBER" | "GUEST" | "LECTURE_ROOM_MANAGER",
+  roles: string[] = [],
 ): MenuItem[] {
   const menus: MenuItem[] = [];
+  const assignedRoles = new Set([
+    role,
+    ...roles.map((assignedRole) =>
+      assignedRole.toUpperCase().replace(/^ROLE_/, ""),
+    ),
+  ]);
 
   if (role === "GUEST") {
     return [];
@@ -124,18 +179,30 @@ export function getMenuByRole(
   menus.push(...menuConfig.common);
 
   // MEMBER 이상의 권한
-  if (role === "MEMBER" || role === "MANAGER" || role === "ADMIN") {
+  if (
+    assignedRoles.has("MEMBER") ||
+    assignedRoles.has("MANAGER") ||
+    assignedRoles.has("ADMIN")
+  ) {
     menus.push(...menuConfig.member);
   }
 
+  if (
+    assignedRoles.has("ADMIN") ||
+    assignedRoles.has("MANAGER") ||
+    assignedRoles.has("LECTURE_ROOM_MANAGER")
+  ) {
+    menus.push(...menuConfig.lectureRoomManager);
+  }
+
   // MANAGER 이상의 권한
-  if (role === "MANAGER" || role === "ADMIN") {
+  if (assignedRoles.has("MANAGER") || assignedRoles.has("ADMIN")) {
     menus.push({ type: "separator" });
     menus.push(...menuConfig.manager);
   }
 
   // ADMIN 전용
-  if (role === "ADMIN") {
+  if (assignedRoles.has("ADMIN")) {
     menus.push({ type: "separator" });
     menus.push(...menuConfig.admin);
   }

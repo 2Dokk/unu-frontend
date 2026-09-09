@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import axios from "axios";
 import {
   ArrowLeft,
   Mail,
@@ -13,13 +14,29 @@ import {
   CalendarDays,
   Info,
   Code2,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getApplicationById, reviewApplication } from "@/lib/api/application";
+import {
+  getApplicationById,
+  importApplicationLectureRoomSchedule,
+  reviewApplication,
+} from "@/lib/api/application";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import { formatDateTime } from "@/lib/utils/date-utils";
 import ApplicationStatusDropdown from "@/components/custom/application/application-status-dropdown";
@@ -56,28 +73,117 @@ interface FormSnapshot {
   questions?: FormQuestion[];
 }
 
-function getStatusBadge(status: string) {
+const LECTURE_ROOM_DAYS = [
+  { title: "월요일관리가능한시간", label: "월요일" },
+  { title: "화요일관리가능한시간", label: "화요일" },
+  { title: "수요일관리가능한시간", label: "수요일" },
+  { title: "목요일관리가능한시간", label: "목요일" },
+  { title: "금요일관리가능한시간", label: "금요일" },
+];
+
+interface LectureRoomAvailability {
+  label: string;
+  options: string[];
+}
+
+function getLectureRoomAvailability(
+  snapshot: FormSnapshot | null,
+  answers: Record<string, unknown>,
+): LectureRoomAvailability[] | null {
+  if (!snapshot?.questions) return null;
+
+  const questionsByTitle = new Map(
+    snapshot.questions.map((question) => [
+      (question.title || question.label || "").replace(/\s+/g, ""),
+      question,
+    ]),
+  );
+
+  const availability = LECTURE_ROOM_DAYS.map((day) => {
+    const question = questionsByTitle.get(day.title);
+    if (!question) return null;
+
+    const answer = answers[question.id];
+    const options = Array.isArray(answer)
+      ? answer.map(String)
+      : typeof answer === "string" && answer
+        ? [answer]
+        : [];
+    return { label: day.label, options };
+  });
+
+  return availability.every(
+    (item): item is LectureRoomAvailability => item !== null,
+  )
+    ? availability
+    : null;
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (!axios.isAxiosError(error)) return fallback;
+  const responseData = error.response?.data;
+  if (typeof responseData === "string") return responseData;
+  if (
+    responseData &&
+    typeof responseData === "object" &&
+    "message" in responseData &&
+    typeof responseData.message === "string"
+  ) {
+    return responseData.message;
+  }
+  return fallback;
+}
+
+function getStatusBadge(status: string, useApprovalLabels: boolean) {
   switch (status) {
     case "PASSED":
-      return <Badge className="bg-green-600 hover:bg-green-700">합격</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.positive}>
+          {useApprovalLabels ? "승인" : "합격"}
+        </Badge>
+      );
     case "REJECTED":
-      return <Badge variant="destructive">불합격</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.negative}>
+          {useApprovalLabels ? "미승인" : "불합격"}
+        </Badge>
+      );
     case "APPLIED":
-      return <Badge variant="secondary">신청</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          신청
+        </Badge>
+      );
     case "IN_PROGRESS":
-      return <Badge variant="secondary">검토중</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.pending}>
+          검토중
+        </Badge>
+      );
     case "WAITING":
-      return <Badge variant="secondary">대기</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          대기
+        </Badge>
+      );
     case "HOLD":
       return (
-        <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
+        <Badge variant="outline" className={STATUS_TONES.pending}>
           보류
         </Badge>
       );
     case "CANCELED":
-      return <Badge variant="outline">취소</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          취소
+        </Badge>
+      );
     default:
-      return <Badge variant="outline">{status}</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          {status}
+        </Badge>
+      );
   }
 }
 
@@ -90,17 +196,15 @@ export default function ApplicationDetailPage() {
     null,
   );
   const [formSnapshot, setFormSnapshot] = useState<FormSnapshot | null>(null);
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [isImportingSchedule, setIsImportingSchedule] = useState(false);
 
-  useEffect(() => {
-    loadApplicationData();
-  }, [applicationId]);
-
-  async function loadApplicationData() {
+  const loadApplicationData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -133,13 +237,17 @@ export default function ApplicationDetailPage() {
         console.error("Failed to parse answers:", e);
         setAnswers({});
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to load application:", error);
       setError("지원서를 불러오는데 실패했습니다.");
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [applicationId]);
+
+  useEffect(() => {
+    void loadApplicationData();
+  }, [loadApplicationData]);
 
   async function handleStatusChange(id: string, newStatus: string) {
     if (!application) return;
@@ -148,9 +256,16 @@ export default function ApplicationDetailPage() {
     try {
       const updated = await reviewApplication(id, newStatus);
       setApplication(updated);
-    } catch (error: any) {
+      if (newStatus === "PASSED" && application.recruitmentType === "NEW_MEMBER") {
+        toast.success("합격 처리하고 회원가입 초대에 추가했습니다.");
+      } else if (application.status === "PASSED" && application.recruitmentType === "NEW_MEMBER") {
+        toast.success("상태를 변경하고 미가입 대상을 초대에서 제외했습니다.");
+      } else {
+        toast.success("상태를 변경했습니다.");
+      }
+    } catch (error: unknown) {
       console.error("Failed to update status:", error);
-      toast.error(error.response?.data || "상태 업데이트에 실패했습니다.");
+      toast.error(getApiErrorMessage(error, "상태 업데이트에 실패했습니다."));
     } finally {
       setIsUpdating(false);
     }
@@ -163,8 +278,32 @@ export default function ApplicationDetailPage() {
       await navigator.clipboard.writeText(application.email);
       setCopiedEmail(true);
       setTimeout(() => setCopiedEmail(false), 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to copy email:", error);
+    }
+  }
+
+  async function handleImportLectureRoomSchedule() {
+    setIsImportingSchedule(true);
+    try {
+      const result = await importApplicationLectureRoomSchedule(applicationId);
+      if (result.createdCount === 0) {
+        toast.success("선택한 관리 시간이 이미 모두 반영되어 있습니다.");
+      } else {
+        const duplicateMessage = result.existingCount
+          ? ` 기존 ${result.existingCount}개 블록은 유지했습니다.`
+          : "";
+        toast.success(
+          `${result.userName}님의 관리 시간 ${result.createdCount}개를 반영했습니다.${duplicateMessage}`,
+        );
+      }
+      setScheduleDialogOpen(false);
+    } catch (error: unknown) {
+      toast.error(
+        getApiErrorMessage(error, "관리 시간을 반영하지 못했습니다."),
+      );
+    } finally {
+      setIsImportingSchedule(false);
     }
   }
 
@@ -233,7 +372,7 @@ export default function ApplicationDetailPage() {
             {error || "지원서를 찾을 수 없습니다"}
           </p>
           <div className="flex gap-3">
-            <Button onClick={() => loadApplicationData()} variant="outline">
+            <Button onClick={() => void loadApplicationData()} variant="outline">
               다시 시도
             </Button>
             <Button onClick={handleBackToRecruitment}>
@@ -245,6 +384,19 @@ export default function ApplicationDetailPage() {
       </div>
     );
   }
+
+  const lectureRoomAvailability = getLectureRoomAvailability(
+    formSnapshot,
+    answers,
+  );
+  const availableLectureRoomSlotCount =
+    lectureRoomAvailability?.reduce(
+      (count, day) =>
+        count + day.options.filter((option) => option.trim() !== "없음").length,
+      0,
+    ) ?? 0;
+  const operationApplication =
+    application.recruitmentType === "INTERNAL_OPERATION";
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
@@ -270,6 +422,7 @@ export default function ApplicationDetailPage() {
                 currentStatus={application.status}
                 onStatusChange={handleStatusChange}
                 isUpdating={isUpdating}
+                useApprovalLabels={operationApplication}
               />
             </div>
           </CardHeader>
@@ -283,10 +436,10 @@ export default function ApplicationDetailPage() {
               </div>
               <div>
                 <p className="text-lg font-semibold">
-                  {application.name}의 지원서
+                  {application.name}의 {operationApplication ? "신청서" : "지원서"}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
-                  {getStatusBadge(application.status)}
+                  {getStatusBadge(application.status, operationApplication)}
                   <span className="text-xs text-muted-foreground">
                     {formatDateTime(application.createdAt)} 제출
                   </span>
@@ -302,47 +455,51 @@ export default function ApplicationDetailPage() {
                 label="학번"
                 value={application.studentId}
               />
-              <InfoRow
-                icon={<GraduationCap className="h-4 w-4" />}
-                label="전공"
-                value={
-                  application.subMajor
-                    ? `${application.major} / ${application.subMajor}`
-                    : application.major
-                }
-              />
-              <InfoRow
-                icon={<Mail className="h-4 w-4" />}
-                label="이메일"
-                value={
-                  <div className="flex items-center gap-2">
-                    <span>{application.email}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2"
-                      onClick={handleCopyEmail}
-                    >
-                      {copiedEmail ? (
-                        <Check className="h-3 w-3 text-green-600" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                    </Button>
-                  </div>
-                }
-              />
-              <InfoRow
-                icon={<Phone className="h-4 w-4" />}
-                label="전화번호"
-                value={application.phoneNumber}
-              />
-              {application.githubId && (
-                <InfoRow
-                  icon={<Code2 className="h-4 w-4" />}
-                  label="GitHub ID"
-                  value={application.githubId}
-                />
+              {!operationApplication && (
+                <>
+                  <InfoRow
+                    icon={<GraduationCap className="h-4 w-4" />}
+                    label="전공"
+                    value={
+                      application.subMajor
+                        ? `${application.major} / ${application.subMajor}`
+                        : application.major
+                    }
+                  />
+                  <InfoRow
+                    icon={<Mail className="h-4 w-4" />}
+                    label="이메일"
+                    value={
+                      <div className="flex items-center gap-2">
+                        <span>{application.email}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2"
+                          onClick={handleCopyEmail}
+                        >
+                          {copiedEmail ? (
+                            <Check className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                    }
+                  />
+                  <InfoRow
+                    icon={<Phone className="h-4 w-4" />}
+                    label="전화번호"
+                    value={application.phoneNumber}
+                  />
+                  {application.githubId && (
+                    <InfoRow
+                      icon={<Code2 className="h-4 w-4" />}
+                      label="GitHub ID"
+                      value={application.githubId}
+                    />
+                  )}
+                </>
               )}
               <InfoRow
                 icon={<CalendarDays className="h-4 w-4" />}
@@ -352,11 +509,21 @@ export default function ApplicationDetailPage() {
             </div>
           </CardContent>
         </Card>
-
         {/* Application Answers */}
         <Card>
-          <CardHeader>
-            <CardTitle>지원서 답변</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle>
+              {operationApplication ? "신청서 답변" : "지원서 답변"}
+            </CardTitle>
+            {lectureRoomAvailability && (
+              <Button
+                size="sm"
+                onClick={() => setScheduleDialogOpen(true)}
+                disabled={availableLectureRoomSlotCount === 0}
+              >
+                시간표에 반영
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
             {formSnapshot?.questions && formSnapshot.questions.length > 0 ? (
@@ -415,7 +582,7 @@ export default function ApplicationDetailPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-[120px_1fr] gap-y-3 gap-x-4">
               <div className="text-sm font-medium text-muted-foreground">
-                지원서 ID
+                {operationApplication ? "신청서 ID" : "지원서 ID"}
               </div>
               <div className="text-sm text-muted-foreground">
                 {application.id}
@@ -452,6 +619,39 @@ export default function ApplicationDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog
+        open={scheduleDialogOpen}
+        onOpenChange={setScheduleDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>관리 시간을 시간표에 반영할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {application.name}님의 관리 가능 시간 {availableLectureRoomSlotCount}
+              개를 모집 공고에 연결된 분기 시간표에 추가합니다. 이미 등록된
+              시간은 중복으로 추가되지 않습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isImportingSchedule}>
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void handleImportLectureRoomSchedule();
+              }}
+              disabled={isImportingSchedule}
+            >
+              {isImportingSchedule && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              반영
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

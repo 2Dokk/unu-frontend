@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,11 +29,13 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { DeleteConfirmDialog } from "@/components/custom/common/delete-confirm-dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -42,15 +44,25 @@ import {
   deleteActivity,
   updateActivityStatus,
 } from "@/lib/api/activity";
+import { getLectureMaterialsByActivity } from "@/lib/api/lecture-material";
 import {
   getMyParticipantByActivityId,
   createMyParticipantByActivityId,
   deleteActivityParticipant,
+  getActivityMemberSummaries,
+  getActivityCapacity,
 } from "@/lib/api/activity-participant";
 import { ActivityResponse } from "@/lib/interfaces/activity";
-import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
+import { LectureMaterial } from "@/lib/interfaces/lecture-material";
+import {
+  ActivityJoinRequest,
+  ActivityParticipantResponse,
+  ActivityParticipantSummary,
+  ActivityCapacityResponse,
+} from "@/lib/interfaces/activity-participant";
 import {
   Calendar,
+  CalendarRange,
   User,
   ClipboardList,
   BadgeCheck,
@@ -61,14 +73,42 @@ import {
   Trash2,
   ArrowLeft,
   ExternalLink,
+  Users,
+  AlertCircle,
+  Landmark,
+  RotateCcw,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { CourseTimeReservationCard } from "@/components/custom/activity/course-time-reservation";
 import { CourseSessionReportCard } from "@/components/custom/activity/course-session-report";
+import { WeeklyMaterials } from "@/components/custom/activity/weekly-materials";
+import { ActivityNotices } from "@/components/custom/activity/activity-notices";
+import { getActivityNotices } from "@/lib/api/activity-notice";
+import { ActivityNotice } from "@/lib/interfaces/activity-notice";
 import { formatDate } from "@/lib/utils/date-utils";
+import {
+  isOperationPlanUrl,
+  operationPlanLabel,
+} from "@/lib/constants/operation-plan";
+import {
+  activityDisplayStatus,
+  isActivityRecruiting,
+  localDateValue,
+} from "@/lib/utils/activity-recruitment";
 import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
 import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { activityMaterialLabel } from "@/lib/constants/activity-material";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
+import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
+import { formatUnreadCount } from "@/lib/utils/unread-count";
+import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
+import {
+  ACTIVITY_RETURN_TARGETS,
+  resolveActivityReturnSource,
+} from "@/lib/constants/activity-navigation";
 
 // ========================
 // TYPES & HELPERS
@@ -105,7 +145,7 @@ function getActivityStatusMeta(status: string): ActivityStatusMeta {
 
 interface ParticipantStatusMeta {
   label: string;
-  variant: "default" | "secondary" | "outline" | "destructive";
+  tone: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
@@ -115,7 +155,7 @@ function getMyParticipantMeta(
   if (!participant) {
     return {
       label: "미신청",
-      variant: "outline",
+      tone: STATUS_TONES.neutral,
       icon: ClipboardList,
     };
   }
@@ -123,17 +163,17 @@ function getMyParticipantMeta(
   const statusMap: Record<string, ParticipantStatusMeta> = {
     APPLIED: {
       label: "신청 완료",
-      variant: "secondary",
+      tone: STATUS_TONES.neutral,
       icon: ClipboardList,
     },
     APPROVED: {
       label: "참여 확정",
-      variant: "default",
+      tone: STATUS_TONES.positive,
       icon: BadgeCheck,
     },
     REJECTED: {
       label: "반려됨",
-      variant: "destructive",
+      tone: STATUS_TONES.negative,
       icon: BadgeX,
     },
   };
@@ -141,7 +181,7 @@ function getMyParticipantMeta(
   return (
     statusMap[participant.status] || {
       label: participant.status,
-      variant: "outline",
+      tone: STATUS_TONES.neutral,
       icon: ClipboardList,
     }
   );
@@ -163,6 +203,7 @@ interface CtaConfig {
 function deriveCtaConfig(
   activity: ActivityResponse,
   participant: ActivityParticipantResponse | null,
+  capacityFull: boolean,
   handlers: {
     onApply: () => void;
     onCancel: () => void;
@@ -171,15 +212,18 @@ function deriveCtaConfig(
     onReapply: () => void;
   },
 ): CtaConfig {
-  const isRecruiting =
-    activity.status === "RECRUITING" || activity.status === "OPEN";
+  const isRecruiting = isActivityRecruiting(activity);
 
   if (!participant) {
     return {
-      label: "참여 신청",
+      label: capacityFull ? "신청 마감" : "참여 신청",
       variant: "default",
-      disabled: !isRecruiting,
-      disabledReason: isRecruiting ? undefined : "모집 중이 아닙니다",
+      disabled: !isRecruiting || capacityFull,
+      disabledReason: capacityFull
+        ? "추가 참여 정원이 모두 찼습니다."
+        : isRecruiting
+          ? undefined
+          : "모집 중이 아닙니다",
       onClick: handlers.onApply,
     };
   }
@@ -195,7 +239,7 @@ function deriveCtaConfig(
 
   if (participant.status === "APPROVED") {
     return {
-      label: "활동 나가기",
+      label: isRecruiting ? "참여 취소" : "활동 나가기",
       variant: "outline",
       onClick: handlers.onLeave,
       disabled: activity.status === "COMPLETED",
@@ -204,10 +248,14 @@ function deriveCtaConfig(
 
   if (participant.status === "REJECTED") {
     return {
-      label: "재신청",
+      label: capacityFull ? "신청 마감" : "다시 신청",
       variant: "outline",
-      disabled: !isRecruiting,
-      disabledReason: isRecruiting ? undefined : "모집 중이 아닙니다",
+      disabled: !isRecruiting || capacityFull,
+      disabledReason: capacityFull
+        ? "추가 참여 정원이 모두 찼습니다."
+        : isRecruiting
+          ? undefined
+          : "모집 중이 아닙니다",
       onClick: handlers.onReapply,
     };
   }
@@ -222,7 +270,6 @@ function deriveCtaConfig(
 
 const STATUS_OPTIONS = [
   { value: "CREATED", label: "생성됨" },
-  { value: "OPEN", label: "모집중" },
   { value: "ONGOING", label: "진행중" },
   { value: "COMPLETED", label: "완료됨" },
 ];
@@ -249,6 +296,7 @@ function InfoRow({ icon, label, value }: InfoRowProps) {
   );
 }
 
+
 // ========================
 // MAIN COMPONENT
 // ========================
@@ -256,31 +304,93 @@ function InfoRow({ icon, label, value }: InfoRowProps) {
 export default function ActivityDetails() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const activityId = params.id as string;
+  // 상세로 진입한 출처(from)에 따라 돌아갈 목적지를 결정한다.
+  const from = searchParams.get("from");
+  const returnSource = resolveActivityReturnSource(from) ?? "activities";
+  const returnTarget = ACTIVITY_RETURN_TARGETS[returnSource];
+  const returnPath = returnTarget.path;
+  const returnLabel = returnTarget.label;
+  // "내 활동" 계열(홈/전체 활동/수료 활동)에서 진입했는지. 기존 returnToMyActivities 참조를 대체한다.
+  const isMyActivityContext =
+    from === "home" || from === "home-activities" || from === "home-completed";
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [myParticipant, setMyParticipant] =
     useState<ActivityParticipantResponse | null>(null);
+  const [visibleMembers, setVisibleMembers] = useState<
+    ActivityParticipantSummary[]
+  >([]);
+  const [capacity, setCapacity] = useState<ActivityCapacityResponse | null>(
+    null,
+  );
+  const [lectureMaterials, setLectureMaterials] = useState<LectureMaterial[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [activityTab, setActivityTab] = useState<"info" | "content" | "notices">(
+    "info",
+  );
+  const [activityNotices, setActivityNotices] = useState<ActivityNotice[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [studyDepositOpen, setStudyDepositOpen] = useState(false);
   const [agreedToPolicy, setAgreedToPolicy] = useState(false);
   const [confirmedPayment, setConfirmedPayment] = useState(false);
+  const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const [agreedToPromo, setAgreedToPromo] = useState(false);
+  const [refundBankName, setRefundBankName] = useState("");
+  const [refundAccountNumber, setRefundAccountNumber] = useState("");
+  const [refundAccountHolder, setRefundAccountHolder] = useState("");
+  const [appliedPosition, setAppliedPosition] = useState("");
+  const [applicationMessage, setApplicationMessage] = useState("");
 
   const { userRole, hasRole, userId } = useAuth();
+  const canAdministerActivity = hasRole("MANAGER") || hasRole("ADMIN");
+  const { markItemViewed, unreadActivityResultIds } = useMenuNotification();
+  const { byActivity: unreadNoticesByActivity } = useActivityNoticeUnread();
+  const unreadNoticeCount = unreadNoticesByActivity[activityId] ?? 0;
+
+  useEffect(() => {
+    void markItemViewed("activities", activityId).catch((error) => {
+      console.error("Failed to mark activity card read:", error);
+    });
+  }, [activityId, markItemViewed]);
+
+  useEffect(() => {
+    if (!unreadActivityResultIds.includes(activityId)) return;
+    void markItemViewed("activity-results", activityId).catch((error) => {
+      console.error("Failed to mark activity result read:", error);
+    });
+  }, [activityId, markItemViewed, unreadActivityResultIds]);
 
   useEffect(() => {
     const fetchActivityDetails = async () => {
       setLoading(true);
       try {
-        const [activityData, participantData] = await Promise.all([
-          getActivityById(activityId),
-          getMyParticipantByActivityId(activityId),
-        ]);
+        const [activityData, participantData, capacityData] =
+          await Promise.all([
+            getActivityById(activityId),
+            getMyParticipantByActivityId(activityId),
+            getActivityCapacity(activityId),
+          ]);
+        const recruitmentClosed =
+          activityData.status === "ONGOING" ||
+          activityData.status === "COMPLETED";
+        let membersData: ActivityParticipantSummary[] = [];
+        if (isMyActivityContext && recruitmentClosed) {
+          try {
+            membersData = await getActivityMemberSummaries(activityId);
+          } catch (memberError) {
+            console.error("Failed to fetch activity members:", memberError);
+          }
+        }
         setActivity(activityData);
         setMyParticipant(participantData);
+        setCapacity(capacityData);
+        setVisibleMembers(membersData);
       } catch (error: any) {
         console.error("Failed to fetch activity details:", error);
         toast.error(
@@ -292,19 +402,88 @@ export default function ActivityDetails() {
     };
 
     fetchActivityDetails();
+  }, [activityId, isMyActivityContext]);
+
+  // 공지는 참여 확정자·운영진·담당자만 볼 수 있어서, 권한이 확인된 뒤에 따로 불러온다.
+  const canViewNotices =
+    !!activity &&
+    (hasRole("MANAGER") ||
+      activity.assignee?.id === userId ||
+      myParticipant?.status === "APPROVED");
+  const showNotices = isMyActivityContext && canViewNotices;
+  const showActivityContent = isMyActivityContext && canViewNotices;
+
+  useEffect(() => {
+    getLectureMaterialsByActivity(activityId)
+      .then(setLectureMaterials)
+      .catch((error) => {
+        console.error("Failed to fetch lecture materials:", error);
+        setLectureMaterials([]);
+      });
   }, [activityId]);
 
-  const handleApply = async () => {
-    if (!activity) return;
+  useEffect(() => {
+    if (!showActivityContent) {
+      setActivityTab((tab) => (tab === "content" ? "info" : tab));
+    }
+  }, [showActivityContent]);
+
+  useEffect(() => {
+    if (!showNotices) {
+      setActivityNotices([]);
+      // 학회 활동 상세이거나 열람 권한을 잃으면 빈 탭에 남지 않도록 되돌린다.
+      setActivityTab((tab) => (tab === "notices" ? "info" : tab));
+      return;
+    }
+    getActivityNotices(activityId)
+      .then(setActivityNotices)
+      .catch((error) =>
+        console.error("Failed to fetch activity notices:", error),
+      );
+  }, [showNotices, activityId]);
+
+  async function refreshNotices() {
+    try {
+      setActivityNotices(await getActivityNotices(activityId));
+    } catch (error) {
+      console.error("Failed to refresh activity notices:", error);
+    }
+  }
+
+  const refreshCapacity = async () => {
+    try {
+      setCapacity(await getActivityCapacity(activityId));
+    } catch (error) {
+      console.error("Failed to refresh activity capacity:", error);
+    }
+  };
+
+  const handleApply = async (application?: ActivityJoinRequest) => {
+    if (!activity) return false;
     setActionLoading(true);
     try {
       const newParticipant = await createMyParticipantByActivityId({
         activityId: activity.id,
+        application,
       });
       setMyParticipant(newParticipant);
+      void refreshCapacity();
+      toast.success(
+        activity.activityType.code === "PROJECT"
+          ? "프로젝트 참여 신청이 접수되었습니다. 개설자가 검토 후 결과를 확정합니다."
+          : newParticipant.status === "APPROVED"
+          ? "참여가 확정되었습니다."
+          : "참여 신청이 완료되었습니다. 활동 시작일에 참여가 확정됩니다.",
+      );
+      return true;
     } catch (error: any) {
       console.error("Failed to apply for activity:", error);
-      toast.error("참여 신청에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      toast.error(
+        typeof error.response?.data === "string"
+          ? error.response.data
+          : "참여 신청에 실패했습니다. 잠시 후 다시 시도해주세요.",
+      );
+      return false;
     } finally {
       setActionLoading(false);
     }
@@ -316,10 +495,12 @@ export default function ActivityDetails() {
     try {
       await deleteActivityParticipant(myParticipant.id);
       setMyParticipant(null);
+      void refreshCapacity();
+      toast.success("참여 신청이 취소되었습니다.");
     } catch (error: any) {
       console.error("Failed to cancel activity:", error);
       toast.error(
-        "참여를 취소하는 데 실패했습니다. 잠시 후 다시 시도해주세요.",
+        "참여 신청을 취소하지 못했습니다. 잠시 후 다시 시도해주세요.",
       );
     } finally {
       setActionLoading(false);
@@ -337,6 +518,7 @@ export default function ActivityDetails() {
     try {
       await deleteActivityParticipant(myParticipant.id);
       setMyParticipant(null);
+      void refreshCapacity();
       setLeaveDialogOpen(false);
     } catch (error: any) {
       console.error("Failed to leave activity:", error);
@@ -354,23 +536,65 @@ export default function ActivityDetails() {
 
   const handleApplyClick = () => {
     if (!activity) return;
-    if (activity.activityType.code === "STUDY") {
+    if (
+      (activity.activityType.code === "STUDY" ||
+        activity.activityType.code === "SPECIAL_LECTURE" ||
+        activity.activityType.code === "LECTURE") &&
+      activity.depositAmount > 0
+    ) {
       setAgreedToPolicy(false);
       setConfirmedPayment(false);
+      setAgreedToPrivacy(false);
       setAgreedToPromo(false);
+      setRefundBankName("");
+      setRefundAccountNumber("");
+      setRefundAccountHolder("");
       setStudyDepositOpen(true);
     } else {
-      handleApply();
+      setAppliedPosition("");
+      setApplicationMessage("");
+      setApplyDialogOpen(true);
     }
   };
 
+  const handleApplyConfirm = async () => {
+    if (
+      activity?.activityType.code === "PROJECT" &&
+      !appliedPosition.trim()
+    ) {
+      toast.error("지원 포지션을 입력해주세요.");
+      return;
+    }
+    const applied = await handleApply(
+      activity?.activityType.code === "PROJECT"
+        ? {
+            appliedPosition: appliedPosition.trim(),
+            applicationMessage: applicationMessage.trim() || undefined,
+          }
+        : undefined,
+    );
+    if (applied) setApplyDialogOpen(false);
+  };
+
   const handleStudyDepositConfirm = async () => {
-    setStudyDepositOpen(false);
-    await handleApply();
+    const applied = await handleApply({
+      refundBankName: refundBankName.trim(),
+      refundAccountNumber,
+      refundAccountHolder: refundAccountHolder.trim(),
+      agreedToDepositPolicy: agreedToPolicy,
+      confirmedDepositPayment: confirmedPayment,
+      agreedToPrivacy: agreedToPrivacy,
+      agreedToPromotion: agreedToPromo,
+    });
+    if (applied) setStudyDepositOpen(false);
   };
 
   const handleEdit = () => {
-    router.push(`/manage/activities/${activityId}/edit`);
+    router.push(
+      `${canAdministerActivity
+        ? `/manage/activities/${activityId}/edit`
+        : `/home/activities/${activityId}/edit`}?from=activity-detail&detailFrom=${returnSource}`,
+    );
   };
 
   const handleStatusChange = async (newStatus: string) => {
@@ -378,6 +602,16 @@ export default function ActivityDetails() {
     try {
       const updated = await updateActivityStatus(activity.id, newStatus);
       setActivity(updated);
+      if (newStatus === "ONGOING" || newStatus === "COMPLETED") {
+        try {
+          setVisibleMembers(await getActivityMemberSummaries(activity.id));
+        } catch (memberError) {
+          console.error("Failed to fetch activity members:", memberError);
+          setVisibleMembers([]);
+        }
+      } else {
+        setVisibleMembers([]);
+      }
     } catch (error: any) {
       console.error("Failed to update activity status:", error);
       toast.error(
@@ -402,6 +636,14 @@ export default function ActivityDetails() {
       setDeleteDialogOpen(false);
     }
   };
+
+  async function refreshMaterials() {
+    try {
+      setLectureMaterials(await getLectureMaterialsByActivity(activityId));
+    } catch (error) {
+      console.error("Failed to refresh lecture materials:", error);
+    }
+  }
 
   if (loading) {
     return (
@@ -453,9 +695,9 @@ export default function ActivityDetails() {
             <Button
               variant="outline"
               className="mt-4"
-              onClick={() => router.push("/activities")}
+              onClick={() => router.push(returnPath)}
             >
-              활동 목록으로 돌아가기
+              {returnLabel} 돌아가기
             </Button>
           </CardContent>
         </Card>
@@ -463,29 +705,52 @@ export default function ActivityDetails() {
     );
   }
 
-  const activityStatusMeta = getActivityStatusMeta(activity.status);
+  const activityStatusMeta = getActivityStatusMeta(
+    activityDisplayStatus(activity),
+  );
   const participantMeta = getMyParticipantMeta(myParticipant);
+  const activityHasStarted = activity.startDate <= localDateValue();
   const canManage =
-    hasRole("MANAGER") || hasRole("ADMIN") || activity.assignee.id === userId;
-  const ctaConfig = deriveCtaConfig(activity, myParticipant, {
-    onApply: handleApplyClick,
-    onCancel: handleCancel,
-    onComplete: handleComplete,
-    onLeave: () => setLeaveDialogOpen(true),
-    onReapply: handleReapply,
-  });
+    canAdministerActivity || activity.assignee.id === userId;
+  const activityManagementPath = canAdministerActivity
+    ? `/manage/activities/${activityId}`
+    : `/home/activities/${activityId}/manage`;
+  const activityManagementPathWithReturn =
+    `${activityManagementPath}?from=activity-detail&detailFrom=${returnSource}`;
+  const canManageMaterials = canManage;
+  const materialLinkLabel = activityMaterialLabel(activity.activityType.code);
+  const primaryMaterial =
+    lectureMaterials.find((material) => material.primary) ?? null;
+  const unassignedMaterials = lectureMaterials.filter(
+    (material) => material.weekNumber == null && !material.primary,
+  );
+  const materialSectionItems = materialLinkLabel
+    ? [...(primaryMaterial ? [primaryMaterial] : []), ...unassignedMaterials]
+    : unassignedMaterials;
+  const ctaConfig = deriveCtaConfig(
+    activity,
+    myParticipant,
+    capacity?.full ?? false,
+    {
+      onApply: handleApplyClick,
+      onCancel: handleCancel,
+      onComplete: handleComplete,
+      onLeave: () => setLeaveDialogOpen(true),
+      onReapply: handleReapply,
+    },
+  );
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       <div className="space-y-2 border-b pb-6">
         <Button
           variant="ghost"
-          onClick={() => router.push("/activities")}
+          onClick={() => router.push(returnPath)}
           className="mb-2"
           size="sm"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          돌아가기
+          {returnLabel}
         </Button>
 
         <div className="space-y-3">
@@ -493,7 +758,7 @@ export default function ActivityDetails() {
 
           <div className="flex flex-wrap items-center gap-2">
             <ActivityTypeBadge activityType={activity.activityType} />
-            <ActivityStatusBadge status={activity.status} />
+            <ActivityStatusBadge status={activityDisplayStatus(activity)} />
           </div>
         </div>
       </div>
@@ -521,7 +786,7 @@ export default function ActivityDetails() {
                   </h3>
                 ),
                 p: ({ children }) => (
-                  <p className="text-sm text-muted-foreground mb-2 last:mb-0 leading-relaxed">
+                  <p className="text-sm mb-2 last:mb-0 leading-relaxed">
                     {children}
                   </p>
                 ),
@@ -580,7 +845,25 @@ export default function ActivityDetails() {
               <div>
                 <p className="text-sm text-muted-foreground">내 참여 상태</p>
                 <p className="font-semibold">{participantMeta.label}</p>
-                {myParticipant && (
+                {myParticipant?.status === "APPLIED" && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {activity.activityType.code === "PROJECT"
+                      ? "개설자가 신청 내용을 검토하고 있습니다."
+                      : `${formatDate(activity.startDate)}에 참여가 확정됩니다.`}
+                  </p>
+                )}
+                {myParticipant?.status === "REJECTED" && (
+                  <div className="flex items-start gap-2 text-xs leading-relaxed">
+                    <span className="shrink-0 font-medium text-foreground">
+                      개설자 안내
+                    </span>
+                    <span className="min-w-0 text-muted-foreground">
+                      {myParticipant.reviewMessage ||
+                        "신청이 반려되었습니다."}
+                    </span>
+                </div>
+                )}
+                {myParticipant?.status === "APPROVED" && (
                   <Badge
                     variant={myParticipant.completed ? "default" : "outline"}
                     className="mt-1"
@@ -606,6 +889,59 @@ export default function ActivityDetails() {
               myParticipant={myParticipant}
             />
           )}
+          {(showActivityContent || showNotices) && (
+            <div className="flex gap-1 border-b">
+              <button
+                type="button"
+                onClick={() => setActivityTab("info")}
+                className={cn(
+                  "px-3 pb-2.5 text-sm font-semibold transition-colors",
+                  activityTab === "info"
+                    ? "border-b-2 border-[#174b3a] text-[#174b3a]"
+                    : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                활동 정보
+              </button>
+              {showActivityContent && (
+                <button
+                  type="button"
+                  onClick={() => setActivityTab("content")}
+                  className={cn(
+                    "px-3 pb-2.5 text-sm font-semibold transition-colors",
+                    activityTab === "content"
+                      ? "border-b-2 border-[#174b3a] text-[#174b3a]"
+                      : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  활동 내용
+                </button>
+              )}
+              {showNotices && (
+                <button
+                  type="button"
+                  onClick={() => setActivityTab("notices")}
+                  className={cn(
+                    "px-3 pb-2.5 text-sm font-semibold transition-colors",
+                    activityTab === "notices"
+                      ? "border-b-2 border-[#174b3a] text-[#174b3a]"
+                      : "border-b-2 border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    공지
+                    {unreadNoticeCount > 0 && (
+                      <span className="flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-4 text-white">
+                        {formatUnreadCount(unreadNoticeCount)}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {activityTab === "info" && (
           <Card>
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
               <CardTitle className="text-md font-semibold">활동 정보</CardTitle>
@@ -670,15 +1006,161 @@ export default function ActivityDetails() {
                 value={`${formatDate(activity.startDate)} ~ ${formatDate(activity.endDate)}`}
               />
 
+              {activity.recruitmentStartDate && activity.recruitmentEndDate && (
+                <InfoRow
+                  icon={<CalendarRange className="h-4 w-4" />}
+                  label="모집 기간"
+                  value={`${formatDate(activity.recruitmentStartDate)} ~ ${formatDate(activity.recruitmentEndDate)}`}
+                />
+              )}
+
+              {(activity.activityType.code === "STUDY" ||
+                activity.activityType.code === "SPECIAL_LECTURE" ||
+                activity.activityType.code === "LECTURE") && (
+                <InfoRow
+                  icon={<Landmark className="h-4 w-4" />}
+                  label="참여 보증금"
+                  value={
+                    activity.depositAmount > 0
+                      ? `${activity.depositAmount.toLocaleString("ko-KR")}원`
+                      : "없음"
+                  }
+                />
+              )}
+
+              {activity.activityType.code === "LECTURE" && (
+                <InfoRow
+                  icon={<Users className="h-4 w-4" />}
+                  label="현재 신청 인원"
+                  value={
+                    capacity?.participantLimit == null
+                      ? `${capacity?.participantCount ?? 0}명 / 제한 없음`
+                      : `${capacity.participantCount} / ${capacity.participantLimit}명`
+                  }
+                />
+              )}
+
+              {activity.instructorCareer &&
+                activity.activityType.code === "SPECIAL_LECTURE" && (
+                  <div className="flex items-start gap-3 py-3">
+                    <div className="mt-0.5 text-muted-foreground">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-0.5 text-xs text-muted-foreground">
+                        강의자 경력
+                      </p>
+                      <p className="max-h-48 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
+                        {activity.instructorCareer}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+              {activity.operationPlan &&
+                operationPlanLabel(activity.activityType.code) && (
+                  <div className="flex items-start gap-3 py-3">
+                    <div className="mt-0.5 text-muted-foreground">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-0.5 text-xs text-muted-foreground">
+                        {operationPlanLabel(activity.activityType.code)}
+                      </p>
+                      {isOperationPlanUrl(activity.operationPlan) ? (
+                        <a
+                          href={activity.operationPlan.trim()}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[#174b3a] hover:underline"
+                        >
+                          <span className="truncate">
+                            {operationPlanLabel(activity.activityType.code)} 열기
+                          </span>
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                        </a>
+                      ) : (
+                        <p className="max-h-48 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed">
+                          {activity.operationPlan}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {activity.recruitmentPositions && (
+                <div className="flex items-start gap-3 py-3">
+                  <div className="mt-0.5 text-muted-foreground">
+                    <ClipboardList className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-0.5 text-xs text-muted-foreground">
+                      희망 포지션
+                    </p>
+                    <p className="whitespace-pre-wrap text-sm font-medium">
+                      {activity.recruitmentPositions}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <InfoRow
                 icon={<User className="h-4 w-4" />}
-                label="담당자"
+                label={
+                  activity.activityType.code === "SPECIAL_LECTURE"
+                    ? "강의자"
+                    : "담당자"
+                }
                 value={
                   activity.assignee.name ||
                   activity.assignee.username ||
                   activity.assignee.email
                 }
               />
+
+              <div className="flex items-start gap-3 py-3">
+                <div className="mt-0.5 text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      {materialLinkLabel ?? "활동 자료"}
+                    </p>
+                    {canManageMaterials && (
+                      <button
+                        type="button"
+                        className="shrink-0 text-xs font-medium text-[#174b3a] hover:underline"
+                        onClick={() =>
+                          router.push(
+                            `/lecture-materials?activityId=${activityId}&create=true`,
+                          )
+                        }
+                      >
+                        자료 추가
+                      </button>
+                    )}
+                  </div>
+                  {materialSectionItems.length === 0 ? (
+                    <p className="text-sm font-medium">—</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {materialSectionItems.map((material) => (
+                        <a
+                          key={material.id}
+                          href={material.driveUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[#174b3a] hover:underline"
+                        >
+                          <span className="truncate">{material.title}</span>
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* My Participant Status (Desktop) */}
               <div className="hidden lg:flex items-start gap-3 py-3">
@@ -690,10 +1172,10 @@ export default function ActivityDetails() {
                     내 참여 상태
                   </p>
                   <div className="flex items-center gap-2">
-                    <Badge variant={participantMeta.variant}>
+                    <Badge variant="outline" className={participantMeta.tone}>
                       {participantMeta.label}
                     </Badge>
-                    {myParticipant && (
+                    {myParticipant?.status === "APPROVED" && (
                       <Badge
                         variant={
                           myParticipant.completed ? "default" : "outline"
@@ -704,6 +1186,24 @@ export default function ActivityDetails() {
                       </Badge>
                     )}
                   </div>
+                  {myParticipant?.status === "APPLIED" && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {activity.activityType.code === "PROJECT"
+                        ? "개설자가 신청 내용을 검토하고 있습니다."
+                        : `${formatDate(activity.startDate)}에 참여가 확정됩니다.`}
+                    </p>
+                  )}
+                  {myParticipant?.status === "REJECTED" && (
+                    <div className="flex items-start gap-2 text-xs leading-relaxed">
+                      <span className="shrink-0 font-medium text-foreground">
+                        개설자 안내
+                      </span>
+                      <span className="min-w-0 text-muted-foreground">
+                        {myParticipant.reviewMessage ||
+                          "신청이 반려되었습니다."}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -739,9 +1239,7 @@ export default function ActivityDetails() {
                   <Button
                     className="w-full"
                     variant="outline"
-                    onClick={() =>
-                      router.push(`/manage/activities/${activityId}`)
-                    }
+                    onClick={() => router.push(activityManagementPathWithReturn)}
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
                     활동 관리하러 가기
@@ -750,8 +1248,58 @@ export default function ActivityDetails() {
               </div>
             </CardContent>
           </Card>
+          )}
+
+          {activityTab === "content" && showActivityContent && (
+            <WeeklyMaterials
+              activityId={activityId}
+              materials={lectureMaterials}
+              discordUrl={activity.discordUrl}
+              canManage={canManage}
+              onChanged={refreshMaterials}
+            />
+          )}
+
+          {activityTab === "notices" && showNotices && (
+            <ActivityNotices
+              activityId={activityId}
+              notices={activityNotices}
+              canManage={canManage}
+              onChanged={refreshNotices}
+            />
+          )}
         </div>
       </div>
+
+      {isMyActivityContext &&
+        (activity.status === "ONGOING" || activity.status === "COMPLETED") && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              참여자
+              <span className="text-sm font-normal text-muted-foreground">
+                {visibleMembers.length}명
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {visibleMembers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                확정된 참여자가 없습니다.
+              </p>
+            ) : (
+              <ul className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+                {visibleMembers.map((member) => (
+                  <li key={member.id} className="text-sm font-medium">
+                    {member.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <DeleteConfirmDialog
         open={deleteDialogOpen}
@@ -759,6 +1307,90 @@ export default function ActivityDetails() {
         itemValue={activity.title}
         onConfirm={handleDelete}
       />
+
+      <AlertDialog
+        open={applyDialogOpen}
+        onOpenChange={(open) => {
+          if (!actionLoading) setApplyDialogOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {activity.title} 참여를 신청하시겠습니까?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {activity.activityType.code === "PROJECT" ? (
+                <>
+                  신청은 개설자 검토 후 참여가 확정됩니다. 신청 결과는 내 활동 탭에서 확인할 수
+                  있습니다.
+                </>
+              ) : activityHasStarted ? (
+                <>신청 즉시 참여가 확정됩니다.</>
+              ) : (
+                <>
+                  신청 후 {formatDate(activity.startDate)}에 참여가 자동으로
+                  확정됩니다. 시작 전까지 신청을 취소할 수 있습니다.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {activity.activityType.code === "PROJECT" && (
+            <div className="space-y-4 py-1">
+              {activity.recruitmentPositions && (
+                <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                  <p className="mb-1 font-medium">모집 포지션</p>
+                  <p className="whitespace-pre-wrap text-muted-foreground">
+                    {activity.recruitmentPositions}
+                  </p>
+                </div>
+              )}
+              <div className="space-y-2">
+                <label htmlFor="applied-position" className="text-sm font-medium">
+                  지원 포지션 <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  id="applied-position"
+                  value={appliedPosition}
+                  onChange={(event) => setAppliedPosition(event.target.value)}
+                  placeholder="예: 프론트엔드"
+                  maxLength={100}
+                  disabled={actionLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="application-message" className="text-sm font-medium">
+                  관련 경험 및 지원 내용 <span className="text-muted-foreground">(선택)</span>
+                </label>
+                <textarea
+                  id="application-message"
+                  value={applicationMessage}
+                  onChange={(event) => setApplicationMessage(event.target.value)}
+                  placeholder="포지션과 관련된 경험이나 함께하고 싶은 이유를 작성해주세요."
+                  maxLength={1000}
+                  rows={4}
+                  disabled={actionLoading}
+                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>
+              돌아가기
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={actionLoading}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleApplyConfirm();
+              }}
+            >
+              {actionLoading ? "신청 중..." : "참여 신청"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Leave Dialog */}
       <AlertDialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
@@ -782,66 +1414,185 @@ export default function ActivityDetails() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Study Deposit Agreement Dialog */}
+      {/* Deposit and refund account dialog */}
       <Dialog
         open={studyDepositOpen}
         onOpenChange={(open) => {
           if (!open) setStudyDepositOpen(false);
         }}
       >
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+
           <DialogHeader>
-            <DialogTitle>스터디 보증금 유의사항</DialogTitle>
+            <DialogTitle>보증금 납부 및 환급 안내</DialogTitle>
+            <DialogDescription>
+              신청 전에 납부 기준을 확인하고 환급받을 계좌를 입력해주세요.
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 text-sm">
-            <ul className="space-y-1.5 list-disc pl-5 text-muted-foreground">
-              <li>스터디 보증금 <strong className="text-foreground">30,000원</strong> 발생</li>
-              <li>신청한 스터디의 수료 조건을 만족할 시, <strong className="text-foreground">전액 환급</strong></li>
-              <li>수료 조건을 만족하지 못하면 환급금 없음</li>
-            </ul>
-
-            <div className="text-xs text-muted-foreground space-y-2 leading-relaxed border-t pt-3">
-              <p>
-                * 환급받지 못한 스터디 보증금은 스터디를 운영하시는 강사님들의 강의비, 스터디 수료자 회식비, CNU 운영비 등으로 활용될 예정이니 참고해주시고 본인이 수료할 수 있을 정도의 스터디를 신청해주세요.
-              </p>
-              <p>* 입금 계좌번호: <strong className="text-foreground">1002-3463-0651 토스뱅크</strong></p>
-              <div>
-                <p className="mb-1">* 입금자명 양식</p>
-                <div className="pl-3 space-y-0.5">
-                  <p>스터디1 신청 시 : 수강자명1</p>
-                  <p>스터디2 신청 시 : 수강자명2</p>
-                  <p>스터디 1, 2 신청 시 : 수강자명12</p>
-                  <p className="mt-1">ex) 천우영 1 &nbsp; 손기령 12 &nbsp; 홍준영 2</p>
+          <div className="space-y-5 text-sm">
+            <div className="rounded-md border p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold d-800">
+                    참여 보증금
+                  </p>
+                  <p className="mt-1 text-2xl font-bold text-emerald-950">
+                    {activity.depositAmount.toLocaleString("ko-KR")}원
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm">
+                  수료 시 전액 환급
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3 border-t pt-4">
-              <label className="flex items-center gap-2.5 cursor-pointer">
+            <section className="space-y-3">
+              <h3 className="flex items-center gap-2 font-semibold">
+                <AlertCircle className="h-4 w-4" />
+                꼭 확인해주세요
+              </h3>
+              <div className="space-y-2 rounded-md border bg-muted/30 p-4 leading-relaxed text-muted-foreground">
+                <p>
+                  수료 조건을 충족하지 못하면 보증금은 환급되지 않습니다.
+                  미환급 보증금은 강의비 및 CNU 운영비로 사용됩니다.
+                </p>
+                <div className="border-t pt-2.5">
+                  <p className="font-medium text-foreground">입금 계좌</p>
+                  <p className="mt-1 text-base font-semibold text-foreground">
+                    토스뱅크 1002-3463-0651 홍준영
+                  </p>
+                </div>
+                <div className="border-t pt-2.5">
+                  <p className="font-medium text-foreground">입금자명</p>
+                  <p className="mt-1">
+                    본인 성함으로 입금자명을 설정해주세요.
+                  </p>
+
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="flex items-center gap-2 font-semibold">
+                환급 계좌 정보
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    은행
+                  </span>
+                  <Input
+                    value={refundBankName}
+                    onChange={(event) => setRefundBankName(event.target.value)}
+                    maxLength={50}
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    예금주
+                  </span>
+                  <Input
+                    value={refundAccountHolder}
+                    onChange={(event) =>
+                      setRefundAccountHolder(event.target.value)
+                    }
+                    placeholder="예금주 이름"
+                    maxLength={50}
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="space-y-1.5 sm:col-span-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    계좌번호
+                  </span>
+                  <Input
+                    value={refundAccountNumber}
+                    onChange={(event) =>
+                      setRefundAccountNumber(
+                        event.target.value.replace(/[^0-9-]/g, ""),
+                      )
+                    }
+                    placeholder="숫자 또는 하이픈으로 입력"
+                    inputMode="numeric"
+                    maxLength={24}
+                    autoComplete="off"
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                입력한 정보는 보증금 환급 업무에만 사용됩니다.
+              </p>
+            </section>
+
+            <section className="space-y-3 border-t pt-4">
+              <h3 className="font-semibold">개인정보 수집·이용 동의</h3>
+              <div className="space-y-2 rounded-md border bg-muted/30 p-4 text-xs leading-relaxed text-muted-foreground">
+                <div className="space-y-1">
+                  <p>
+                    <span className="font-medium text-foreground">수집 항목</span>
+                    {" · "}은행명, 예금주명, 계좌번호
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">이용 목적</span>
+                    {" · "}활동 보증금 환급
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">보유 기간</span>
+                    {" · "}보증금 환급 완료 후 파기
+                  </p>
+                </div>
+                <p className="border-t pt-2.5">
+                  개인정보 수집·이용에 대한 동의를 거부할 수 있으나, 동의하지 않을
+                  경우 해당 활동 참여 신청이 제한될 수 있습니다.
+                </p>
+              </div>
+              <label className="flex cursor-pointer items-start gap-2.5 leading-relaxed">
                 <Checkbox
+                  className="mt-0.5"
+                  checked={agreedToPrivacy}
+                  onCheckedChange={(v) => setAgreedToPrivacy(!!v)}
+                />
+                <span>[필수] 개인정보 수집·이용에 동의합니다.</span>
+              </label>
+            </section>
+
+            <section className="space-y-3 border-t pt-4">
+              <h3 className="font-semibold">필수 확인</h3>
+              <label className="flex cursor-pointer items-start gap-2.5 leading-relaxed">
+                <Checkbox
+                  className="mt-0.5"
                   checked={agreedToPolicy}
                   onCheckedChange={(v) => setAgreedToPolicy(!!v)}
                 />
-                <span>위 유의사항을 모두 확인하였으며, 동의합니다.</span>
+                <span>보증금 납부 및 환급 기준을 확인했습니다.</span>
               </label>
-              <label className="flex items-center gap-2.5 cursor-pointer">
+              <label className="flex cursor-pointer items-start gap-2.5 leading-relaxed">
                 <Checkbox
+                  className="mt-0.5"
                   checked={confirmedPayment}
                   onCheckedChange={(v) => setConfirmedPayment(!!v)}
                 />
                 <span>보증금 입금을 완료하였습니다.</span>
               </label>
-              <label className="flex items-center gap-2.5 cursor-pointer">
+            </section>
+
+            <section className="space-y-3 border-t pt-4">
+              <h3 className="font-semibold">
+                선택 동의
+              </h3>
+              <label className="flex cursor-pointer items-start gap-2.5 leading-relaxed">
                 <Checkbox
+                  className="mt-0.5"
                   checked={agreedToPromo}
                   onCheckedChange={(v) => setAgreedToPromo(!!v)}
                 />
-                <span className="text-muted-foreground text-xs">
-                  활동 사진 및 결과물이 소식지 등 홍보에 사용될 수 있습니다.
+                <span>
+                  활동 사진 및 결과물의 교내 소식지 등 홍보 활용에 동의합니다.
                 </span>
               </label>
-            </div>
+            </section>
           </div>
 
           <DialogFooter className="mt-2">
@@ -849,14 +1600,23 @@ export default function ActivityDetails() {
               취소
             </Button>
             <Button
-              disabled={!agreedToPolicy || !confirmedPayment || !agreedToPromo || actionLoading}
+              disabled={
+                !refundBankName.trim() ||
+                refundAccountNumber.replace(/\D/g, "").length < 8 ||
+                !refundAccountHolder.trim() ||
+                !agreedToPolicy ||
+                !confirmedPayment ||
+                !agreedToPrivacy ||
+                actionLoading
+              }
               onClick={handleStudyDepositConfirm}
             >
-              {actionLoading ? "처리 중..." : "신청하기"}
+              {actionLoading ? "신청 중..." : "참여 신청"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

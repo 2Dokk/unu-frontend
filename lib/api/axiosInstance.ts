@@ -1,9 +1,40 @@
 import axios from "axios";
 import Cookies from "js-cookie";
+import { clearAuthCookies, setAuthCookies } from "@/lib/utils/auth-cookies";
+import {
+  isManualLogoutInProgress,
+  markSessionExpired,
+  sessionExpiredLoginUrl,
+} from "@/lib/utils/auth-session";
+
+function redirectToExpiredSessionLogin() {
+  if (isManualLogoutInProgress()) return;
+  markSessionExpired();
+  clearAuthCookies();
+  if (typeof window !== "undefined") {
+    window.location.replace(sessionExpiredLoginUrl());
+  }
+}
+
+export class RefreshSessionExpiredError extends Error {
+  constructor(message = "Refresh token is unavailable") {
+    super(message);
+    this.name = "RefreshSessionExpiredError";
+  }
+}
+
+export function isRefreshSessionExpiredError(error: unknown): boolean {
+  if (error instanceof RefreshSessionExpiredError) return true;
+  if (!axios.isAxiosError(error)) return false;
+  const status = error.response?.status;
+  return status === 400 || status === 401 || status === 403;
+}
 
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
   timeout: 10000,
+  // HttpOnly refresh 쿠키가 요청에 자동으로 실리도록 한다.
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -13,6 +44,10 @@ const axiosInstance = axios.create({
 // Request interceptor
 axiosInstance.interceptors.request.use(
   (config: any) => {
+    if (isManualLogoutInProgress()) {
+      if (config.headers) delete config.headers.Authorization;
+      return config;
+    }
     const token = Cookies.get("token");
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -24,34 +59,49 @@ axiosInstance.interceptors.request.use(
   },
 );
 
-// --- token refresh middleware (response interceptor) ---
-let isRefreshing = false;
-let failedQueue: {
-  resolve: (value?: any) => void;
-  reject: (reason?: any) => void;
-}[] = [];
-
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach(({ resolve, reject }) => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve(token);
-    }
-  });
-  failedQueue = [];
-  isRefreshing = false;
-};
-
-// create a plain axios instance to call refresh endpoint (to avoid interceptor loop)
 const refreshClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
+  timeout: 10000,
+  // refresh 토큰은 HttpOnly 쿠키로만 전달되므로 자격증명을 반드시 함께 보낸다.
+  withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
 
+let refreshPromise: Promise<string> | null = null;
+
+export function refreshAccessToken(): Promise<string> {
+  if (refreshPromise) return refreshPromise;
+
+  // refresh 토큰은 JS로 읽지 않는다. 쿠키가 있으면 브라우저가 자동으로 실어 보내고,
+  // 없거나 만료됐으면 서버가 401을 반환한다.
+  refreshPromise = refreshClient
+    .post("/auth/refresh")
+    .then((res) => {
+      if (isManualLogoutInProgress()) {
+        throw new axios.CanceledError("Authentication refresh was canceled");
+      }
+
+      const data = res.data || {};
+      const newAccessToken = data.accessToken || data.token;
+      if (!newAccessToken) {
+        throw new RefreshSessionExpiredError("Invalid refresh response");
+      }
+
+      setAuthCookies(newAccessToken);
+      axiosInstance.defaults.headers.common.Authorization =
+        `Bearer ${newAccessToken}`;
+      return newAccessToken;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
+}
+
 axiosInstance.interceptors.response.use(
   (response: any) => response,
-  (error: any) => {
+  async (error: any) => {
     const originalRequest = error.config;
 
     // if no response or not 401, just reject
@@ -59,77 +109,37 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // prevent infinite loop when refresh endpoint itself returns 401
+    const requestUrl = String(originalRequest?.url ?? "");
+    if (
+      requestUrl.includes("/auth/login") ||
+      requestUrl.includes("/auth/signup")
+    ) {
+      return Promise.reject(error);
+    }
+
     if (originalRequest && originalRequest._retry) {
-      // already retried -> logout
-      Cookies.remove("token");
-      Cookies.remove("refreshToken");
-      if (typeof window !== "undefined") window.location.href = "/login";
+      if (!isManualLogoutInProgress()) redirectToExpiredSessionLogin();
       return Promise.reject(error);
     }
 
-    // if no refresh token, logout immediately
-    const refreshToken = Cookies.get("refreshToken");
-    if (!refreshToken) {
-      Cookies.remove("token");
-      if (typeof window !== "undefined") window.location.href = "/login";
-      return Promise.reject(error);
-    }
-
-    if (isRefreshing) {
-      // queue the request until refresh completes
-      return new Promise((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      })
-        .then((token) => {
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-          }
-          return axiosInstance(originalRequest);
-        })
-        .catch((err) => Promise.reject(err));
-    }
-
-    // start refresh
+    const hadSession = Boolean(Cookies.get("token"));
     originalRequest._retry = true;
-    isRefreshing = true;
-
-    return new Promise((resolve, reject) => {
-      // adjust refresh endpoint / payload according to your backend
-      refreshClient
-        .post("/auth/refresh", { refreshToken })
-        .then((res) => {
-          const data = res.data || {};
-          const newAccessToken = data.accessToken || data.token;
-          const newRefreshToken = data.refreshToken;
-
-          if (!newAccessToken) {
-            throw new Error("No access token in refresh response");
-          }
-
-          // store tokens (adjust options as needed: expires, secure, sameSite)
-          Cookies.set("token", newAccessToken);
-          if (newRefreshToken) Cookies.set("refreshToken", newRefreshToken);
-
-          // update default header for subsequent requests
-          axiosInstance.defaults.headers["Authorization"] =
-            `Bearer ${newAccessToken}`;
-
-          processQueue(null, newAccessToken);
-
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          }
-          resolve(axiosInstance(originalRequest));
-        })
-        .catch((err) => {
-          processQueue(err, null);
-          Cookies.remove("token");
-          Cookies.remove("refreshToken");
-          if (typeof window !== "undefined") window.location.href = "/login";
-          reject(err);
-        });
-    });
+    try {
+      const newAccessToken = await refreshAccessToken();
+      if (originalRequest.headers) {
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+      }
+      return axiosInstance(originalRequest);
+    } catch (refreshError) {
+      if (
+        hadSession &&
+        !isManualLogoutInProgress() &&
+        isRefreshSessionExpiredError(refreshError)
+      ) {
+        redirectToExpiredSessionLogin();
+      }
+      return Promise.reject(refreshError);
+    }
   },
 );
 

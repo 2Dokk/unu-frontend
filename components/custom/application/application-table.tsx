@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -31,23 +32,43 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ApplicationResponse } from "@/lib/interfaces/application";
-import { reviewApplication } from "@/lib/api/application";
-import ApplicationStatusDropdown from "./application-status-dropdown";
+import {
+  deleteApplication,
+  importApplicationLectureRoomSchedule,
+  reviewApplication,
+} from "@/lib/api/application";
 import { toast } from "sonner";
+import { CalendarPlus, Loader2, Trash2 } from "lucide-react";
 
-const BULK_STATUS_OPTIONS = [
-  { value: "APPLIED", label: "신청" },
-  { value: "IN_PROGRESS", label: "검토중" },
-  { value: "WAITING", label: "대기" },
-  { value: "HOLD", label: "보류" },
-  { value: "PASSED", label: "합격" },
-  { value: "REJECTED", label: "불합격" },
-];
+// PASSED/REJECTED 표시 문구는 모집 유형에 따라 달라진다.
+// (INTERNAL_OPERATION: 승인/미승인, 그 외: 합격/불합격). enum 값 자체는 그대로.
+function passedLabel(useApprovalLabels: boolean) {
+  return useApprovalLabels ? "승인" : "합격";
+}
+function rejectedLabel(useApprovalLabels: boolean) {
+  return useApprovalLabels ? "미승인" : "불합격";
+}
+
+function getBulkStatusOptions(useApprovalLabels: boolean) {
+  return [
+    { value: "APPLIED", label: "신청" },
+    { value: "IN_PROGRESS", label: "검토중" },
+    { value: "WAITING", label: "대기" },
+    { value: "HOLD", label: "보류" },
+    { value: "PASSED", label: passedLabel(useApprovalLabels) },
+    { value: "REJECTED", label: rejectedLabel(useApprovalLabels) },
+  ];
+}
 
 type StatusFilter = "all" | "PASSED" | "REJECTED" | "WAITING";
 
 interface ApplicationsTableProps {
   applications: ApplicationResponse[];
+  enableBulkScheduleImport?: boolean;
+  /** true면 PASSED/REJECTED를 "승인/미승인"으로 표시한다(학회 내부 신청/모집용). 기본 false=합격/불합격. */
+  useApprovalLabels?: boolean;
+  /** 관리자 삭제 성공 시 실제 삭제된 지원서 id들을 부모에 알린다(상단 통계 동기화용). */
+  onApplicationsDeleted?: (ids: string[]) => void;
 }
 
 // Helper function to determine if status is in waiting group
@@ -65,42 +86,57 @@ function getStatusGroup(
   return "WAITING";
 }
 
-function getStatusBadge(status: string) {
+function getStatusBadge(status: string, useApprovalLabels: boolean) {
   switch (status) {
     case "PASSED":
-      return <Badge className="bg-green-600 hover:bg-green-700">합격</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.positive}>
+          {passedLabel(useApprovalLabels)}
+        </Badge>
+      );
     case "REJECTED":
-      return <Badge variant="destructive">불합격</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.negative}>
+          {rejectedLabel(useApprovalLabels)}
+        </Badge>
+      );
     case "APPLIED":
-      return <Badge variant="secondary">신청</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          신청
+        </Badge>
+      );
     case "IN_PROGRESS":
-      return <Badge variant="secondary">검토중</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.pending}>
+          검토중
+        </Badge>
+      );
     case "WAITING":
-      return <Badge variant="secondary">대기</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          대기
+        </Badge>
+      );
     case "HOLD":
       return (
-        <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
+        <Badge variant="outline" className={STATUS_TONES.pending}>
           보류
         </Badge>
       );
     case "CANCELED":
-      return <Badge variant="outline">취소</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          취소
+        </Badge>
+      );
     default:
-      return <Badge variant="outline">{status}</Badge>;
+      return (
+        <Badge variant="outline" className={STATUS_TONES.neutral}>
+          {status}
+        </Badge>
+      );
   }
-}
-
-function getStatusLabel(status: string): string {
-  const statusMap: Record<string, string> = {
-    APPLIED: "신청",
-    IN_PROGRESS: "검토중",
-    WAITING: "대기",
-    HOLD: "보류",
-    PASSED: "합격",
-    REJECTED: "불합격",
-    CANCELED: "취소",
-  };
-  return statusMap[status] || status;
 }
 
 function formatDate(dateString: string): string {
@@ -116,17 +152,23 @@ function formatDate(dateString: string): string {
 
 export default function ApplicationsTable({
   applications: initialApplications,
+  enableBulkScheduleImport = false,
+  useApprovalLabels = false,
+  onApplicationsDeleted,
 }: ApplicationsTableProps) {
   const router = useRouter();
+  const bulkStatusOptions = getBulkStatusOptions(useApprovalLabels);
   const [applications, setApplications] = useState(initialApplications);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
-  const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
-
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkTargetStatus, setBulkTargetStatus] = useState<string>("");
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [bulkScheduleDialogOpen, setBulkScheduleDialogOpen] = useState(false);
+  const [bulkScheduleImporting, setBulkScheduleImporting] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Filter applications
   const filteredApplications = useMemo(() => {
@@ -151,34 +193,16 @@ export default function ApplicationsTable({
       }
 
       return true;
-    });
+    }).sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
   }, [applications, statusFilter, search]);
 
-  async function handleStatusChange(applicationId: string, newStatus: string) {
-    // Optimistic update
-    setUpdatingIds((prev) => new Set(prev).add(applicationId));
-
-    try {
-      const updated = await reviewApplication(applicationId, newStatus);
-
-      // Update local state
-      setApplications((prev) =>
-        prev.map((app) => (app.id === applicationId ? updated : app)),
-      );
-    } catch (error: any) {
-      console.error("Failed to update application status:", error);
-      toast.error(error.response?.data || "상태 변경에 실패했습니다.");
-    } finally {
-      setUpdatingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(applicationId);
-        return next;
-      });
-    }
-  }
-
   // Bulk selection helpers
-  const filteredIds = filteredApplications.map((a) => a.id);
+  const filteredIds = filteredApplications
+    .filter((application) => application.status !== "CANCELED")
+    .map((application) => application.id);
   const allFilteredSelected =
     filteredIds.length > 0 && filteredIds.every((id) => selectedIds.has(id));
 
@@ -197,7 +221,8 @@ export default function ApplicationsTable({
   function handleSelectOne(id: string, checked: boolean) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      checked ? next.add(id) : next.delete(id);
+      if (checked) next.add(id);
+      else next.delete(id);
       return next;
     });
   }
@@ -210,23 +235,124 @@ export default function ApplicationsTable({
   async function handleBulkStatusChange() {
     setBulkUpdating(true);
     try {
-      const results = await Promise.all(
-        Array.from(selectedIds).map((id) =>
+      const ids = Array.from(selectedIds);
+      const results = await Promise.allSettled(
+        ids.map((id) =>
           reviewApplication(id, bulkTargetStatus),
         ),
       );
+      const updatedApplications = results.flatMap((result) =>
+        result.status === "fulfilled" ? [result.value] : [],
+      );
+      const failedIds = ids.filter(
+        (_, index) => results[index].status === "rejected",
+      );
+
       setApplications((prev) =>
         prev.map((app) => {
-          const updated = results.find((r) => r.id === app.id);
+          const updated = updatedApplications.find((item) => item.id === app.id);
           return updated ?? app;
         }),
       );
-      setSelectedIds(new Set());
-    } catch (error: any) {
-      toast.error(error.response?.data || "일괄 상태 변경에 실패했습니다.");
+      setSelectedIds(new Set(failedIds));
+
+      if (failedIds.length === 0) {
+        toast.success(
+          bulkTargetStatus === "PASSED" && !useApprovalLabels
+            ? `${updatedApplications.length}명을 합격 처리하고 회원가입 초대에 추가했습니다.`
+            : `${updatedApplications.length}명의 상태를 변경했습니다.`,
+        );
+      } else if (updatedApplications.length === 0) {
+        toast.error("선택한 지원자의 상태를 변경하지 못했습니다.");
+      } else {
+        toast.warning(
+          `${updatedApplications.length}명은 변경했고, ${failedIds.length}명은 변경하지 못했습니다.`,
+        );
+      }
     } finally {
       setBulkUpdating(false);
       setBulkStatusDialogOpen(false);
+    }
+  }
+
+  async function handleBulkDelete() {
+    setBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const results = await Promise.allSettled(
+        ids.map((id) => deleteApplication(id)),
+      );
+      const deletedIds = ids.filter(
+        (_, index) => results[index].status === "fulfilled",
+      );
+      const failedIds = ids.filter(
+        (_, index) => results[index].status === "rejected",
+      );
+
+      if (deletedIds.length > 0) {
+        const deletedSet = new Set(deletedIds);
+        setApplications((prev) =>
+          prev.filter((app) => !deletedSet.has(app.id)),
+        );
+        onApplicationsDeleted?.(deletedIds);
+      }
+      setSelectedIds(new Set(failedIds));
+
+      if (failedIds.length === 0) {
+        toast.success(`${deletedIds.length}명의 지원서를 삭제했습니다.`);
+      } else if (deletedIds.length === 0) {
+        toast.error("선택한 지원서를 삭제하지 못했습니다.");
+      } else {
+        toast.warning(
+          `${deletedIds.length}명은 삭제했고, ${failedIds.length}명은 삭제하지 못했습니다.`,
+        );
+      }
+    } finally {
+      setBulkDeleting(false);
+      setBulkDeleteDialogOpen(false);
+    }
+  }
+
+  async function handleBulkScheduleImport() {
+    setBulkScheduleImporting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const results = await Promise.allSettled(
+        ids.map(importApplicationLectureRoomSchedule),
+      );
+      const successfulResults = results.flatMap((result) =>
+        result.status === "fulfilled" ? [result.value] : [],
+      );
+      const failedIds = ids.filter(
+        (_, index) => results[index].status === "rejected",
+      );
+      const createdCount = successfulResults.reduce(
+        (sum, result) => sum + result.createdCount,
+        0,
+      );
+      const existingCount = successfulResults.reduce(
+        (sum, result) => sum + result.existingCount,
+        0,
+      );
+
+      setSelectedIds(new Set(failedIds));
+
+      if (failedIds.length === 0) {
+        toast.success(
+          createdCount > 0
+            ? `${successfulResults.length}명의 관리 시간 ${createdCount}개를 반영했습니다.${existingCount > 0 ? ` 기존 ${existingCount}개 블록은 유지했습니다.` : ""}`
+            : "선택한 신청자의 관리 시간이 이미 모두 반영되어 있습니다.",
+        );
+      } else if (successfulResults.length === 0) {
+        toast.error("선택한 신청자의 관리 시간을 반영하지 못했습니다.");
+      } else {
+        toast.warning(
+          `${successfulResults.length}명은 반영했고, ${failedIds.length}명은 반영하지 못했습니다.`,
+        );
+      }
+    } finally {
+      setBulkScheduleImporting(false);
+      setBulkScheduleDialogOpen(false);
     }
   }
 
@@ -247,7 +373,7 @@ export default function ApplicationsTable({
   return (
     <div className="space-y-4">
       {/* Filters / Bulk toolbar */}
-      <div className="flex items-center gap-3 h-9">
+      <div className="flex min-h-9 flex-wrap items-center gap-2">
         {selectedIds.size > 0 ? (
           <>
             <span className="text-xs text-muted-foreground font-medium">
@@ -260,7 +386,7 @@ export default function ApplicationsTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                {BULK_STATUS_OPTIONS.map((opt) => (
+                {bulkStatusOptions.map((opt) => (
                   <DropdownMenuItem
                     key={opt.value}
                     className="text-xs"
@@ -271,6 +397,26 @@ export default function ApplicationsTable({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            {enableBulkScheduleImport && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={() => setBulkScheduleDialogOpen(true)}
+              >
+                <CalendarPlus className="h-3.5 w-3.5" />
+                시간표 일괄 반영
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 border-destructive/30 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setBulkDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              삭제
+            </Button>
             <Button
               size="sm"
               variant="ghost"
@@ -295,8 +441,16 @@ export default function ApplicationsTable({
         {[
           { value: "all", label: "전체", count: allCount },
           { value: "WAITING", label: "대기", count: waitingCount },
-          { value: "PASSED", label: "합격", count: acceptedCount },
-          { value: "REJECTED", label: "불합격", count: rejectedCount },
+          {
+            value: "PASSED",
+            label: passedLabel(useApprovalLabels),
+            count: acceptedCount,
+          },
+          {
+            value: "REJECTED",
+            label: rejectedLabel(useApprovalLabels),
+            count: rejectedCount,
+          },
         ].map(({ value, label, count }) => {
           const active = statusFilter === value;
           return (
@@ -348,8 +502,6 @@ export default function ApplicationsTable({
           </TableHeader>
           <TableBody>
             {filteredApplications.map((application) => {
-              const isUpdating = updatingIds.has(application.id);
-
               return (
                 <TableRow
                   key={application.id}
@@ -361,6 +513,7 @@ export default function ApplicationsTable({
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={selectedIds.has(application.id)}
+                      disabled={application.status === "CANCELED"}
                       onCheckedChange={(checked) =>
                         handleSelectOne(application.id, !!checked)
                       }
@@ -386,7 +539,7 @@ export default function ApplicationsTable({
                     <span className="truncate block">{application.email}</span>
                   </TableCell>
                   <TableCell className="text-center py-4">
-                    {getStatusBadge(application.status)}
+                    {getStatusBadge(application.status, useApprovalLabels)}
                   </TableCell>
                   <TableCell className="text-sm py-4 text-muted-foreground text-center">
                     {formatDate(application.createdAt)}
@@ -410,7 +563,7 @@ export default function ApplicationsTable({
               선택한 지원자 <strong>{selectedIds.size}명</strong>의 상태를{" "}
               <strong>
                 {
-                  BULK_STATUS_OPTIONS.find((o) => o.value === bulkTargetStatus)
+                  bulkStatusOptions.find((o) => o.value === bulkTargetStatus)
                     ?.label
                 }
               </strong>
@@ -424,6 +577,68 @@ export default function ApplicationsTable({
               disabled={bulkUpdating}
             >
               {bulkUpdating ? "변경 중..." : "변경"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Dialog */}
+      <AlertDialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={setBulkDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>선택한 지원자를 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              선택한 지원자 <strong>{selectedIds.size}명</strong>의 지원서가
+              영구적으로 삭제됩니다. 삭제한 지원서는 복구할 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={(event) => {
+                event.preventDefault();
+                void handleBulkDelete();
+              }}
+              disabled={bulkDeleting}
+            >
+              {bulkDeleting ? "삭제 중..." : "삭제"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={bulkScheduleDialogOpen}
+        onOpenChange={setBulkScheduleDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>관리 시간을 일괄 반영할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              선택한 신청자 <strong>{selectedIds.size}명</strong>의 관리 가능
+              시간을 모집 공고에 연결된 분기 시간표에 반영합니다. 이미 등록된
+              시간은 중복으로 추가되지 않습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkScheduleImporting}>
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void handleBulkScheduleImport();
+              }}
+              disabled={bulkScheduleImporting}
+            >
+              {bulkScheduleImporting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              일괄 반영
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -23,7 +23,7 @@ export async function createActivityType(
   data: ActivityTypeRequest,
 ): Promise<ActivityTypeResponse> {
   const response = await axiosInstance.post<ActivityTypeResponse>(
-    "/ActivityTypes",
+    "/activity-types",
     data,
   );
   return response.data;

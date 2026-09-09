@@ -1,19 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
-import { getMyActivityParticipants } from "@/lib/api/activity-participant";
-import { getAttendanceStatsByParticipantId } from "@/lib/api/attendance";
-import { getActivitySessionsByActivityId } from "@/lib/api/activity-session";
-import { getCurrentQuarter } from "@/lib/api/quarter";
-import { ActivityParticipantResponse } from "@/lib/interfaces/activity-participant";
-import { AttendanceStatsResponseDto } from "@/lib/interfaces/attendance";
-import { QuarterResponse } from "@/lib/interfaces/quarter";
+import { useMyActivities } from "@/lib/hooks/useMyActivities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Activity,
@@ -21,27 +13,27 @@ import {
   TrendingUp,
   Calendar,
   Clock,
+  Users,
+  ArrowRight,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ParticipantStatusBadge } from "@/components/custom/participant/partipant-status-badge";
-
-interface ParticipationWithStats {
-  participant: ActivityParticipantResponse;
-  attendanceStats: AttendanceStatsResponseDto;
-  totalSessions: number;
-  attendanceRate: number;
-}
+import { ActivityStatusBadge } from "@/components/custom/activity/activity-status-badge";
+import { activityDisplayStatus } from "@/lib/utils/activity-recruitment";
+import { STATUS_TONES } from "@/lib/constants/status-badge-tones";
+import { ActivityTypeBadge } from "@/components/custom/activity/activity-type-badge";
+import { formatDate } from "@/lib/utils/date-utils";
+import { useActivityNoticeUnread } from "@/lib/contexts/ActivityNoticeUnreadContext";
+import { ActivityNoticeUnreadBadge } from "@/components/custom/activity/activity-notice-unread-badge";
+import { useMenuNotification } from "@/lib/contexts/MenuNotificationContext";
 
 export default function HomePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [currentQuarter, setCurrentQuarter] = useState<QuarterResponse | null>(
-    null,
-  );
-  const [participations, setParticipations] = useState<
-    ParticipationWithStats[]
-  >([]);
-  const [loading, setLoading] = useState(true);
+  const { loading, currentQuarter, participations, hostedActivities } =
+    useMyActivities();
+  const { byActivity: unreadNoticesByActivity } = useActivityNoticeUnread();
+  const { unreadActivityResultIds } = useMenuNotification();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -49,94 +41,56 @@ export default function HomePage() {
     }
   }, [isAuthenticated, authLoading, router]);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-
-        // Fetch current quarter and participations in parallel
-        const [quarterData, participantData] = await Promise.all([
-          getCurrentQuarter(),
-          getMyActivityParticipants(),
-        ]);
-
-        setCurrentQuarter(quarterData);
-
-        // Fetch stats for each participation
-        const enrichedData = await Promise.all(
-          participantData.map(async (participant) => {
-            try {
-              const [attendanceStats, sessions] = await Promise.all([
-                getAttendanceStatsByParticipantId(participant.id),
-                getActivitySessionsByActivityId(participant.activity.id),
-              ]);
-
-              const totalSessions = sessions.length;
-              const attendedSessions =
-                attendanceStats.presentCount + attendanceStats.excusedCount;
-              const attendanceRate =
-                totalSessions > 0
-                  ? (attendedSessions / totalSessions) * 100
-                  : 0;
-
-              return {
-                participant,
-                attendanceStats,
-                totalSessions,
-                attendanceRate,
-              };
-            } catch (error: any) {
-              console.error(
-                `Failed to fetch stats for participant ${participant.id}:`,
-                error,
-              );
-              return {
-                participant,
-                attendanceStats: {
-                  presentCount: 0,
-                  absentCount: 0,
-                  excusedCount: 0,
-                },
-                totalSessions: 0,
-                attendanceRate: 0,
-              };
-            }
-          }),
-        );
-
-        setParticipations(enrichedData);
-      } catch (error: any) {
-        console.error("Failed to fetch data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [isAuthenticated]);
-
-  // Calculate summary stats
-  const currentQuarterActivities = participations.filter(
-    (p) => p.participant.activity?.quarter?.id === currentQuarter?.id,
+  // 통계는 원본 participations 기준. "내가 신청·참여한 활동" 목록에서만 개설 활동과
+  // 겹치는 participant를 숨겨 중복 표시를 막는다.
+  const hostedActivityIds = new Set(
+    hostedActivities.map(({ activity }) => activity.id),
   );
 
-  const currentQuarterCompleted = currentQuarterActivities.filter(
+  const currentQuarterParticipations = participations.filter(
+    (p) =>
+      p.participant.activity?.quarter?.id === currentQuarter?.id,
+  );
+  const visibleCurrentQuarterParticipations =
+    currentQuarterParticipations.filter(
+      (p) => !hostedActivityIds.has(p.participant.activity.id),
+    );
+  const currentQuarterActivities = currentQuarterParticipations.filter(
+    (p) => p.participant.status !== "REJECTED",
+  );
+  const currentQuarterHostedActivities = hostedActivities.filter(
+    ({ activity }) => activity.quarter?.id === currentQuarter?.id,
+  );
+
+  // 이번 분기 활동 수: 참여 활동 + 개설 활동을 activity ID로 합쳐 중복 제거.
+  const currentQuarterActivityCount = new Set([
+    ...currentQuarterActivities.map((p) => p.participant.activity.id),
+    ...currentQuarterHostedActivities.map(({ activity }) => activity.id),
+  ]).size;
+
+  const completedCount = participations.filter(
     (p) => p.participant.completed,
   ).length;
 
-  const totalActivities = participations.length;
+  const confirmedActivities = participations.filter(
+    (p) => p.participant.status === "APPROVED",
+  );
+
+  // 전체 참여 활동 수: 참여(APPROVED) + 개설을 activity ID로 합쳐 중복 제거.
+  const totalActivities = new Set([
+    ...confirmedActivities.map((p) => p.participant.activity.id),
+    ...hostedActivities.map(({ activity }) => activity.id),
+  ]).size;
 
   const averageAttendance =
-    participations.length > 0
-      ? participations.reduce((acc, p) => acc + p.attendanceRate, 0) /
-        participations.length
+    confirmedActivities.length > 0
+      ? confirmedActivities.reduce((acc, p) => acc + p.attendanceRate, 0) /
+        confirmedActivities.length
       : 0;
 
   if (authLoading || (loading && isAuthenticated)) {
     return (
-      <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+      <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-8">
         <div className="grid gap-4 md:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i}>
@@ -157,99 +111,118 @@ export default function HomePage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
+    <div className="mx-auto w-full max-w-6xl px-6 py-8 space-y-8">
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">내 활동</h1>
         <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-          활동 참여 현황과 출석 정보를 확인하세요
+          신청·참여 중인 활동과 직접 개설한 활동을 확인하세요
         </p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              이번 분기 활동
-            </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {currentQuarterActivities.length}
+      <div className="space-y-10">
+        <div className="space-y-8">
+          {/* Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card className="gap-0 py-4">
+              <CardHeader className="flex flex-row items-center justify-between px-4">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  이번 분기 활동
+                </CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="px-4">
+                <div className="text-2xl font-bold">
+                  {currentQuarterActivityCount}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {currentQuarter?.name || ""}
+                </p>
+              </CardContent>
+            </Card>
+
+            <button
+              type="button"
+              className="text-left"
+              onClick={() => router.push("/home/completed")}
+            >
+              <Card className="h-full cursor-pointer gap-0 py-4 transition-shadow hover:shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between px-4">
+                  <CardTitle className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+                    수료 활동
+                    <ArrowRight className="h-3 w-3" />
+                  </CardTitle>
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent className="px-4">
+                  <div className="text-2xl font-bold">{completedCount}</div>
+                  <p className="text-xs text-muted-foreground">누적 수료 수</p>
+                </CardContent>
+              </Card>
+            </button>
+
+            <button
+              type="button"
+              className="text-left"
+              onClick={() => router.push("/home/activities")}
+            >
+              <Card className="h-full cursor-pointer gap-0 py-4 transition-shadow hover:shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between px-4">
+                  <CardTitle className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+                    전체 활동
+                    <ArrowRight className="h-3 w-3" />
+                  </CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent className="px-4">
+                  <div className="text-2xl font-bold">{totalActivities}</div>
+                  <p className="text-xs text-muted-foreground">누적 활동 수</p>
+                </CardContent>
+              </Card>
+            </button>
+
+            <Card className="gap-0 py-4">
+              <CardHeader className="flex flex-row items-center justify-between px-4">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  평균 출석률
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="px-4">
+                <div className="text-2xl font-bold">
+                  {averageAttendance.toFixed(0)}%
+                </div>
+                <p className="text-xs text-muted-foreground">전체 평균</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Current Quarter Activities */}
+          <section className="space-y-8">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">이번 분기 활동</h2>
+              <p className="mt-1 text-muted-foreground">
+                {currentQuarter?.name} 활동 현황
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {currentQuarter?.name || ""}
-            </p>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              수료 활동
-            </CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{currentQuarterCompleted}</div>
-            <p className="text-xs text-muted-foreground mt-1">이번 분기 기준</p>
-          </CardContent>
-        </Card>
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold tracking-tight">
+                내가 신청·참여한 활동
+              </h2>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              전체 참여 활동
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalActivities}</div>
-            <p className="text-xs text-muted-foreground mt-1">누적 활동 수</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              평균 출석률
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {averageAttendance.toFixed(0)}%
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">전체 평균</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Separator />
-
-      {/* Current Quarter Activities */}
-      <section className="space-y-6">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight">이번 분기 활동</h2>
-          <p className="text-muted-foreground mt-1">
-            {currentQuarter?.name} 진행 중인 활동
-          </p>
-        </div>
-
-        {currentQuarterActivities.length === 0 ? (
+        {visibleCurrentQuarterParticipations.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Activity className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                이번 분기에 참여한 활동이 없습니다
+                이번 분기에 신청하거나 참여한 활동이 없습니다
               </p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {currentQuarterActivities.map(
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {visibleCurrentQuarterParticipations.map(
               ({
                 participant,
                 attendanceStats,
@@ -258,57 +231,106 @@ export default function HomePage() {
               }) => {
                 const attendedCount =
                   attendanceStats.presentCount + attendanceStats.excusedCount;
+                // 실제 활동 표시 상태(개설 활동 영역과 동일 기준). 수료/미수료 판정도 이 값으로 한다.
+                const displayStatus = activityDisplayStatus(
+                  participant.activity,
+                );
+                const isCompleted = displayStatus === "COMPLETED";
 
                 return (
                   <Card
                     key={participant.id}
-                    className="hover:shadow-md transition-shadow"
+                    role="button"
+                    tabIndex={0}
+                    className="cursor-pointer gap-2 py-4 transition-shadow hover:shadow-md"
                     onClick={() =>
-                      router.push(`/activities/${participant.activity.id}`)
+                      router.push(
+                        `/activities/${participant.activity.id}?from=home`,
+                      )
                     }
-                    onMouseOver={() => (document.body.style.cursor = "pointer")}
-                    onMouseOut={() => (document.body.style.cursor = "default")}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        router.push(
+                          `/activities/${participant.activity.id}?from=home`,
+                        );
+                      }
+                    }}
                   >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg">
-                            {participant.activity?.title || "활동명 없음"}
-                          </CardTitle>
-                          <div className="flex items-center gap-2">
-                            <ParticipantStatusBadge
-                              status={participant.status}
-                            />
-                            {participant.completed ? (
-                              <Badge
-                                variant="outline"
-                                className="bg-green-50 text-green-700 border-green-200"
-                              >
-                                수료
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline">진행 중</Badge>
-                            )}
-                          </div>
-                        </div>
+                    <CardHeader className="px-4">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <CardTitle className="min-w-0 flex-1 truncate text-base leading-snug">
+                          {participant.activity?.title || "활동명 없음"}
+                        </CardTitle>
+                        {unreadActivityResultIds.includes(
+                          participant.activity.id,
+                        ) && (
+                          <Badge className="shrink-0 border-red-200 bg-red-50 text-[10px] font-semibold text-red-600 hover:bg-red-50">
+                            신청 결과
+                          </Badge>
+                        )}
+                        <ActivityNoticeUnreadBadge
+                          count={
+                            unreadNoticesByActivity[participant.activity.id] ?? 0
+                          }
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {/* 내 참여 상태와 실제 활동 상태를 별개로 표시한다. */}
+                        <ParticipantStatusBadge status={participant.status} />
+                        <ActivityStatusBadge status={displayStatus} />
+                        {/* 종료된 활동에서 참여 확정자에게만 개인 결과(수료/미수료) 표시 */}
+                        {isCompleted &&
+                          participant.status === "APPROVED" &&
+                          (participant.completed ? (
+                            <Badge
+                              variant="outline"
+                              className={STATUS_TONES.positive}
+                            >
+                              수료
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className={STATUS_TONES.neutral}
+                            >
+                              미수료
+                            </Badge>
+                          ))}
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            출석
-                          </span>
-                          <span className="font-medium">
-                            {attendedCount} / {totalSessions} 출석
-                          </span>
-                        </div>
-                        <Progress value={attendanceRate} className="h-2" />
-                        <p className="text-xs text-right text-muted-foreground">
-                          {attendanceRate.toFixed(0)}%
-                        </p>
+                    <CardContent className="px-4">
+                      {participant.status === "REJECTED" ? (
+                        <div className="flex items-start gap-2 text-xs leading-relaxed">
+                        <span className="shrink-0 font-medium text-foreground">
+                          개설자 안내
+                        </span>
+                        <span className="min-w-0 text-muted-foreground">
+                          {participant.reviewMessage ||
+                            "신청이 반려되었습니다."}
+                        </span>
                       </div>
+                      ) : participant.status === "APPLIED" ? (
+                        <p className="text-xs text-muted-foreground">
+                          {participant.activity.activityType.code === "PROJECT"
+                            ? "개설자가 신청 내용을 검토하고 있습니다."
+                            : `${formatDate(participant.activity.startDate)}에 참여가 확정됩니다.`}
+                        </p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              출석
+                            </span>
+                            <span className="font-medium">
+                              {attendedCount} / {totalSessions} ·{" "}
+                              {attendanceRate.toFixed(0)}%
+                            </span>
+                          </div>
+                          <Progress value={attendanceRate} className="h-1.5" />
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
@@ -316,91 +338,74 @@ export default function HomePage() {
             )}
           </div>
         )}
-      </section>
+            </div>
 
-      <Separator />
-
-      {/* All Activities History */}
-      <section className="space-y-6">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight">전체 활동</h2>
-          <p className="text-muted-foreground mt-1">모든 활동 참여 이력</p>
-        </div>
-
-        {participations.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                아직 참여한 활동이 없습니다
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="py-0">
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {participations.map(
-                  ({
-                    participant,
-                    attendanceStats,
-                    totalSessions,
-                    attendanceRate,
-                  }) => {
-                    const attendedCount =
-                      attendanceStats.presentCount +
-                      attendanceStats.excusedCount;
-
-                    return (
-                      <div
-                        key={participant.id}
-                        className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold tracking-tight">
+                내가 개설한 활동
+              </h3>
+              {currentQuarterHostedActivities.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                    <Users className="mb-3 h-10 w-10 text-muted-foreground" />
+                    <p className="text-muted-foreground">
+                      이번 분기에 개설한 활동이 없습니다
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {currentQuarterHostedActivities.map(
+                    ({ activity, participantCount }) => (
+                      <button
+                        key={activity.id}
+                        type="button"
+                        className="text-left"
+                        onClick={() =>
+                          router.push(
+                            `/home/activities/${activity.id}/manage?from=home`,
+                          )
+                        }
                       >
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">
-                                {participant.activity?.title || "활동명 없음"}
-                              </p>
-                              {participant.completed && (
-                                <Badge
-                                  variant="outline"
-                                  className="bg-green-50 text-green-700 border-green-200"
-                                >
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  수료
-                                </Badge>
-                              )}
+                        <Card className="h-full gap-2 py-4 transition-shadow hover:shadow-md">
+                          <CardHeader className="px-4">
+                            <CardTitle className="truncate text-base leading-snug">
+                              {activity.title}
+                            </CardTitle>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <ActivityTypeBadge
+                                activityType={activity.activityType}
+                              />
+                              <ActivityStatusBadge status={activityDisplayStatus(activity)} />
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {participant.activity?.quarter?.name ||
-                                "분기 정보 없음"}
+                          </CardHeader>
+                          <CardContent className="px-4">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                참여자{" "}
+                                <strong className="text-foreground">
+                                  {participantCount}명
+                                </strong>
+                              </span>
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {formatDate(activity.startDate)} ~{" "}
+                              {formatDate(activity.endDate)}
                             </p>
-                          </div>
-                        </div>
+                          </CardContent>
+                        </Card>
+                      </button>
+                    ),
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
 
-                        <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <p className="text-sm font-medium">
-                              {attendedCount} / {totalSessions}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              출석률 {attendanceRate.toFixed(0)}%
-                            </p>
-                          </div>
-                          <div className="w-24">
-                            <Progress value={attendanceRate} className="h-2" />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  },
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </section>
+        </div>
+      </div>
     </div>
   );
 }

@@ -30,6 +30,29 @@ import { RecruitmentResponse } from "@/lib/interfaces/recruitment";
 import { ApplicationResponse } from "@/lib/interfaces/application";
 import ApplicationsTable from "@/components/custom/application/application-table";
 import { formatDate, formatDateTime } from "@/lib/utils/date-utils";
+import { parseSchema } from "@/lib/interfaces/form-builder";
+
+const MANAGER_SCHEDULE_QUESTION_TITLES = [
+  "월요일관리가능한시간",
+  "화요일관리가능한시간",
+  "수요일관리가능한시간",
+  "목요일관리가능한시간",
+  "금요일관리가능한시간",
+];
+
+function isLectureRoomManagerRecruitment(
+  recruitment: RecruitmentResponse,
+): boolean {
+  if (recruitment.type !== "INTERNAL_OPERATION") return false;
+  const questionTitles = new Set(
+    parseSchema(recruitment.form.schema).questions.map((question) =>
+      question.title.replace(/\s+/g, ""),
+    ),
+  );
+  return MANAGER_SCHEDULE_QUESTION_TITLES.every((title) =>
+    questionTitles.has(title),
+  );
+}
 
 interface InfoRowProps {
   icon: React.ReactNode;
@@ -152,7 +175,7 @@ export default function RecruitmentDetailPage() {
               {/* Title + Description */}
               <div className="mb-6 space-y-2">
                 <Skeleton className="h-5 w-56" />
-                <Skeleton className="h-4 w-80" />
+                <Skeleton className="h-4 w-full max-w-80" />
               </div>
               <Skeleton className="h-px w-full mb-0" />
               {/* Info Rows */}
@@ -216,6 +239,11 @@ export default function RecruitmentDetailPage() {
         </h1>
         <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
           <Badge variant={getStatusVariant(status)}>{status}</Badge>
+          <Badge variant="outline">
+            {recruitment.type === "INTERNAL_OPERATION"
+              ? "학회 운영 관련 모집"
+              : "신규 학회원 모집"}
+          </Badge>
           <span>·</span>
           <span>{recruitment.quarter.name}</span>
           <span>·</span>
@@ -248,6 +276,15 @@ export default function RecruitmentDetailPage() {
             <div className="divide-y">
               <InfoRow
                 icon={<Info className="h-4 w-4" />}
+                label="모집 유형"
+                value={
+                  recruitment.type === "INTERNAL_OPERATION"
+                    ? "학회 운영 관련 모집"
+                    : "신규 학회원 모집"
+                }
+              />
+              <InfoRow
+                icon={<Info className="h-4 w-4" />}
                 label="상태"
                 value={
                   <div className="flex items-center gap-2">
@@ -271,7 +308,11 @@ export default function RecruitmentDetailPage() {
               />
               <InfoRow
                 icon={<ClipboardList className="h-4 w-4" />}
-                label="지원서 양식"
+                label={
+                  recruitment.type === "INTERNAL_OPERATION"
+                    ? "신청서 양식"
+                    : "지원서 양식"
+                }
                 value={recruitment.form.title}
               />
             </div>
@@ -283,7 +324,9 @@ export default function RecruitmentDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserRound className="h-5 w-5" />
-              지원 현황
+              {recruitment.type === "INTERNAL_OPERATION"
+                ? "신청 현황"
+                : "지원 현황"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -291,7 +334,11 @@ export default function RecruitmentDetailPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <UsersRound className="h-4 w-4" />
-                  <span>총 지원자</span>
+                  <span>
+                    {recruitment.type === "INTERNAL_OPERATION"
+                      ? "총 신청자"
+                      : "총 지원자"}
+                  </span>
                 </div>
                 <p className="text-3xl font-bold">{totalApplicants}</p>
               </div>
@@ -299,7 +346,9 @@ export default function RecruitmentDetailPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CheckCircle className="h-4 w-4" />
-                  <span>합격</span>
+                  <span>
+                    {recruitment.type === "INTERNAL_OPERATION" ? "승인" : "합격"}
+                  </span>
                 </div>
                 <p className="text-3xl font-bold text-green-600">
                   {acceptedCount}
@@ -309,7 +358,11 @@ export default function RecruitmentDetailPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <XCircle className="h-4 w-4" />
-                  <span>불합격</span>
+                  <span>
+                    {recruitment.type === "INTERNAL_OPERATION"
+                      ? "미승인"
+                      : "불합격"}
+                  </span>
                 </div>
                 <p className="text-3xl font-bold text-red-600">
                   {rejectedCount}
@@ -333,14 +386,30 @@ export default function RecruitmentDetailPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>지원자 목록</CardTitle>
+              <CardTitle>
+                {recruitment.type === "INTERNAL_OPERATION"
+                  ? "신청자 목록"
+                  : "지원자 목록"}
+              </CardTitle>
               <span className="text-sm text-muted-foreground">
                 총 {applications.length}건
               </span>
             </div>
           </CardHeader>
           <CardContent>
-            <ApplicationsTable applications={applications} />
+            <ApplicationsTable
+              applications={applications}
+              enableBulkScheduleImport={isLectureRoomManagerRecruitment(
+                recruitment,
+              )}
+              useApprovalLabels={recruitment.type === "INTERNAL_OPERATION"}
+              onApplicationsDeleted={(deletedIds) => {
+                const deletedSet = new Set(deletedIds);
+                setApplications((prev) =>
+                  prev.filter((application) => !deletedSet.has(application.id)),
+                );
+              }}
+            />
           </CardContent>
         </Card>
 

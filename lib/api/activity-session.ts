@@ -1,5 +1,6 @@
 import axiosInstance from "./axiosInstance";
 import {
+  ActivitySessionBulkRequestDto,
   ActivitySessionRequestDto,
   ActivitySessionResponseDto,
 } from "../interfaces/activity-session";
@@ -12,6 +13,16 @@ export const getAllActivitySessions = async (): Promise<
 > => {
   const response =
     await axiosInstance.get<ActivitySessionResponseDto[]>("/activity-sessions");
+  return response.data;
+};
+
+export const createActivitySessionsBulk = async (
+  data: ActivitySessionBulkRequestDto,
+): Promise<ActivitySessionResponseDto[]> => {
+  const response = await axiosInstance.post<ActivitySessionResponseDto[]>(
+    "/activity-sessions/bulk",
+    data,
+  );
   return response.data;
 };
 

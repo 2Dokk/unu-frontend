@@ -159,7 +159,11 @@ export function ActivityTable({
         disabled={isCanceling}
         size="sm"
       >
-        {isCanceling ? "취소 중..." : "신청 취소"}
+      {isCanceling
+        ? "취소 중..."
+        : participant.status === "APPLIED"
+          ? "신청 취소"
+          : "참여 취소"}
       </Button>
     );
   };

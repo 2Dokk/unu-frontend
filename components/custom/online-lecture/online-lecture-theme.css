@@ -1,0 +1,39 @@
+@theme {
+  /* 브랜드 — 딥그린 */
+  --color-brand: #2f9e63;
+  --color-brand-dark: #436E57;
+  --color-brand-deep: #15803d;
+  --color-brand-soft: #e6f6ea;
+  --color-brand-line: #b6e3c1;
+
+  /* 표면 */
+  --color-canvas: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f7f8fa;
+  --color-surface-input: #fbfbfd;
+  --color-surface-locked: #fbfbfc;
+
+  /* 선 */
+  --color-line: #e8eaef;
+  --color-line-soft: #eef0f4;
+  --color-line-divider: #f0f1f5;
+  --color-line-input: #d9dce4;
+
+  /* 글자 — 원본보다 한 단계씩 어둡게. 옅은 회색이 실제로는 잘 안 보여서 대비를 올렸다. */
+  --color-ink: #1a1d24;
+  --color-ink-2: #3a4050;
+  --color-ink-3: #5a6172;
+  --color-hint: #5b6274;
+  --color-faint: #767d8c;
+  --color-disabled: #8b93a3;
+  --color-disabled-2: #9aa1af;
+
+  /* 상태 */
+  --color-warn: #b45309;
+  --color-warn-soft: #fdf1e3;
+  --color-warn-dot: #e08a1e;
+  --color-danger: #c0392b;
+  --color-danger-soft: #fdf3f3;
+  --color-danger-line: #f0d4d4;
+  --color-sun: #c96b6b;
+}

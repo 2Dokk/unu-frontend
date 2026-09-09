@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { lookupApplication, verifyApplication } from "@/lib/api/application";
-import { ApplicationResponse } from "@/lib/interfaces/application";
+import { ApiError } from "@/lib/api/publicClient";
+import { ApplicationLookupResponse } from "@/lib/interfaces/application";
 
 export default function ApplicationLookupPage() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function ApplicationLookupPage() {
   const [password, setPassword] = useState("");
 
   const [foundApplication, setFoundApplication] =
-    useState<ApplicationResponse | null>(null);
+    useState<ApplicationLookupResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,9 +52,13 @@ export default function ApplicationLookupPage() {
 
       setFoundApplication(application);
       setError(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to search application:", error);
-      setError("입력하신 정보와 일치하는 지원서를 찾을 수 없습니다");
+      setError(
+        error instanceof ApiError && error.status === 429
+          ? "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."
+          : "입력하신 정보와 일치하는 지원서를 찾을 수 없습니다",
+      );
       setFoundApplication(null);
     } finally {
       setIsLoading(false);
@@ -78,23 +83,31 @@ export default function ApplicationLookupPage() {
       setIsLoading(true);
 
       // Step 2: Verify password
-      const verifiedApp = await verifyApplication(
+      const verification = await verifyApplication(
         foundApplication.id,
         password,
       );
 
-      // Store application data and password in sessionStorage for the detail page
+      // The short-lived token limits the impact of browser storage exposure.
       sessionStorage.setItem(
         "current_application",
-        JSON.stringify(verifiedApp),
+        JSON.stringify(verification.application),
       );
-      sessionStorage.setItem("current_application_pwd", password);
+      sessionStorage.setItem(
+        "current_application_token",
+        verification.accessToken,
+      );
+      sessionStorage.removeItem("current_application_pwd");
 
       // Navigate to detail page (no ID in URL)
       router.push("/apply/my/application");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to verify application:", error);
-      setError("비밀번호가 올바르지 않습니다.");
+      setError(
+        error instanceof ApiError && error.status === 429
+          ? "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."
+          : "비밀번호가 올바르지 않습니다.",
+      );
       setIsLoading(false);
     }
   };
@@ -191,12 +204,12 @@ export default function ApplicationLookupPage() {
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
+              <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                <div className="min-w-0">
                   <span className="text-muted-foreground">이름:</span>{" "}
                   <span className="font-medium">{foundApplication.name}</span>
                 </div>
-                <div>
+                <div className="min-w-0 break-words">
                   <span className="text-muted-foreground">이메일:</span>{" "}
                   <span className="font-medium">{foundApplication.email}</span>
                 </div>
@@ -233,12 +246,12 @@ export default function ApplicationLookupPage() {
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
+              <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+                <div className="min-w-0">
                   <span className="text-muted-foreground">이름:</span>{" "}
                   <span className="font-medium">{foundApplication.name}</span>
                 </div>
-                <div>
+                <div className="min-w-0 break-words">
                   <span className="text-muted-foreground">이메일:</span>{" "}
                   <span className="font-medium">{foundApplication.email}</span>
                 </div>

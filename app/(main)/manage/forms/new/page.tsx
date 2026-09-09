@@ -24,7 +24,6 @@ import { FormTemplateResponse } from "@/lib/interfaces/form";
 import { parseSchema, serializeSchema } from "@/lib/interfaces/form-builder";
 
 import { Suspense } from "react";
-import { X } from "lucide-react";
 
 function NewFormPageInner() {
   const router = useRouter();
@@ -212,51 +211,21 @@ function NewFormPageInner() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>신청 시작일시</Label>
-                <div className="flex items-center gap-2">
-                  <div className="w-64">
-                    <DateTimePicker
-                      value={startAt}
-                      onChange={setStartAt}
-                      placeholder="시작일시를 선택하세요"
-                    />
-                  </div>
-                  {startAt && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={() => setStartAt("")}
-                      title="시작일시 삭제"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+                <DateTimePicker
+                  value={startAt}
+                  onChange={setStartAt}
+                  placeholder="시작일시를 선택하세요"
+                  clearable
+                />
               </div>
               <div className="space-y-2">
                 <Label>신청 마감일시</Label>
-                <div className="flex items-center gap-2">
-                  <div className="w-64">
-                    <DateTimePicker
-                      value={endAt}
-                      onChange={setEndAt}
-                      placeholder="마감일시를 선택하세요"
-                    />
-                  </div>
-                  {endAt && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={() => setEndAt("")}
-                      title="마감일시 삭제"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+                <DateTimePicker
+                  value={endAt}
+                  onChange={setEndAt}
+                  placeholder="마감일시를 선택하세요"
+                  clearable
+                />
               </div>
             </div>
 

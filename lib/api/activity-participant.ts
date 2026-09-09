@@ -1,6 +1,10 @@
 import {
+  ActivityJoinRequest,
+  ActivityParticipantRefundAccount,
   ActivityParticipantRequest,
   ActivityParticipantResponse,
+  ActivityParticipantSummary,
+  ActivityCapacityResponse,
 } from "../interfaces/activity-participant";
 import axiosInstance from "./axiosInstance";
 
@@ -45,9 +49,11 @@ export async function updateActivityParticipantStatus(
 
 export async function updateActivityParticipantCompleted(
   id: string,
+  completed: boolean,
 ): Promise<ActivityParticipantResponse> {
   const response = await axiosInstance.patch<ActivityParticipantResponse>(
     `/activity-participants/${id}/completed`,
+    { completed },
   );
   return response.data;
 }
@@ -67,6 +73,12 @@ export async function deleteActivityParticipant(id: string): Promise<void> {
   await axiosInstance.delete(`/activity-participants/${id}`);
 }
 
+export async function deleteActivityParticipantByAdmin(
+  id: string,
+): Promise<void> {
+  await axiosInstance.delete(`/activity-participants/${id}/admin`);
+}
+
 export async function getMyParticipantByActivityId(
   activityId: string,
 ): Promise<ActivityParticipantResponse | null> {
@@ -82,9 +94,20 @@ export async function getMyParticipantByActivityId(
 
 export async function createMyParticipantByActivityId(data: {
   activityId: string;
+  application?: ActivityJoinRequest;
 }): Promise<ActivityParticipantResponse> {
   const response = await axiosInstance.post<ActivityParticipantResponse>(
     `/activity-participants/activities/${data.activityId}/me`,
+    data.application ?? {},
+  );
+  return response.data;
+}
+
+export async function getActivityParticipantRefundAccounts(
+  activityId: string,
+): Promise<ActivityParticipantRefundAccount[]> {
+  const response = await axiosInstance.get<ActivityParticipantRefundAccount[]>(
+    `/activity-participants/activities/${activityId}/refund-accounts`,
   );
   return response.data;
 }
@@ -103,6 +126,24 @@ export async function getActivityParticipantsByActivityId(data: {
 }): Promise<ActivityParticipantResponse[]> {
   const response = await axiosInstance.get<ActivityParticipantResponse[]>(
     `/activity-participants/activities/${data.activityId}`,
+  );
+  return response.data;
+}
+
+export async function getActivityMemberSummaries(
+  activityId: string,
+): Promise<ActivityParticipantSummary[]> {
+  const response = await axiosInstance.get<ActivityParticipantSummary[]>(
+    `/activity-participants/activities/${activityId}/members`,
+  );
+  return response.data;
+}
+
+export async function getActivityCapacity(
+  activityId: string,
+): Promise<ActivityCapacityResponse> {
+  const response = await axiosInstance.get<ActivityCapacityResponse>(
+    `/activity-participants/activities/${activityId}/capacity`,
   );
   return response.data;
 }

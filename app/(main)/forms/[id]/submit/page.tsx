@@ -36,7 +36,7 @@ function QuestionField({
     <Card className={error ? "border-destructive" : ""}>
       <CardContent className="space-y-3">
         <div className="flex items-start gap-2">
-          <span className="flex-1 text-sm font-medium whitespace-pre-wrap">
+          <span className="min-w-0 flex-1 wrap-break-word whitespace-pre-wrap text-sm font-medium">
             {index + 1}. {question.title || "(제목 없음)"}
           </span>
           {question.required && (
@@ -215,9 +215,11 @@ export default function FormSubmitPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-8">
       <div className="space-y-1">
-        <h1 className="text-xl font-bold tracking-tight">{form.title}</h1>
+        <h1 className="break-words text-xl font-bold tracking-tight">
+          {form.title}
+        </h1>
         {form.description && (
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+          <p className="break-words whitespace-pre-wrap text-sm text-muted-foreground">
             {form.description.split(/(\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
               const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
               if (match) {

@@ -1,6 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,14 +20,28 @@ import {
 import { Input } from "@/components/ui/input";
 import { login as loginApi } from "@/lib/api/auth";
 import { LoginRequest } from "@/lib/interfaces/auth";
-import { useState } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { consumeSessionExpired } from "@/lib/utils/auth-session";
 
-const LoginPage = () => {
+const LoginForm = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
+  const expiredFromUrl = searchParams.get("reason") === "session-expired";
+  const safeRedirect =
+    redirectTo?.startsWith("/") && !redirectTo.startsWith("//")
+      ? redirectTo
+      : null;
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(expiredFromUrl);
+
+  useEffect(() => {
+    if (expiredFromUrl || consumeSessionExpired()) {
+      setSessionExpired(true);
+    }
+  }, [expiredFromUrl]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -43,13 +59,14 @@ const LoginPage = () => {
       };
       const response = await loginApi(data);
 
-      // AuthContext를 통해 로그인 상태 업데이트
-      login(response.token, response.refreshToken);
+      login(response.token);
 
-      // Redirect to dashboard after successful login
-      router.push("/home");
-    } catch (error: any) {
-      const serverMessage = error?.response?.data;
+      // 로그인이 필요해서 여기로 밀려왔다면 원래 가려던 곳으로, 아니면 홈으로
+      router.push(safeRedirect || "/home");
+    } catch (error: unknown) {
+      const serverMessage = (
+        error as { response?: { data?: string } }
+      )?.response?.data;
       setError(
         serverMessage ??
           (error instanceof Error
@@ -65,12 +82,33 @@ const LoginPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2 text-center">
-          <CardTitle className="text-2xl font-bold">CNU&U</CardTitle>
+          <CardTitle className="flex items-center justify-center gap-2 text-2xl font-bold">
+            <span className="relative size-8 overflow-hidden rounded-lg">
+              <Image
+                src="/cnu-header-logo.png"
+                alt=""
+                fill
+                sizes="32px"
+                className="object-cover"
+                priority
+              />
+            </span>
+            CNU
+          </CardTitle>
           <CardDescription>
             학회 운영 및 활동 관리를 위한 내부 시스템입니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {sessionExpired ? (
+            <div className="mb-4 rounded-md bg-amber-50 p-3 text-center text-sm text-amber-800">
+              세션이 만료되어 로그아웃 되었습니다.
+            </div>
+          ) : safeRedirect ? (
+            <div className="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+              로그인이 필요한 페이지입니다. 로그인 후 이어서 진행해주세요.
+            </div>
+          ) : null}
           <form onSubmit={handleSubmit}>
             <FieldGroup>
               <Field>
@@ -103,7 +141,7 @@ const LoginPage = () => {
               <Field>
                 <Button
                   type="submit"
-                  className="w-full h-11"
+                  className="h-11 w-full bg-[#264638] text-white hover:bg-[#1f382d]"
                   disabled={loading}
                 >
                   {loading ? "로그인 중..." : "로그인"}
@@ -121,5 +159,11 @@ const LoginPage = () => {
     </div>
   );
 };
+
+const LoginPage = () => (
+  <Suspense fallback={null}>
+    <LoginForm />
+  </Suspense>
+);
 
 export default LoginPage;

@@ -37,21 +37,50 @@ export function createEmptyQuestion(): Question {
   };
 }
 
-export function parseSchema(schemaString: string): FormSchema {
+export function parseSchema(schemaValue: unknown): FormSchema {
   try {
-    const parsed = JSON.parse(schemaString);
+    const parsed =
+      typeof schemaValue === "string" ? JSON.parse(schemaValue) : schemaValue;
     // Validate structure
-    if (!parsed.version || !Array.isArray(parsed.questions)) {
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("version" in parsed) ||
+      !("questions" in parsed) ||
+      !Array.isArray(parsed.questions)
+    ) {
       throw new Error("Invalid schema structure");
     }
     return parsed;
-  } catch (error: any) {
+  } catch {
     // Return empty schema if parsing fails
     return {
       version: 1,
       questions: [],
     };
   }
+}
+
+export function validateRequiredAnswers(
+  schema: FormSchema,
+  answers: Record<string, unknown>,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  schema.questions.forEach((question) => {
+    if (!question.required) return;
+    const answer = answers[question.id];
+    if (
+      answer === undefined ||
+      answer === null ||
+      (typeof answer === "string" && answer.trim() === "") ||
+      (Array.isArray(answer) && answer.length === 0)
+    ) {
+      errors[`q_${question.id}`] = "필수 질문입니다.";
+    }
+  });
+
+  return errors;
 }
 
 export function serializeSchema(schema: FormSchema): string {

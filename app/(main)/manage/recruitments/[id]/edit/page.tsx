@@ -46,7 +46,7 @@ export default function EditRecruitmentPage() {
         <div className="space-y-3 border-b pb-6">
           <Skeleton className="h-9 w-24" />
           <Skeleton className="h-7 w-44" />
-          <Skeleton className="h-4 w-72" />
+          <Skeleton className="h-4 w-full max-w-72" />
         </div>
 
         {/* 2-col form grid */}

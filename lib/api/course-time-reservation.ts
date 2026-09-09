@@ -2,6 +2,7 @@ import axiosInstance from "./axiosInstance";
 import {
   CourseTimeReservationRequest,
   CourseTimeReservationResponse,
+  CourseTimeReservationSlotResponse,
 } from "../interfaces/course-time-reservation";
 
 export async function createCourseReservation(
@@ -32,8 +33,8 @@ export async function getMyReservations(params: {
 export async function getActivityReservations(
   activityId: string,
   date?: string,
-): Promise<CourseTimeReservationResponse[]> {
-  const response = await axiosInstance.get<CourseTimeReservationResponse[]>(
+): Promise<CourseTimeReservationSlotResponse[]> {
+  const response = await axiosInstance.get<CourseTimeReservationSlotResponse[]>(
     `/activities/${activityId}/course-reservations`,
     { params: date ? { date } : undefined },
   );

@@ -12,6 +12,8 @@ interface ApplicationStatusDropdownProps {
   currentStatus: string;
   onStatusChange: (applicationId: string, newStatus: string) => void;
   isUpdating: boolean;
+  /** true면 PASSED/REJECTED를 "승인/미승인"으로 표시한다(학회 내부 신청/모집용). */
+  useApprovalLabels?: boolean;
 }
 
 const ApplicationStatusDropdown = ({
@@ -19,6 +21,7 @@ const ApplicationStatusDropdown = ({
   currentStatus,
   onStatusChange,
   isUpdating,
+  useApprovalLabels = false,
 }: ApplicationStatusDropdownProps) => {
   return (
     <DropdownMenu>
@@ -63,13 +66,13 @@ const ApplicationStatusDropdown = ({
           onClick={() => onStatusChange(applicationId, "PASSED")}
           disabled={currentStatus === "PASSED"}
         >
-          합격
+          {useApprovalLabels ? "승인" : "합격"}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onStatusChange(applicationId, "REJECTED")}
           disabled={currentStatus === "REJECTED"}
         >
-          불합격
+          {useApprovalLabels ? "미승인" : "불합격"}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onStatusChange(applicationId, "CANCELED")}

@@ -24,6 +24,7 @@ import {
   Github,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 // Validation schemas
 const profileSchema = z.object({
@@ -37,7 +38,10 @@ const profileSchema = z.object({
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "현재 비밀번호를 입력해주세요"),
-  newPassword: z.string().min(8, "새 비밀번호는 최소 8자 이상이어야 합니다"),
+  newPassword: z
+    .string()
+    .min(8, "새 비밀번호는 최소 8자 이상이어야 합니다")
+    .max(100, "새 비밀번호는 100자 이하로 입력해주세요"),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -63,6 +67,8 @@ function InfoRow({ icon, label, value }: InfoRowProps) {
 }
 
 export default function ProfilePage() {
+  const { hasRole } = useAuth();
+  const canEditIdentity = hasRole("ADMIN");
   const [mode, setMode] = useState<Mode>("view");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -295,7 +301,9 @@ export default function ProfilePage() {
                     id="name"
                     {...registerProfile("name")}
                     disabled={isSaving}
+                    readOnly={!canEditIdentity}
                     placeholder="이름을 입력하세요"
+                    className={!canEditIdentity ? "bg-muted" : undefined}
                   />
                   {profileErrors.name && (
                     <p className="text-xs text-destructive">
@@ -325,11 +333,18 @@ export default function ProfilePage() {
                     id="studentId"
                     {...registerProfile("studentId")}
                     disabled={isSaving}
+                    readOnly={!canEditIdentity}
                     placeholder="학번을 입력하세요"
+                    className={!canEditIdentity ? "bg-muted" : undefined}
                   />
                   {profileErrors.studentId && (
                     <p className="text-xs text-destructive">
                       {profileErrors.studentId.message}
+                    </p>
+                  )}
+                  {!canEditIdentity && (
+                    <p className="text-xs text-muted-foreground">
+                      이름과 학번 변경은 관리자에게 요청해주세요.
                     </p>
                   )}
                 </div>

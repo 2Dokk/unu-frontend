@@ -19,22 +19,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Loader2, X, Check } from "lucide-react";
+import { Search, Loader2, X, Check, ClipboardPaste } from "lucide-react";
+import axios from "axios";
+import { toast } from "sonner";
 import { getAllQuarters, getCurrentQuarter } from "@/lib/api/quarter";
-import { searchUsers } from "@/lib/api/user";
+import { searchUserSummaries } from "@/lib/api/user";
 import {
   getLectureRoomSchedulesByQuarter,
   createLectureRoomSchedule,
   createLectureRoomScheduleForMe,
   deleteLectureRoomSchedule,
+  importLectureRoomSchedulesFromGoogleForm,
 } from "@/lib/api/lecture-room-schedule";
 import { QuarterResponse } from "@/lib/interfaces/quarter";
-import { UserResponseDto } from "@/lib/interfaces/auth";
-import { LectureRoomScheduleResponseDto } from "@/lib/interfaces/lecture-room-schedule";
+import { UserSummaryDto } from "@/lib/interfaces/auth";
+import {
+  LectureRoomScheduleImportUser,
+  LectureRoomScheduleResponseDto,
+} from "@/lib/interfaces/lecture-room-schedule";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -46,16 +53,26 @@ const DAYS = [
   { key: "FRIDAY", label: "금요일", short: "금" },
 ];
 
-// 90-minute school class periods: 09:00, 10:30, 12:00, 13:30, 15:00, 16:30, 18:00
 const TIME_SLOTS: string[] = [
   "09:00:00",
-  "10:30:00",
-  "12:00:00",
-  "13:30:00",
-  "15:00:00",
-  "16:30:00",
-  "18:00:00",
-  "19:30:00",
+  "10:15:00",
+  "11:45:00",
+  "13:15:00",
+  "14:45:00",
+  "16:15:00",
+  "17:45:00",
+  "19:15:00",
+];
+
+const TIME_SLOT_ENDS = [
+  "10:15",
+  "11:45",
+  "13:15",
+  "14:45",
+  "16:15",
+  "17:45",
+  "19:15",
+  "20:45",
 ];
 
 const USER_COLORS = [
@@ -71,17 +88,141 @@ const USER_COLORS = [
   { bg: "#FDF4FF", border: "#E879F9", text: "#86198F" },
 ];
 
+const IMPORT_DAY_COLUMNS = [
+  { header: "월요일관리가능한시간", dayOfWeek: "MONDAY" },
+  { header: "화요일관리가능한시간", dayOfWeek: "TUESDAY" },
+  { header: "수요일관리가능한시간", dayOfWeek: "WEDNESDAY" },
+  { header: "목요일관리가능한시간", dayOfWeek: "THURSDAY" },
+  { header: "금요일관리가능한시간", dayOfWeek: "FRIDAY" },
+] as const;
+
+interface ImportPreviewRow extends LectureRoomScheduleImportUser {
+  lineNumber: number;
+  name: string;
+}
+
+interface ImportPreview {
+  rows: ImportPreviewRow[];
+  errors: string[];
+}
+
+function normalizeHeader(value: string) {
+  return value.replace(/^\uFEFF/, "").replace(/\s+/g, "").toLowerCase();
+}
+
+function cleanCell(value: string | undefined) {
+  const trimmed = (value ?? "").trim();
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed.slice(1, -1).replace(/""/g, '"').trim();
+  }
+  return trimmed;
+}
+
+function parseGoogleFormResponses(value: string): ImportPreview {
+  const lines = value
+    .replace(/\r/g, "")
+    .split("\n")
+    .filter((line) => line.trim().length > 0);
+  if (lines.length === 0) {
+    return { rows: [], errors: ["구글 시트에서 제목 행과 응답 행을 함께 붙여넣어 주세요."] };
+  }
+
+  const headers = lines[0].split("\t").map(normalizeHeader);
+  const studentIdIndex = headers.findIndex((header) =>
+    header.startsWith("학번"),
+  );
+  const nameIndex = headers.findIndex((header) => header.startsWith("이름"));
+  const dayIndexes = IMPORT_DAY_COLUMNS.map((column) => ({
+    ...column,
+    index: headers.findIndex((header) => header === column.header),
+  }));
+  const errors: string[] = [];
+
+  if (studentIdIndex < 0) errors.push("'학번' 열을 찾을 수 없습니다.");
+  if (nameIndex < 0) errors.push("'이름' 열을 찾을 수 없습니다.");
+  dayIndexes.forEach((column) => {
+    if (column.index < 0) errors.push(`'${column.header.slice(0, 3)} 관리 가능한 시간' 열을 찾을 수 없습니다.`);
+  });
+  if (errors.length > 0) return { rows: [], errors };
+  if (lines.length === 1) {
+    return { rows: [], errors: ["붙여넣은 표에 응답 행이 없습니다."] };
+  }
+
+  const rows: ImportPreviewRow[] = [];
+  const seenStudentIds = new Set<string>();
+
+  lines.slice(1).forEach((line, rowIndex) => {
+    const lineNumber = rowIndex + 2;
+    const cells = line.split("\t");
+    const studentId = cleanCell(cells[studentIdIndex]);
+    const name = cleanCell(cells[nameIndex]);
+    const rowErrors: string[] = [];
+    const slots: LectureRoomScheduleImportUser["slots"] = [];
+
+    if (!/^\d{8}$/.test(studentId)) {
+      rowErrors.push("학번이 8자리 숫자가 아닙니다");
+    } else if (seenStudentIds.has(studentId)) {
+      rowErrors.push(`학번 ${studentId}이 중복되었습니다`);
+    } else {
+      seenStudentIds.add(studentId);
+    }
+    if (!name) rowErrors.push("이름이 비어 있습니다");
+
+    dayIndexes.forEach((column) => {
+      const answer = cleanCell(cells[column.index]);
+      if (!answer) {
+        rowErrors.push(`${column.header.slice(0, 3)} 응답이 비어 있습니다`);
+        return;
+      }
+      if (answer === "없음") return;
+
+      const options = answer.split(",").map((option) => option.trim());
+      if (options.some((option) => option === "없음")) {
+        rowErrors.push(`${column.header.slice(0, 3)}의 '없음'은 다른 시간과 함께 선택할 수 없습니다`);
+        return;
+      }
+      options.forEach((option) => {
+        const match = option.match(/^([1-8])\s*교시(?:\s*\([^)]*\))?$/);
+        if (!match) {
+          rowErrors.push(`${column.header.slice(0, 3)}의 '${option}'을 교시로 해석할 수 없습니다`);
+          return;
+        }
+        const period = Number(match[1]);
+        if (
+          !slots.some(
+            (slot) =>
+              slot.dayOfWeek === column.dayOfWeek && slot.period === period,
+          )
+        ) {
+          slots.push({ dayOfWeek: column.dayOfWeek, period });
+        }
+      });
+    });
+
+    if (rowErrors.length > 0) {
+      errors.push(`${lineNumber}행: ${rowErrors.join(", ")}`);
+      return;
+    }
+    rows.push({ lineNumber, studentId, name, slots });
+  });
+
+  return { rows, errors };
+}
+
+function importErrorMessage(error: unknown) {
+  if (axios.isAxiosError(error) && typeof error.response?.data === "string") {
+    return error.response.data;
+  }
+  return "시간표 응답을 반영하지 못했습니다.";
+}
+
 function formatSlotTime(slot: string) {
   return slot.slice(0, 5);
 }
 
-// Returns class end time (slot start + 75 min, excludes 15-min break)
 function getClassEndTime(slot: string): string {
-  const [h, m] = slot.split(":").map(Number);
-  const total = h * 60 + m + 75;
-  return `${Math.floor(total / 60)
-    .toString()
-    .padStart(2, "0")}:${(total % 60).toString().padStart(2, "0")}`;
+  const index = TIME_SLOTS.indexOf(slot);
+  return TIME_SLOT_ENDS[index] ?? formatSlotTime(slot);
 }
 
 function getEndTime(toIdx: number): string {
@@ -92,13 +233,14 @@ function getEndTime(toIdx: number): string {
 
 export default function LectureRoomSchedulePage() {
   const { userRole, userId } = useAuth();
-  const canAssign =
-    userRole === "ADMIN" ||
-    userRole === "MANAGER" ||
-    userRole === "LECTURE_ROOM_MANAGER";
+  const canManageAll = userRole === "ADMIN" || userRole === "MANAGER";
+  const isAdmin = userRole === "ADMIN";
 
   // Data
   const [quarters, setQuarters] = useState<QuarterResponse[]>([]);
+  const [currentQuarter, setCurrentQuarter] = useState<QuarterResponse | null>(
+    null,
+  );
   const [selectedQuarterId, setSelectedQuarterId] = useState<string>("");
   const [schedules, setSchedules] = useState<LectureRoomScheduleResponseDto[]>(
     [],
@@ -112,21 +254,28 @@ export default function LectureRoomSchedulePage() {
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // User search (canAssign only)
+  // User search (admin/manager only)
   const [userSearchQuery, setUserSearchQuery] = useState("");
-  const [userSearchResults, setUserSearchResults] = useState<UserResponseDto[]>(
+  const [userSearchResults, setUserSearchResults] = useState<UserSummaryDto[]>(
     [],
   );
-  const [selectedUsers, setSelectedUsers] = useState<UserResponseDto[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<UserSummaryDto[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
 
   // Filter
   const [hiddenUserIds, setHiddenUserIds] = useState<Set<string>>(new Set());
 
+  // Google Form import (admin only)
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [importing, setImporting] = useState(false);
+
   const toggleUserVisibility = (uid: string) => {
     setHiddenUserIds((prev) => {
       const next = new Set(prev);
-      next.has(uid) ? next.delete(uid) : next.add(uid);
+      if (next.has(uid)) next.delete(uid);
+      else next.add(uid);
       return next;
     });
   };
@@ -162,14 +311,31 @@ export default function LectureRoomSchedulePage() {
   // ─── Load quarters ──────────────────────────────────────────────────────────
 
   useEffect(() => {
-    Promise.all([getAllQuarters(), getCurrentQuarter().catch(() => null)]).then(
-      ([data, current]) => {
+    if (canManageAll) {
+      // ADMIN/MANAGER: 기존과 동일하게 전체 분기 로드 + 현재 분기를 기본 선택.
+      Promise.all([
+        getAllQuarters(),
+        getCurrentQuarter().catch(() => null),
+      ]).then(([data, current]) => {
         setQuarters(data);
+        setCurrentQuarter(current);
         const defaultId = current?.id ?? data[0]?.id;
         if (defaultId) setSelectedQuarterId(defaultId);
-      },
-    );
-  }, []);
+      });
+    } else {
+      // LECTURE_ROOM_MANAGER: 전체 분기 목록을 로드하지 않고 현재 분기만 조회·고정한다.
+      // 현재 분기를 확인할 수 없으면 다른 분기로 fallback하지 않고 비운다(시간표도 로드되지 않음).
+      getCurrentQuarter()
+        .then((current) => {
+          setCurrentQuarter(current);
+          setSelectedQuarterId(current.id);
+        })
+        .catch(() => {
+          setCurrentQuarter(null);
+          setSelectedQuarterId("");
+        });
+    }
+  }, [canManageAll]);
 
   // ─── Load schedules ─────────────────────────────────────────────────────────
 
@@ -216,7 +382,7 @@ export default function LectureRoomSchedulePage() {
     setCreating(true);
     const slot = TIME_SLOTS[selectedSlotIdx];
 
-    if (canAssign && selectedUsers.length > 0) {
+    if (canManageAll && selectedUsers.length > 0) {
       await Promise.all(
         selectedUsers.map((u) =>
           createLectureRoomSchedule({
@@ -230,7 +396,7 @@ export default function LectureRoomSchedulePage() {
       setSelectedUsers([]);
       setUserSearchResults([]);
       setUserSearchQuery("");
-    } else if (!canAssign) {
+    } else if (!canManageAll) {
       await createLectureRoomScheduleForMe({
         quarterId: selectedQuarterId,
         dayOfWeek: selectedDay,
@@ -240,7 +406,7 @@ export default function LectureRoomSchedulePage() {
 
     await loadSchedules();
     setCreating(false);
-    if (!canAssign) closeSlotDialog();
+    if (!canManageAll) closeSlotDialog();
   };
 
   // ─── Delete ─────────────────────────────────────────────────────────────────
@@ -252,7 +418,7 @@ export default function LectureRoomSchedulePage() {
       await loadSchedules();
     } finally {
       setDeletingId(null);
-      if (!canAssign) closeSlotDialog();
+      if (!canManageAll) closeSlotDialog();
     }
   };
 
@@ -271,14 +437,16 @@ export default function LectureRoomSchedulePage() {
     if (!userSearchQuery.trim()) return;
     setSearchingUsers(true);
     try {
-      const results = await searchUsers({ name: userSearchQuery.trim() });
+      const results = await searchUserSummaries({
+        name: userSearchQuery.trim(),
+      });
       setUserSearchResults(results);
     } finally {
       setSearchingUsers(false);
     }
   };
 
-  const toggleUser = (u: UserResponseDto) => {
+  const toggleUser = (u: UserSummaryDto) => {
     setSelectedUsers((prev) =>
       prev.some((p) => p.id === u.id)
         ? prev.filter((p) => p.id !== u.id)
@@ -291,28 +459,84 @@ export default function LectureRoomSchedulePage() {
       ? `${DAYS.find((d) => d.key === selectedDay)?.label} ${formatSlotTime(TIME_SLOTS[selectedSlotIdx])} ~ ${getEndTime(selectedSlotIdx)}`
       : "";
 
+  const closeImportDialog = () => {
+    setImportDialogOpen(false);
+    setImportText("");
+    setImportPreview(null);
+  };
+
+  const handleAnalyzeImport = () => {
+    setImportPreview(parseGoogleFormResponses(importText));
+  };
+
+  const handleImportSchedules = async () => {
+    if (!isAdmin || !selectedQuarterId || !importPreview) return;
+    if (importPreview.errors.length > 0 || importPreview.rows.length === 0) return;
+
+    setImporting(true);
+    try {
+      const result = await importLectureRoomSchedulesFromGoogleForm({
+        quarterId: selectedQuarterId,
+        users: importPreview.rows.map(({ studentId, slots }) => ({
+          studentId,
+          slots,
+        })),
+      });
+      toast.success(
+        `${result.userCount}명의 시간표를 반영했습니다. (${result.createdCount}개 시간 등록)`,
+      );
+      closeImportDialog();
+      await loadSchedules();
+    } catch (error) {
+      toast.error(importErrorMessage(error));
+    } finally {
+      setImporting(false);
+    }
+  };
+
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-8 space-y-6">
       {/* Header */}
-      <div className="flex justify-between">
+      <div className="flex flex-wrap justify-between gap-3">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight">관리자 시간표</h1>
           <p className="text-sm text-muted-foreground">관리자용 시간표입니다</p>
         </div>
-        <Select value={selectedQuarterId} onValueChange={setSelectedQuarterId}>
-          <SelectTrigger className="w-auto h-7 border-0 shadow-none bg-transparent px-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-md gap-1 [&>svg]:opacity-50">
-            <SelectValue placeholder="분기 선택" />
-          </SelectTrigger>
-          <SelectContent>
-            {quarters.map((quarter) => (
-              <SelectItem key={quarter.id} value={quarter.id}>
-                {quarter.year} {quarter.season}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setImportDialogOpen(true)}
+              disabled={!selectedQuarterId}
+            >
+              <ClipboardPaste className="mr-1.5 h-4 w-4" />
+              응답 가져오기
+            </Button>
+          )}
+          {canManageAll ? (
+            <Select value={selectedQuarterId} onValueChange={setSelectedQuarterId}>
+              <SelectTrigger className="w-auto h-7 border-0 shadow-none bg-transparent px-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground rounded-md gap-1 [&>svg]:opacity-50">
+                <SelectValue placeholder="분기 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                {quarters.map((quarter) => (
+                  <SelectItem key={quarter.id} value={quarter.id}>
+                    {quarter.year} {quarter.season}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+          // LECTURE_ROOM_MANAGER: 현재 분기를 dropdown이 아닌 단순 텍스트로만 표시.
+            <span className="flex h-7 items-center px-2 text-sm font-medium text-muted-foreground">
+              {currentQuarter ? `${currentQuarter.year} ${currentQuarter.season}` : ""}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Filter chips */}
@@ -427,7 +651,7 @@ export default function LectureRoomSchedulePage() {
                           return (
                             <td
                               key={day.key}
-                              className="border cursor-pointer"
+                              className="border cursor-pointer overflow-hidden"
                               style={{
                                 height: "56px",
                                 padding: 0,
@@ -445,6 +669,9 @@ export default function LectureRoomSchedulePage() {
                                     display: "flex",
                                     height: "100%",
                                     width: "100%",
+                                    maxWidth: "100%",
+                                    minWidth: 0,
+                                    overflow: "hidden",
                                   }}
                                 >
                                   {slotSchedules.map((s) => {
@@ -455,11 +682,37 @@ export default function LectureRoomSchedulePage() {
                                         key={s.id}
                                         title={`${s.userName} (${formatSlotTime(slot)})`}
                                         style={{
-                                          flex: 1,
+                                          flex: "1 1 0",
+                                          width: 0,
+                                          minWidth: 0,
+                                          height: "100%",
+                                          position: "relative",
+                                          overflow: "hidden",
                                           backgroundColor: c.bg,
                                           borderRight: `1px solid ${c.border}`,
                                         }}
-                                      />
+                                      >
+                                        <span
+                                          style={{
+                                            position: "absolute",
+                                            top: "4px",
+                                            left: "4px",
+                                            maxWidth: "calc(100% - 8px)",
+                                            padding: "1px 4px",
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                            backgroundColor: "rgba(255, 255, 255, 0.72)",
+                                            borderRadius: "10px",
+                                            color: c.text,
+                                            fontSize: "9px",
+                                            fontWeight: 600,
+                                            lineHeight: "14px",
+                                          }}
+                                        >
+                                          {s.userName}
+                                        </span>
+                                      </div>
                                     );
                                   })}
                                 </div>
@@ -477,6 +730,116 @@ export default function LectureRoomSchedulePage() {
         </CardContent>
       </Card>
 
+      {isAdmin && (
+        <Dialog
+          open={importDialogOpen}
+          onOpenChange={(open) => !open && closeImportDialog()}
+        >
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>구글폼 응답 가져오기</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="schedule-import-text">응답 표</Label>
+                <Textarea
+                  id="schedule-import-text"
+                  value={importText}
+                  onChange={(event) => {
+                    setImportText(event.target.value);
+                    setImportPreview(null);
+                  }}
+                  rows={9}
+                  className="resize-y font-mono text-xs"
+                  placeholder="구글 시트에서 제목 행과 응답 행을 함께 복사해 붙여넣어 주세요."
+                />
+                <p className="text-xs text-muted-foreground">
+                  학번으로 학회원 계정을 찾습니다. 반영하면 표에 포함된 학회원의 선택 분기 시간표가 교체됩니다.
+                </p>
+              </div>
+
+              {importPreview && (
+                <div className="space-y-3 rounded-md border p-3">
+                  {importPreview.errors.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-medium text-destructive">
+                        확인이 필요한 항목이 있습니다
+                      </p>
+                      <div className="max-h-36 space-y-1 overflow-y-auto text-xs text-destructive">
+                        {importPreview.errors.map((error, index) => (
+                          <p key={`${error}-${index}`}>{error}</p>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span className="font-medium">
+                          {importPreview.rows.length}명 · 총 {importPreview.rows.reduce((sum, row) => sum + row.slots.length, 0)}개 시간
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          선택 분기 전체 교체
+                        </span>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto rounded border">
+                        <table className="w-full text-xs">
+                          <thead className="sticky top-0 bg-muted/90">
+                            <tr>
+                              <th className="px-3 py-2 text-left font-medium">행</th>
+                              <th className="px-3 py-2 text-left font-medium">학번</th>
+                              <th className="px-3 py-2 text-left font-medium">이름</th>
+                              <th className="px-3 py-2 text-right font-medium">시간</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {importPreview.rows.map((row) => (
+                              <tr key={row.studentId}>
+                                <td className="px-3 py-2 text-muted-foreground">{row.lineNumber}</td>
+                                <td className="px-3 py-2">{row.studentId}</td>
+                                <td className="px-3 py-2">{row.name}</td>
+                                <td className="px-3 py-2 text-right">{row.slots.length}개</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeImportDialog}>
+                취소
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleAnalyzeImport}
+                disabled={!importText.trim() || importing}
+              >
+                응답 분석
+              </Button>
+              <Button
+                type="button"
+                onClick={handleImportSchedules}
+                disabled={
+                  importing ||
+                  !importPreview ||
+                  importPreview.errors.length > 0 ||
+                  importPreview.rows.length === 0
+                }
+              >
+                {importing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                시간표 반영
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* ── Slot Dialog ────────────────────────────────────────────────────────── */}
       <Dialog
         open={slotDialogOpen}
@@ -487,7 +850,7 @@ export default function LectureRoomSchedulePage() {
             <DialogTitle>{selectedTimeLabel}</DialogTitle>
           </DialogHeader>
 
-          {canAssign ? (
+          {canManageAll ? (
             /* ── Manager view: see all + add/delete ── */
             <div className="space-y-4">
               {/* Current users */}
