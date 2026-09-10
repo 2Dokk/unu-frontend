@@ -20,6 +20,7 @@ import { useSidebar } from "@/lib/contexts/SidebarContext";
 import { useSidebarBadges } from "@/lib/hooks/useSidebarBadges";
 import { PublicNavLinks } from "@/components/custom/public-nav-links";
 import { TimedAnchorLink } from "@/components/custom/timed-anchor-link";
+import { ApplicantNotificationBell } from "@/components/custom/applicant-notification-bell";
 import { menuConfig } from "@/lib/constants/menu-config";
 
 const INTERNAL_ROUTE_PREFIXES = Array.from(
@@ -70,6 +71,7 @@ export function NavigationBar() {
            {currentQuarter.year} {currentQuarter.season.toUpperCase()}
           </span>
         )} 없어도 될듯 해서 뺍니다 */}
+        <ApplicantNotificationBell />
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
           <Button
