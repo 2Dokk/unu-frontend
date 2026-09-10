@@ -10,6 +10,7 @@ import { ThemeProvider } from "next-themes";
 import { ActivityNoticeUnreadProvider } from "@/lib/contexts/ActivityNoticeUnreadContext";
 import { MenuNotificationProvider } from "@/lib/contexts/MenuNotificationContext";
 import { NoticeUnreadProvider } from "@/lib/contexts/NoticeUnreadContext";
+import { ApplicantNotificationProvider } from "@/lib/contexts/ApplicantNotificationContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,14 +55,16 @@ export default function RootLayout({
             <NoticeUnreadProvider>
               <ActivityNoticeUnreadProvider>
                 <MenuNotificationProvider>
-                  <div className="min-h-screen flex flex-col">
-                    <SidebarProvider>
-                      <NavigationBar />
-                      {children}
-                      <SiteFooter />
-                    </SidebarProvider>
-                  </div>
-                  <Toaster />
+                  <ApplicantNotificationProvider>
+                    <div className="min-h-screen flex flex-col">
+                      <SidebarProvider>
+                        <NavigationBar />
+                        {children}
+                        <SiteFooter />
+                      </SidebarProvider>
+                    </div>
+                    <Toaster />
+                  </ApplicantNotificationProvider>
                 </MenuNotificationProvider>
               </ActivityNoticeUnreadProvider>
             </NoticeUnreadProvider>
